@@ -598,8 +598,8 @@ function VaccinationsTab({ petId, token, vaccinations, setVaccinations }: {
   const handleAdd = async () => {
     if (!name.trim() || !adminDate) return;
     const vac = await petsApi.addVaccination(petId, {
-      name, administered_date: new Date(adminDate),
-      expiration_date: expDate ? new Date(expDate) : null,
+      name, administered_date: adminDate,
+      expiration_date: expDate || null,
       administered_by: null, lot_number: null
     }, token);
     setVaccinations([vac, ...vaccinations]);
