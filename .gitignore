@@ -33,6 +33,7 @@ npm-debug.log*
 coverage/
 
 # Temp files
+tmp/
 *.tmp
 *.temp
 state.json
