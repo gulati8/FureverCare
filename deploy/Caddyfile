@@ -1,0 +1,43 @@
+furevercare.gulatilabs.me {
+    # API requests
+    handle /api/* {
+        reverse_proxy localhost:3001
+    }
+
+    # Uploaded files
+    handle /uploads/* {
+        reverse_proxy localhost:3001
+    }
+
+    # Health check
+    handle /health {
+        reverse_proxy localhost:3001
+    }
+
+    # Frontend (SPA)
+    handle {
+        reverse_proxy localhost:8080
+    }
+
+    # Automatic HTTPS via Let's Encrypt
+    tls {
+        protocols tls1.2 tls1.3
+    }
+
+    # Security headers
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+        -Server
+    }
+
+    # Gzip compression
+    encode gzip
+
+    # Logging
+    log {
+        output file /var/log/caddy/furevercare.log
+        format json
+    }
+}

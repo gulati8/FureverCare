@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { API_URL } from '../api/client';
 
 interface PetOwner {
   id: number;
@@ -21,8 +22,6 @@ interface Props {
   petName: string;
   onClose: () => void;
 }
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export default function ManageAccessModal({ petId, petName, onClose }: Props) {
   const { token } = useAuth();

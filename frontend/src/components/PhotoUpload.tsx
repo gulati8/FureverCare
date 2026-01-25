@@ -1,13 +1,12 @@
 import { useState, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { API_URL } from '../api/client';
 
 interface Props {
   petId: number;
   currentPhotoUrl: string | null;
   onPhotoUpdated: (photoUrl: string | null) => void;
 }
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export default function PhotoUpload({ petId, currentPhotoUrl, onPhotoUpdated }: Props) {
   const { token } = useAuth();

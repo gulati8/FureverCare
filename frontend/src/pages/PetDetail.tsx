@@ -11,11 +11,10 @@ import {
   PetMedication,
   PetVaccination,
   PetEmergencyContact,
+  API_URL,
 } from '../api/client';
 import EditPetModal from '../components/EditPetModal';
 import ManageAccessModal from '../components/ManageAccessModal';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 type TabType = 'overview' | 'conditions' | 'allergies' | 'medications' | 'vaccinations' | 'contacts' | 'vets';
 
