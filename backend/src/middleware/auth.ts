@@ -21,7 +21,7 @@ export function generateToken(user: User): string {
 
   return jwt.sign(payload, config.jwt.secret, {
     expiresIn: config.jwt.expiresIn,
-  });
+  } as jwt.SignOptions);
 }
 
 export function verifyToken(token: string): JWTPayload {
