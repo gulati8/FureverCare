@@ -6,6 +6,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import PetDetail from './pages/PetDetail';
 import PublicCard from './pages/PublicCard';
+import AcceptInvite from './pages/AcceptInvite';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -50,6 +51,7 @@ export default function App() {
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
       <Route path="/card/:shareId" element={<PublicCard />} />
+      <Route path="/invite/:inviteCode" element={<AcceptInvite />} />
 
       {/* Private routes */}
       <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>

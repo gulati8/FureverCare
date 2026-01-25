@@ -12,6 +12,10 @@ import {
   PetVaccination,
   PetEmergencyContact,
 } from '../api/client';
+import EditPetModal from '../components/EditPetModal';
+import ManageAccessModal from '../components/ManageAccessModal';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 type TabType = 'overview' | 'conditions' | 'allergies' | 'medications' | 'vaccinations' | 'contacts' | 'vets';
 
@@ -24,6 +28,8 @@ export default function PetDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showAccessModal, setShowAccessModal] = useState(false);
 
   // Health records state
   const [vets, setVets] = useState<PetVet[]>([]);
@@ -81,6 +87,16 @@ export default function PetDetail() {
 
   const shareUrl = pet ? `${window.location.origin}/card/${pet.share_id}` : '';
 
+  const getFullPhotoUrl = (url: string | null) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    return `${API_URL}${url}`;
+  };
+
+  const handlePetUpdated = (updatedPet: Pet) => {
+    setPet(updatedPet);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -109,7 +125,7 @@ export default function PetDetail() {
           <div className="flex items-center space-x-4">
             <div className="w-20 h-20 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
               {pet.photo_url ? (
-                <img src={pet.photo_url} alt={pet.name} className="w-20 h-20 rounded-full object-cover" />
+                <img src={getFullPhotoUrl(pet.photo_url)!} alt={pet.name} className="w-20 h-20 rounded-full object-cover" />
               ) : (
                 <span className="text-4xl">
                   {pet.species === 'dog' ? '🐕' : pet.species === 'cat' ? '🐈' : '🐾'}
@@ -127,6 +143,18 @@ export default function PetDetail() {
           </div>
 
           <div className="flex space-x-3">
+            <button
+              onClick={() => setShowEditModal(true)}
+              className="btn-secondary"
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => setShowAccessModal(true)}
+              className="btn-secondary"
+            >
+              Access
+            </button>
             <button
               onClick={() => setShowShareModal(true)}
               className="btn-primary"
@@ -198,6 +226,24 @@ export default function PetDetail() {
           petName={pet.name}
           shareUrl={shareUrl}
           onClose={() => setShowShareModal(false)}
+        />
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <EditPetModal
+          pet={pet}
+          onClose={() => setShowEditModal(false)}
+          onPetUpdated={handlePetUpdated}
+        />
+      )}
+
+      {/* Manage Access Modal */}
+      {showAccessModal && (
+        <ManageAccessModal
+          petId={petId}
+          petName={pet.name}
+          onClose={() => setShowAccessModal(false)}
         />
       )}
     </div>

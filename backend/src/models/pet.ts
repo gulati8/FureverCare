@@ -65,8 +65,20 @@ export async function findPetByShareId(shareId: string): Promise<Pet | null> {
   return queryOne<Pet>('SELECT * FROM pets WHERE share_id = $1', [shareId]);
 }
 
+// Get pets where user is the original owner (legacy)
 export async function findPetsByUserId(userId: number): Promise<Pet[]> {
   return query<Pet>('SELECT * FROM pets WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
+}
+
+// Get all pets user has access to (via pet_owners junction table)
+export async function findPetsForUser(userId: number): Promise<Pet[]> {
+  return query<Pet>(
+    `SELECT p.* FROM pets p
+     JOIN pet_owners po ON po.pet_id = p.id
+     WHERE po.user_id = $1 AND po.accepted_at IS NOT NULL
+     ORDER BY p.created_at DESC`,
+    [userId]
+  );
 }
 
 export async function updatePet(id: number, userId: number, updates: Partial<CreatePetInput>): Promise<Pet | null> {

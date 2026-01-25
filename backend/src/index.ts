@@ -2,10 +2,13 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
 import { config } from './config/index.js';
 import authRoutes from './routes/auth.js';
 import petRoutes from './routes/pets.js';
 import publicRoutes from './routes/public.js';
+import uploadRoutes from './routes/upload.js';
+import ownersRoutes from './routes/owners.js';
 
 const app = express();
 
@@ -33,10 +36,15 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Static files (uploads)
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/pets', petRoutes);
 app.use('/api/public', publicRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/owners', ownersRoutes);
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

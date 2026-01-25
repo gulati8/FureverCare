@@ -5,11 +5,18 @@ import { validate } from '../middleware/validate.js';
 import {
   createPet,
   findPetById,
-  findPetsByUserId,
+  findPetsForUser,
   updatePet,
   deletePet,
   regenerateShareId,
 } from '../models/pet.js';
+import {
+  userHasPetAccess,
+  userCanEditPet,
+  userIsPetOwner,
+  addPetOwner,
+  getUserPetRole,
+} from '../models/pet-owners.js';
 import {
   getPetVets, createPetVet, deletePetVet,
   getPetConditions, createPetCondition, deletePetCondition,
@@ -36,16 +43,20 @@ const createPetSchema = z.object({
 
 const updatePetSchema = createPetSchema.partial();
 
-// Helper to verify pet ownership
-async function verifyPetOwnership(petId: number, userId: number): Promise<boolean> {
-  const pet = await findPetById(petId);
-  return pet !== null && pet.user_id === userId;
+// Helper to verify pet access (any role)
+async function verifyPetAccess(petId: number, userId: number): Promise<boolean> {
+  return userHasPetAccess(petId, userId);
 }
 
-// GET /pets - List all pets for current user
+// Helper to verify pet edit access (owner or editor)
+async function verifyPetEditAccess(petId: number, userId: number): Promise<boolean> {
+  return userCanEditPet(petId, userId);
+}
+
+// GET /pets - List all pets user has access to
 router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const pets = await findPetsByUserId(req.userId!);
+    const pets = await findPetsForUser(req.userId!);
     res.json(pets);
   } catch (error) {
     console.error('Error fetching pets:', error);
@@ -60,6 +71,10 @@ router.post('/', authenticate, validate(createPetSchema), async (req: AuthReques
       user_id: req.userId!,
       ...req.body,
     });
+
+    // Add creator as owner in pet_owners table
+    await addPetOwner(pet.id, req.userId!, 'owner');
+
     res.status(201).json(pet);
   } catch (error) {
     console.error('Error creating pet:', error);
@@ -70,12 +85,24 @@ router.post('/', authenticate, validate(createPetSchema), async (req: AuthReques
 // GET /pets/:id - Get a specific pet
 router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const pet = await findPetById(parseInt(req.params.id));
-    if (!pet || pet.user_id !== req.userId) {
+    const petId = parseInt(req.params.id);
+    const pet = await findPetById(petId);
+
+    if (!pet) {
       res.status(404).json({ error: 'Pet not found' });
       return;
     }
-    res.json(pet);
+
+    // Check access via pet_owners
+    const hasAccess = await verifyPetAccess(petId, req.userId!);
+    if (!hasAccess) {
+      res.status(404).json({ error: 'Pet not found' });
+      return;
+    }
+
+    // Include user's role in the response
+    const role = await getUserPetRole(petId, req.userId!);
+    res.json({ ...pet, userRole: role });
   } catch (error) {
     console.error('Error fetching pet:', error);
     res.status(500).json({ error: 'Failed to fetch pet' });
@@ -132,7 +159,7 @@ router.post('/:id/regenerate-share-id', authenticate, async (req: AuthRequest, r
 // --- Veterinarians ---
 router.get('/:id/vets', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    if (!await verifyPetOwnership(parseInt(req.params.id), req.userId!)) {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
       res.status(404).json({ error: 'Pet not found' });
       return;
     }
@@ -145,7 +172,7 @@ router.get('/:id/vets', authenticate, async (req: AuthRequest, res: Response) =>
 
 router.post('/:id/vets', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    if (!await verifyPetOwnership(parseInt(req.params.id), req.userId!)) {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
       res.status(404).json({ error: 'Pet not found' });
       return;
     }
@@ -158,7 +185,7 @@ router.post('/:id/vets', authenticate, async (req: AuthRequest, res: Response) =
 
 router.delete('/:id/vets/:vetId', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    if (!await verifyPetOwnership(parseInt(req.params.id), req.userId!)) {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
       res.status(404).json({ error: 'Pet not found' });
       return;
     }
@@ -172,7 +199,7 @@ router.delete('/:id/vets/:vetId', authenticate, async (req: AuthRequest, res: Re
 // --- Conditions ---
 router.get('/:id/conditions', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    if (!await verifyPetOwnership(parseInt(req.params.id), req.userId!)) {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
       res.status(404).json({ error: 'Pet not found' });
       return;
     }
@@ -185,7 +212,7 @@ router.get('/:id/conditions', authenticate, async (req: AuthRequest, res: Respon
 
 router.post('/:id/conditions', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    if (!await verifyPetOwnership(parseInt(req.params.id), req.userId!)) {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
       res.status(404).json({ error: 'Pet not found' });
       return;
     }
@@ -198,7 +225,7 @@ router.post('/:id/conditions', authenticate, async (req: AuthRequest, res: Respo
 
 router.delete('/:id/conditions/:conditionId', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    if (!await verifyPetOwnership(parseInt(req.params.id), req.userId!)) {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
       res.status(404).json({ error: 'Pet not found' });
       return;
     }
@@ -212,7 +239,7 @@ router.delete('/:id/conditions/:conditionId', authenticate, async (req: AuthRequ
 // --- Allergies ---
 router.get('/:id/allergies', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    if (!await verifyPetOwnership(parseInt(req.params.id), req.userId!)) {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
       res.status(404).json({ error: 'Pet not found' });
       return;
     }
@@ -225,7 +252,7 @@ router.get('/:id/allergies', authenticate, async (req: AuthRequest, res: Respons
 
 router.post('/:id/allergies', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    if (!await verifyPetOwnership(parseInt(req.params.id), req.userId!)) {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
       res.status(404).json({ error: 'Pet not found' });
       return;
     }
@@ -238,7 +265,7 @@ router.post('/:id/allergies', authenticate, async (req: AuthRequest, res: Respon
 
 router.delete('/:id/allergies/:allergyId', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    if (!await verifyPetOwnership(parseInt(req.params.id), req.userId!)) {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
       res.status(404).json({ error: 'Pet not found' });
       return;
     }
@@ -252,7 +279,7 @@ router.delete('/:id/allergies/:allergyId', authenticate, async (req: AuthRequest
 // --- Medications ---
 router.get('/:id/medications', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    if (!await verifyPetOwnership(parseInt(req.params.id), req.userId!)) {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
       res.status(404).json({ error: 'Pet not found' });
       return;
     }
@@ -265,7 +292,7 @@ router.get('/:id/medications', authenticate, async (req: AuthRequest, res: Respo
 
 router.post('/:id/medications', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    if (!await verifyPetOwnership(parseInt(req.params.id), req.userId!)) {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
       res.status(404).json({ error: 'Pet not found' });
       return;
     }
@@ -278,7 +305,7 @@ router.post('/:id/medications', authenticate, async (req: AuthRequest, res: Resp
 
 router.patch('/:id/medications/:medId', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    if (!await verifyPetOwnership(parseInt(req.params.id), req.userId!)) {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
       res.status(404).json({ error: 'Pet not found' });
       return;
     }
@@ -295,7 +322,7 @@ router.patch('/:id/medications/:medId', authenticate, async (req: AuthRequest, r
 
 router.delete('/:id/medications/:medId', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    if (!await verifyPetOwnership(parseInt(req.params.id), req.userId!)) {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
       res.status(404).json({ error: 'Pet not found' });
       return;
     }
@@ -309,7 +336,7 @@ router.delete('/:id/medications/:medId', authenticate, async (req: AuthRequest, 
 // --- Vaccinations ---
 router.get('/:id/vaccinations', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    if (!await verifyPetOwnership(parseInt(req.params.id), req.userId!)) {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
       res.status(404).json({ error: 'Pet not found' });
       return;
     }
@@ -322,7 +349,7 @@ router.get('/:id/vaccinations', authenticate, async (req: AuthRequest, res: Resp
 
 router.post('/:id/vaccinations', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    if (!await verifyPetOwnership(parseInt(req.params.id), req.userId!)) {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
       res.status(404).json({ error: 'Pet not found' });
       return;
     }
@@ -335,7 +362,7 @@ router.post('/:id/vaccinations', authenticate, async (req: AuthRequest, res: Res
 
 router.delete('/:id/vaccinations/:vacId', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    if (!await verifyPetOwnership(parseInt(req.params.id), req.userId!)) {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
       res.status(404).json({ error: 'Pet not found' });
       return;
     }
@@ -349,7 +376,7 @@ router.delete('/:id/vaccinations/:vacId', authenticate, async (req: AuthRequest,
 // --- Emergency Contacts ---
 router.get('/:id/emergency-contacts', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    if (!await verifyPetOwnership(parseInt(req.params.id), req.userId!)) {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
       res.status(404).json({ error: 'Pet not found' });
       return;
     }
@@ -362,7 +389,7 @@ router.get('/:id/emergency-contacts', authenticate, async (req: AuthRequest, res
 
 router.post('/:id/emergency-contacts', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    if (!await verifyPetOwnership(parseInt(req.params.id), req.userId!)) {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
       res.status(404).json({ error: 'Pet not found' });
       return;
     }
@@ -375,7 +402,7 @@ router.post('/:id/emergency-contacts', authenticate, async (req: AuthRequest, re
 
 router.delete('/:id/emergency-contacts/:contactId', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    if (!await verifyPetOwnership(parseInt(req.params.id), req.userId!)) {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
       res.status(404).json({ error: 'Pet not found' });
       return;
     }
