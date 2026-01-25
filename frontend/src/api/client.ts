@@ -1,4 +1,6 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// In production, use empty string for same-origin requests (Caddy proxies /api/*)
+// In development, default to localhost:3001
+export const API_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:3001');
 
 interface RequestOptions extends RequestInit {
   token?: string;
