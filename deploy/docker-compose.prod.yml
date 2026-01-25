@@ -15,7 +15,7 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - furevercare
+      - internal
 
   redis:
     image: redis:7-alpine
@@ -29,7 +29,7 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - furevercare
+      - internal
 
   backend:
     image: ghcr.io/gulati8/furevercare-api:latest
@@ -37,14 +37,12 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@furevercare-db:5432/${POSTGRES_DB}
+      REDIS_URL: redis://furevercare-redis:6379
       JWT_SECRET: ${JWT_SECRET}
       FRONTEND_URL: ${FRONTEND_URL}
     volumes:
       - uploads_data:/app/uploads
-    ports:
-      - "127.0.0.1:3001:3001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -52,18 +50,17 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - furevercare
+      - internal
+      - proxy
 
   frontend:
     image: ghcr.io/gulati8/furevercare-web:latest
     container_name: furevercare-web
-    ports:
-      - "127.0.0.1:8080:80"
     depends_on:
       - backend
     restart: unless-stopped
     networks:
-      - furevercare
+      - proxy
 
 volumes:
   postgres_data:
@@ -71,5 +68,7 @@ volumes:
   uploads_data:
 
 networks:
-  furevercare:
+  internal:
     driver: bridge
+  proxy:
+    external: true
