@@ -1,0 +1,21 @@
+name: Feedback
+description: Report a bug, request a feature, or ask a question
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What's on your mind?
+      description: Describe the issue, idea, or question
+      placeholder: Tell us what you're thinking...
+    validations:
+      required: true
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type
+      options:
+        - Bug (something's broken)
+        - Feature (new idea)
+        - Question
+    validations:
+      required: true
