@@ -19,3 +19,14 @@ body:
         - Question
     validations:
       required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How urgent is this?
+      options:
+        - High (need it soon)
+        - Medium (when you get to it)
+        - Low (nice to have)
+    validations:
+      required: true

@@ -8,17 +8,21 @@ When starting a session, check for new GitHub issues:
 gh issue list --repo gulati8/FureverCare --state open
 ```
 
+**Work issues in priority order: High → Medium → Low**
+
 For each new issue:
 
 1. **Read and understand** - What is the user asking for?
 2. **Research** - Check the codebase, understand feasibility
-3. **Respond** - Comment with:
-   - Acknowledgment
-   - Clarifying questions (if needed)
-   - Proposed approach (if clear)
-   - Estimate complexity: small/medium/large
-4. **Label** - Apply appropriate label: `bug`, `feature`, or `question`
-5. **Implement or queue** - Small fixes can be done immediately; larger work gets planned
+3. **Ask clarifying questions** - ALWAYS ask questions before implementing. Don't assume. Ensure you understand exactly what the user wants. Examples:
+   - "Should this also work on mobile?"
+   - "Do you want this behind authentication?"
+   - "Should it notify other owners?"
+   - "What should happen if X fails?"
+4. **Wait for answers** - Don't proceed with implementation until questions are answered
+5. **Propose approach** - Once clear, describe what you'll build
+6. **Label** - Apply: `bug`, `feature`, or `question`
+7. **Implement** - Build it right the first time because you asked first
 
 ## Deployment
 
