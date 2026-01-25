@@ -92,6 +92,8 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Copy deployment files via SSM
+        env:
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
         run: |
           # Read and base64 encode the docker-compose file
           COMPOSE_CONTENT=$(base64 -w 0 deploy/docker-compose.prod.yml)
@@ -102,7 +104,8 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --parameters "commands=[
               \"sudo mkdir -p /srv/furevercare\",
-              \"echo '$COMPOSE_CONTENT' | base64 -d | sudo tee /srv/furevercare/docker-compose.prod.yml > /dev/null\"
+              \"echo '$COMPOSE_CONTENT' | base64 -d | sudo tee /srv/furevercare/docker-compose.prod.yml > /dev/null\",
+              \"grep -q '^CLAUDE_API_KEY=' /srv/furevercare/.env 2>/dev/null && sudo sed -i 's/^CLAUDE_API_KEY=.*/CLAUDE_API_KEY=$CLAUDE_API_KEY/' /srv/furevercare/.env || echo 'CLAUDE_API_KEY=$CLAUDE_API_KEY' | sudo tee -a /srv/furevercare/.env > /dev/null\"
             ]" \
             --query 'Command.CommandId' \
             --output text)
