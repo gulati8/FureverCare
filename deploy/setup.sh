@@ -45,6 +45,6 @@ docker compose -f docker-compose.prod.yml exec -T backend npm run db:migrate:own
 echo "=== Setup Complete ==="
 echo ""
 echo "Next steps:"
-echo "1. Add the Caddyfile config to your Caddy configuration"
+echo "1. Ensure Caddy is configured to route to furevercare-web and furevercare-api"
 echo "2. Reload Caddy: sudo systemctl reload caddy"
 echo "3. Access the app at https://furevercare.gulatilabs.me"
