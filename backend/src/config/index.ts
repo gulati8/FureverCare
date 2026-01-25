@@ -23,6 +23,18 @@ export const config = {
     url: process.env.FRONTEND_URL || 'http://localhost:5173',
   },
 
+  claude: {
+    apiKey: process.env.CLAUDE_API_KEY || '',
+    model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514',
+    maxTokens: parseInt(process.env.CLAUDE_MAX_TOKENS || '4096', 10),
+  },
+
+  pdfUpload: {
+    maxSizeMB: parseInt(process.env.PDF_MAX_SIZE_MB || '20', 10),
+    uploadDir: process.env.PDF_UPLOAD_DIR || 'uploads/pdfs',
+    allowedMimeTypes: ['application/pdf'],
+  },
+
   isProduction: process.env.NODE_ENV === 'production',
   isDevelopment: process.env.NODE_ENV !== 'production',
 };

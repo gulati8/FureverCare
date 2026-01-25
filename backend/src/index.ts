@@ -9,6 +9,8 @@ import petRoutes from './routes/pets.js';
 import publicRoutes from './routes/public.js';
 import uploadRoutes from './routes/upload.js';
 import ownersRoutes from './routes/owners.js';
+import pdfImportRoutes from './routes/pdf-import.js';
+import auditRoutes from './routes/audit.js';
 
 const app = express();
 
@@ -42,6 +44,8 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/pets', petRoutes);
+app.use('/api/pets', pdfImportRoutes);  // PDF import routes under /api/pets/:petId/pdf-import
+app.use('/api/pets', auditRoutes);       // Audit routes under /api/pets/:petId/audit
 app.use('/api/public', publicRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/owners', ownersRoutes);

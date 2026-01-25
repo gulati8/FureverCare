@@ -266,3 +266,185 @@ export interface EmergencyCard {
   emergency_contacts: Array<{ name: string; relationship: string | null; phone: string; is_primary: boolean }>;
   generated_at: string;
 }
+
+// PDF Import Types
+export type PdfUploadStatus = 'pending' | 'processing' | 'completed' | 'failed';
+export type DocumentType = 'vaccination_record' | 'visit_summary' | 'lab_results' | 'prescription' | 'other';
+export type RecordType = 'vaccination' | 'medication' | 'condition' | 'allergy' | 'vet' | 'emergency_contact';
+export type ExtractionItemStatus = 'pending' | 'approved' | 'rejected' | 'modified';
+
+export interface PdfUpload {
+  id: number;
+  pet_id: number;
+  uploaded_by: number;
+  filename: string;
+  original_filename: string;
+  file_path: string;
+  file_size: number;
+  mime_type: string;
+  status: PdfUploadStatus;
+  document_type: DocumentType | null;
+  processing_started_at: string | null;
+  processing_completed_at: string | null;
+  error_message: string | null;
+  created_at: string;
+}
+
+export interface PdfExtraction {
+  id: number;
+  pdf_upload_id: number;
+  raw_extraction: Record<string, any> | null;
+  mapped_data: Record<string, any> | null;
+  extraction_model: string | null;
+  tokens_used: number | null;
+  status: string;
+  reviewed_by: number | null;
+  reviewed_at: string | null;
+  created_at: string;
+}
+
+export interface PdfExtractionItem {
+  id: number;
+  extraction_id: number;
+  record_type: RecordType;
+  extracted_data: Record<string, any>;
+  confidence_score: number | null;
+  user_modified_data: Record<string, any> | null;
+  status: ExtractionItemStatus;
+  created_record_id: number | null;
+  created_record_type: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExtractionWithItems {
+  extraction: PdfExtraction;
+  items: PdfExtractionItem[];
+}
+
+export interface ProcessingResult {
+  upload: PdfUpload;
+  extraction?: PdfExtraction;
+  items?: PdfExtractionItem[];
+  error?: string;
+}
+
+export interface ApprovalResult {
+  approved: Array<{
+    itemId: number;
+    recordType: string;
+    createdRecordId: number;
+  }>;
+  rejected: number[];
+  errors: Array<{ itemId: number; error: string }>;
+}
+
+// Audit Log Types
+export interface AuditLogEntry {
+  id: number;
+  entity_type: string;
+  entity_id: number;
+  action: 'create' | 'update' | 'delete';
+  changed_by: number | null;
+  changed_by_name: string | null;
+  changed_by_email: string | null;
+  source: 'manual' | 'pdf_import';
+  source_pdf_upload_id: number | null;
+  old_values: Record<string, any> | null;
+  new_values: Record<string, any> | null;
+  changed_fields: string[] | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  created_at: string;
+}
+
+export interface AuditLogResponse {
+  logs: AuditLogEntry[];
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  };
+}
+
+// PDF Import API
+export const pdfImportApi = {
+  // Upload a PDF file
+  upload: async (petId: number, file: File, token: string, documentType?: DocumentType): Promise<PdfUpload> => {
+    const formData = new FormData();
+    formData.append('pdf', file);
+    if (documentType) {
+      formData.append('documentType', documentType);
+    }
+
+    const response = await fetch(`${API_URL}/api/pets/${petId}/pdf-import/upload`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Upload failed' }));
+      throw new Error(error.error || 'Upload failed');
+    }
+
+    return response.json();
+  },
+
+  // List all uploads for a pet
+  listUploads: (petId: number, token: string) =>
+    api.get<PdfUpload[]>(`/api/pets/${petId}/pdf-import/uploads`, token),
+
+  // Get a specific upload
+  getUpload: (petId: number, uploadId: number, token: string) =>
+    api.get<PdfUpload>(`/api/pets/${petId}/pdf-import/uploads/${uploadId}`, token),
+
+  // Delete an upload
+  deleteUpload: (petId: number, uploadId: number, token: string) =>
+    api.delete(`/api/pets/${petId}/pdf-import/uploads/${uploadId}`, token),
+
+  // Process an uploaded PDF
+  processUpload: (petId: number, uploadId: number, token: string) =>
+    api.post<ProcessingResult>(`/api/pets/${petId}/pdf-import/uploads/${uploadId}/process`, {}, token),
+
+  // Get extraction results
+  getExtraction: (petId: number, uploadId: number, token: string) =>
+    api.get<ExtractionWithItems>(`/api/pets/${petId}/pdf-import/uploads/${uploadId}/extraction`, token),
+
+  // Approve extraction items
+  approveItems: (petId: number, uploadId: number, itemIds: number[], token: string) =>
+    api.post<ApprovalResult>(`/api/pets/${petId}/pdf-import/uploads/${uploadId}/extraction/approve`, { itemIds }, token),
+
+  // Reject extraction items
+  rejectItems: (petId: number, uploadId: number, itemIds: number[], token: string) =>
+    api.post<{ rejected: number[] }>(`/api/pets/${petId}/pdf-import/uploads/${uploadId}/extraction/reject`, { itemIds }, token),
+
+  // Edit an extraction item
+  editItem: (petId: number, itemId: number, modifiedData: Record<string, any>, token: string) =>
+    api.patch<PdfExtractionItem>(`/api/pets/${petId}/pdf-import/extraction-items/${itemId}`, { modifiedData }, token),
+};
+
+// Audit API
+export const auditApi = {
+  // Get audit log for a pet
+  getAuditLog: (petId: number, token: string, options?: { limit?: number; offset?: number; entityType?: string; action?: string }) => {
+    const params = new URLSearchParams();
+    if (options?.limit) params.append('limit', options.limit.toString());
+    if (options?.offset) params.append('offset', options.offset.toString());
+    if (options?.entityType) params.append('entityType', options.entityType);
+    if (options?.action) params.append('action', options.action);
+    const queryString = params.toString();
+    return api.get<AuditLogResponse>(`/api/pets/${petId}/audit${queryString ? `?${queryString}` : ''}`, token);
+  },
+
+  // Get audit log for a specific record
+  getRecordAudit: (petId: number, recordType: string, recordId: number, token: string) =>
+    api.get<AuditLogEntry[]>(`/api/pets/${petId}/audit/${recordType}/${recordId}`, token),
+
+  // Get audit entries from a PDF upload
+  getPdfUploadAudit: (petId: number, uploadId: number, token: string) =>
+    api.get<AuditLogEntry[]>(`/api/pets/${petId}/audit/pdf-upload/${uploadId}`, token),
+};

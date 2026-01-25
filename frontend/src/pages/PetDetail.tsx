@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '../hooks/useAuth';
 import {
   petsApi,
+  pdfImportApi,
   Pet,
   PetVet,
   PetCondition,
@@ -11,12 +12,17 @@ import {
   PetMedication,
   PetVaccination,
   PetEmergencyContact,
+  PdfUpload,
   API_URL,
 } from '../api/client';
 import EditPetModal from '../components/EditPetModal';
 import ManageAccessModal from '../components/ManageAccessModal';
+import { PdfUploadZone } from '../components/pdf-import/PdfUploadZone';
+import { PdfUploadList } from '../components/pdf-import/PdfUploadList';
+import { ExtractionReview } from '../components/pdf-import/ExtractionReview';
+import { AuditLogViewer } from '../components/audit/AuditLogViewer';
 
-type TabType = 'overview' | 'conditions' | 'allergies' | 'medications' | 'vaccinations' | 'contacts' | 'vets';
+type TabType = 'overview' | 'conditions' | 'allergies' | 'medications' | 'vaccinations' | 'contacts' | 'vets' | 'import' | 'history';
 
 export default function PetDetail() {
   const { id } = useParams<{ id: string }>();
@@ -114,6 +120,8 @@ export default function PetDetail() {
     { id: 'vaccinations', label: 'Vaccinations', count: vaccinations.length },
     { id: 'vets', label: 'Veterinarians', count: vets.length },
     { id: 'contacts', label: 'Emergency Contacts', count: emergencyContacts.length },
+    { id: 'import', label: 'Import PDF' },
+    { id: 'history', label: 'History' },
   ];
 
   return (
@@ -216,6 +224,12 @@ export default function PetDetail() {
         )}
         {activeTab === 'contacts' && (
           <ContactsTab petId={petId} token={token!} contacts={emergencyContacts} setContacts={setEmergencyContacts} />
+        )}
+        {activeTab === 'import' && (
+          <ImportTab petId={petId} onImportComplete={() => loadPetData()} />
+        )}
+        {activeTab === 'history' && (
+          <HistoryTab petId={petId} />
         )}
       </div>
 
@@ -799,6 +813,107 @@ function ContactsTab({ petId, token, contacts, setContacts }: {
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+// Import Tab
+function ImportTab({ petId, onImportComplete }: { petId: number; onImportComplete: () => void }) {
+  const { token } = useAuth();
+  const [uploads, setUploads] = useState<PdfUpload[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedUpload, setSelectedUpload] = useState<PdfUpload | null>(null);
+
+  useEffect(() => {
+    loadUploads();
+  }, [petId, token]);
+
+  const loadUploads = async () => {
+    if (!token) return;
+    setIsLoading(true);
+    try {
+      const data = await pdfImportApi.listUploads(petId, token);
+      setUploads(data);
+    } catch (err) {
+      console.error('Failed to load uploads:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUploadComplete = (upload: PdfUpload) => {
+    setUploads([upload, ...uploads]);
+  };
+
+  const handleUploadDeleted = (uploadId: number) => {
+    setUploads(uploads.filter(u => u.id !== uploadId));
+  };
+
+  const handleProcessingComplete = (updatedUpload: PdfUpload) => {
+    setUploads(uploads.map(u => u.id === updatedUpload.id ? updatedUpload : u));
+    setSelectedUpload(updatedUpload);
+  };
+
+  const handleApprovalComplete = () => {
+    setSelectedUpload(null);
+    onImportComplete();
+    loadUploads();
+  };
+
+  if (selectedUpload) {
+    return (
+      <ExtractionReview
+        petId={petId}
+        upload={selectedUpload}
+        onBack={() => setSelectedUpload(null)}
+        onApprovalComplete={handleApprovalComplete}
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Import from PDF</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Upload veterinary documents to automatically extract health information using AI.
+          You'll be able to review and approve the extracted data before it's added to your pet's records.
+        </p>
+        <PdfUploadZone petId={petId} onUploadComplete={handleUploadComplete} />
+      </div>
+
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Uploaded Documents</h3>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <svg className="animate-spin h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+          </div>
+        ) : (
+          <PdfUploadList
+            petId={petId}
+            uploads={uploads}
+            onUploadSelect={setSelectedUpload}
+            onUploadDeleted={handleUploadDeleted}
+            onProcessingComplete={handleProcessingComplete}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// History Tab
+function HistoryTab({ petId }: { petId: number }) {
+  return (
+    <div>
+      <h3 className="text-lg font-semibold mb-4">Change History</h3>
+      <p className="text-sm text-gray-600 mb-4">
+        View all changes made to your pet's health records, including data imported from PDFs.
+      </p>
+      <AuditLogViewer petId={petId} />
     </div>
   );
 }
