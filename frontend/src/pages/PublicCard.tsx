@@ -176,8 +176,8 @@ export default function PublicCard() {
                     <span className="font-medium">{v.name}</span>
                     <span className={`text-sm ${isExpired ? 'text-red-600' : 'text-gray-500'}`}>
                       {v.expiration_date
-                        ? `${isExpired ? 'Expired' : 'Expires'}: ${new Date(v.expiration_date).toLocaleDateString()}`
-                        : `Given: ${new Date(v.administered_date).toLocaleDateString()}`
+                        ? `${isExpired ? 'Expired' : 'Expires'}: ${new Date(v.expiration_date.split('T')[0] + 'T00:00:00').toLocaleDateString()}`
+                        : `Given: ${new Date(v.administered_date.split('T')[0] + 'T00:00:00').toLocaleDateString()}`
                       }
                     </span>
                   </li>

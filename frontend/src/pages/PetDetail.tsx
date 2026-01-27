@@ -290,7 +290,7 @@ function OverviewTab({ pet, conditions, allergies, medications }: {
           {pet.date_of_birth && (
             <div>
               <dt className="text-sm text-gray-500">Date of Birth</dt>
-              <dd className="text-gray-900">{new Date(pet.date_of_birth).toLocaleDateString()}</dd>
+              <dd className="text-gray-900">{new Date(pet.date_of_birth.split('T')[0] + 'T00:00:00').toLocaleDateString()}</dd>
             </div>
           )}
           {pet.weight_kg && (
@@ -667,11 +667,11 @@ function VaccinationsTab({ petId, token, vaccinations, setVaccinations }: {
               <div>
                 <p className="font-medium">{v.name}</p>
                 <p className="text-sm text-gray-500">
-                  Administered: {new Date(v.administered_date).toLocaleDateString()}
+                  Administered: {new Date(v.administered_date.split('T')[0] + 'T00:00:00').toLocaleDateString()}
                 </p>
                 {v.expiration_date && (
                   <p className={`text-sm ${isExpired(v.expiration_date) ? 'text-red-600' : 'text-gray-500'}`}>
-                    {isExpired(v.expiration_date) ? 'Expired' : 'Expires'}: {new Date(v.expiration_date).toLocaleDateString()}
+                    {isExpired(v.expiration_date) ? 'Expired' : 'Expires'}: {new Date(v.expiration_date.split('T')[0] + 'T00:00:00').toLocaleDateString()}
                   </p>
                 )}
               </div>

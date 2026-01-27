@@ -94,7 +94,7 @@ export default function Dashboard() {
                   </p>
                   {pet.date_of_birth && (
                     <p className="text-sm text-gray-400">
-                      Born: {new Date(pet.date_of_birth).toLocaleDateString()}
+                      Born: {new Date(pet.date_of_birth.split('T')[0] + 'T00:00:00').toLocaleDateString()}
                     </p>
                   )}
                 </div>
