@@ -13,6 +13,7 @@ export interface Pet {
   weight_kg: number | null;
   weight_unit: 'lbs' | 'kg' | null;
   sex: string | null;
+  is_fixed: boolean;
   microchip_id: string | null;
   photo_url: string | null;
   special_instructions: string | null;
@@ -29,6 +30,7 @@ export interface CreatePetInput {
   weight_kg?: number;
   weight_unit?: 'lbs' | 'kg';
   sex?: string;
+  is_fixed?: boolean;
   microchip_id?: string;
   photo_url?: string;
   special_instructions?: string;
@@ -38,8 +40,8 @@ export async function createPet(input: CreatePetInput): Promise<Pet> {
   const shareId = nanoid();
 
   const result = await queryOne<Pet>(
-    `INSERT INTO pets (user_id, share_id, name, species, breed, date_of_birth, weight_kg, weight_unit, sex, microchip_id, photo_url, special_instructions)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+    `INSERT INTO pets (user_id, share_id, name, species, breed, date_of_birth, weight_kg, weight_unit, sex, is_fixed, microchip_id, photo_url, special_instructions)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
      RETURNING *`,
     [
       input.user_id,
@@ -51,6 +53,7 @@ export async function createPet(input: CreatePetInput): Promise<Pet> {
       input.weight_kg || null,
       input.weight_unit || 'lbs',
       input.sex || null,
+      input.is_fixed || false,
       input.microchip_id || null,
       input.photo_url || null,
       input.special_instructions || null,
@@ -89,7 +92,7 @@ export async function updatePet(id: number, userId: number, updates: Partial<Cre
   const values: any[] = [];
   let paramCount = 1;
 
-  const allowedFields = ['name', 'species', 'breed', 'date_of_birth', 'weight_kg', 'weight_unit', 'sex', 'microchip_id', 'photo_url', 'special_instructions'];
+  const allowedFields = ['name', 'species', 'breed', 'date_of_birth', 'weight_kg', 'weight_unit', 'sex', 'is_fixed', 'microchip_id', 'photo_url', 'special_instructions'];
 
   for (const field of allowedFields) {
     if ((updates as any)[field] !== undefined) {

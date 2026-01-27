@@ -21,6 +21,7 @@ export default function EditPetModal({ pet, onClose, onPetUpdated }: Props) {
     breed: pet.breed || '',
     date_of_birth: pet.date_of_birth ? pet.date_of_birth.split('T')[0] : '',
     sex: pet.sex || '',
+    is_fixed: pet.is_fixed || false,
     weight_kg: pet.weight_kg ? Number(pet.weight_kg) : undefined,
     weight_unit: pet.weight_unit || 'lbs',
     microchip_id: pet.microchip_id || '',
@@ -146,27 +147,42 @@ export default function EditPetModal({ pet, onClose, onPetUpdated }: Props) {
                   <option value="">Select...</option>
                   <option value="male">Male</option>
                   <option value="female">Female</option>
-                  <option value="neutered_male">Neutered Male</option>
-                  <option value="spayed_female">Spayed Female</option>
                 </select>
               </div>
             </div>
 
-            <div>
-              <label className="label">Weight</label>
-              <div className="flex gap-2">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="is_fixed_edit"
+                checked={formData.is_fixed || false}
+                onChange={(e) => setFormData({ ...formData, is_fixed: e.target.checked })}
+                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+              />
+              <label htmlFor="is_fixed_edit" className="ml-2 block text-sm text-gray-700">
+                Spayed / Neutered
+              </label>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label">Weight</label>
                 <input
                   type="number"
                   step="0.1"
                   min="0"
                   value={formData.weight_kg || ''}
                   onChange={(e) => setFormData({ ...formData, weight_kg: e.target.value ? Number(e.target.value) : undefined })}
-                  className="input flex-1"
+                  className="input"
                 />
+              </div>
+
+              <div>
+                <label className="label">Weight Unit</label>
                 <select
                   value={formData.weight_unit}
                   onChange={(e) => setFormData({ ...formData, weight_unit: e.target.value as 'lbs' | 'kg' })}
-                  className="input w-36"
+                  className="input"
                 >
                   <option value="lbs">pounds (lbs)</option>
                   <option value="kg">kilograms (kg)</option>

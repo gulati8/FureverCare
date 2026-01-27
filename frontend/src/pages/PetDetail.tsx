@@ -157,7 +157,7 @@ export default function PetDetail() {
               <h1 className="text-2xl font-bold text-gray-900">{pet.name}</h1>
               <p className="text-gray-500 capitalize">
                 {pet.breed ? `${pet.breed} ${pet.species}` : pet.species}
-                {pet.sex && ` • ${pet.sex.replace('_', ' ')}`}
+                {pet.sex && ` • ${pet.sex}${pet.is_fixed ? ' (Fixed)' : ''}`}
               </p>
               {pet.weight_kg && <p className="text-sm text-gray-400">{formatWeight(pet.weight_kg, pet.weight_unit)}</p>}
             </div>
@@ -299,6 +299,12 @@ function OverviewTab({ pet, conditions, allergies, medications }: {
             <div>
               <dt className="text-sm text-gray-500">Breed</dt>
               <dd className="text-gray-900">{pet.breed}</dd>
+            </div>
+          )}
+          {pet.sex && (
+            <div>
+              <dt className="text-sm text-gray-500">Sex</dt>
+              <dd className="text-gray-900 capitalize">{pet.sex}{pet.is_fixed ? ' (Spayed/Neutered)' : ''}</dd>
             </div>
           )}
           {pet.date_of_birth && (

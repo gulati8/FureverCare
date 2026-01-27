@@ -91,7 +91,7 @@ export default function PublicCard() {
                 <h1 className="text-2xl font-bold">{pet.name}</h1>
                 <p className="opacity-90 capitalize">
                   {pet.breed ? `${pet.breed} ${pet.species}` : pet.species}
-                  {pet.sex && ` • ${pet.sex.replace('_', ' ')}`}
+                  {pet.sex && ` • ${pet.sex}${pet.is_fixed ? ' (Fixed)' : ''}`}
                 </p>
                 {pet.age && <p className="text-sm opacity-75">Age: {pet.age}</p>}
               </div>

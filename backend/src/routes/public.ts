@@ -75,6 +75,7 @@ router.get('/card/:shareId', async (req: Request, res: Response) => {
         weight_kg: pet.weight_kg,
         weight_unit: pet.weight_unit,
         sex: pet.sex,
+        is_fixed: pet.is_fixed,
         microchip_id: pet.microchip_id,
         photo_url: pet.photo_url,
         special_instructions: pet.special_instructions,

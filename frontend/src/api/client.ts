@@ -155,6 +155,7 @@ export interface Pet {
   weight_kg: number | null;
   weight_unit: 'lbs' | 'kg' | null;
   sex: string | null;
+  is_fixed: boolean;
   microchip_id: string | null;
   photo_url: string | null;
   special_instructions: string | null;
@@ -170,6 +171,7 @@ export interface CreatePetInput {
   weight_kg?: number;
   weight_unit?: 'lbs' | 'kg';
   sex?: string;
+  is_fixed?: boolean;
   microchip_id?: string;
   photo_url?: string;
   special_instructions?: string;
@@ -252,6 +254,7 @@ export interface EmergencyCard {
     weight_kg: number | null;
     weight_unit: 'lbs' | 'kg' | null;
     sex: string | null;
+    is_fixed: boolean;
     microchip_id: string | null;
     photo_url: string | null;
     special_instructions: string | null;
