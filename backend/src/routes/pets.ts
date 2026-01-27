@@ -35,6 +35,7 @@ const createPetSchema = z.object({
   breed: z.string().optional(),
   date_of_birth: z.string().optional(),
   weight_kg: z.number().positive().optional(),
+  weight_unit: z.enum(['lbs', 'kg']).optional(),
   sex: z.string().optional(),
   microchip_id: z.string().optional(),
   photo_url: z.string().url().optional(),

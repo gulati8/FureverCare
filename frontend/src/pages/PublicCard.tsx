@@ -2,6 +2,20 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { publicApi, EmergencyCard } from '../api/client';
 
+const KG_TO_LBS = 2.20462;
+
+function formatWeight(value: number | string, unit: 'lbs' | 'kg' | null): string {
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  const safeUnit = unit || 'kg';
+  if (safeUnit === 'lbs') {
+    const kg = numValue / KG_TO_LBS;
+    return `${numValue.toFixed(1)} lbs / ${kg.toFixed(1)} kg`;
+  } else {
+    const lbs = numValue * KG_TO_LBS;
+    return `${lbs.toFixed(1)} lbs / ${numValue.toFixed(1)} kg`;
+  }
+}
+
 export default function PublicCard() {
   const { shareId } = useParams<{ shareId: string }>();
   const [card, setCard] = useState<EmergencyCard | null>(null);
@@ -89,7 +103,7 @@ export default function PublicCard() {
               {pet.weight_kg && (
                 <div>
                   <dt className="text-gray-500">Weight</dt>
-                  <dd className="font-medium">{pet.weight_kg} kg</dd>
+                  <dd className="font-medium">{formatWeight(pet.weight_kg, pet.weight_unit)}</dd>
                 </div>
               )}
               {pet.microchip_id && (

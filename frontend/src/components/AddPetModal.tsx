@@ -19,6 +19,7 @@ export default function AddPetModal({ onClose, onPetAdded }: Props) {
     date_of_birth: '',
     sex: '',
     weight_kg: undefined,
+    weight_unit: 'lbs',
     microchip_id: '',
   });
 
@@ -134,30 +135,38 @@ export default function AddPetModal({ onClose, onPetAdded }: Props) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="label">Weight (kg)</label>
+            <div>
+              <label className="label">Weight</label>
+              <div className="flex gap-2">
                 <input
                   type="number"
                   step="0.1"
                   min="0"
                   value={formData.weight_kg || ''}
                   onChange={(e) => setFormData({ ...formData, weight_kg: e.target.value ? Number(e.target.value) : undefined })}
-                  className="input"
+                  className="input flex-1"
                   placeholder="25.5"
                 />
+                <select
+                  value={formData.weight_unit}
+                  onChange={(e) => setFormData({ ...formData, weight_unit: e.target.value as 'lbs' | 'kg' })}
+                  className="input w-20"
+                >
+                  <option value="lbs">lbs</option>
+                  <option value="kg">kg</option>
+                </select>
               </div>
+            </div>
 
-              <div>
-                <label className="label">Microchip ID</label>
-                <input
-                  type="text"
-                  value={formData.microchip_id}
-                  onChange={(e) => setFormData({ ...formData, microchip_id: e.target.value })}
-                  className="input"
-                  placeholder="123456789"
-                />
-              </div>
+            <div>
+              <label className="label">Microchip ID</label>
+              <input
+                type="text"
+                value={formData.microchip_id}
+                onChange={(e) => setFormData({ ...formData, microchip_id: e.target.value })}
+                className="input"
+                placeholder="123456789"
+              />
             </div>
 
             <div className="flex justify-end space-x-3 pt-4">

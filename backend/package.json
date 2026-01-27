@@ -10,9 +10,11 @@
     "db:migrate": "node dist/db/migrate.js",
     "db:migrate:owners": "node dist/db/migrate-owners.js",
     "db:migrate:pdf-import": "node dist/db/migrate-pdf-import.js",
+    "db:migrate:weight-units": "node dist/db/migrate-weight-units.js",
     "db:migrate:dev": "tsx src/db/migrate.ts",
     "db:migrate:owners:dev": "tsx src/db/migrate-owners.ts",
     "db:migrate:pdf-import:dev": "tsx src/db/migrate-pdf-import.ts",
+    "db:migrate:weight-units:dev": "tsx src/db/migrate-weight-units.ts",
     "db:seed": "node dist/db/seed.js",
     "db:seed:dev": "tsx src/db/seed.ts"
   },

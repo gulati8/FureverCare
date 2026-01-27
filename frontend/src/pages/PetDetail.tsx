@@ -24,6 +24,20 @@ import { AuditLogViewer } from '../components/audit/AuditLogViewer';
 
 type TabType = 'overview' | 'conditions' | 'allergies' | 'medications' | 'vaccinations' | 'contacts' | 'vets' | 'import' | 'history';
 
+const KG_TO_LBS = 2.20462;
+
+function formatWeight(value: number | string, unit: 'lbs' | 'kg' | null): string {
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  const safeUnit = unit || 'kg';
+  if (safeUnit === 'lbs') {
+    const kg = numValue / KG_TO_LBS;
+    return `${numValue.toFixed(1)} lbs / ${kg.toFixed(1)} kg`;
+  } else {
+    const lbs = numValue * KG_TO_LBS;
+    return `${lbs.toFixed(1)} lbs / ${numValue.toFixed(1)} kg`;
+  }
+}
+
 export default function PetDetail() {
   const { id } = useParams<{ id: string }>();
   const { token } = useAuth();
@@ -145,7 +159,7 @@ export default function PetDetail() {
                 {pet.breed ? `${pet.breed} ${pet.species}` : pet.species}
                 {pet.sex && ` • ${pet.sex.replace('_', ' ')}`}
               </p>
-              {pet.weight_kg && <p className="text-sm text-gray-400">{pet.weight_kg} kg</p>}
+              {pet.weight_kg && <p className="text-sm text-gray-400">{formatWeight(pet.weight_kg, pet.weight_unit)}</p>}
             </div>
           </div>
 
@@ -296,7 +310,7 @@ function OverviewTab({ pet, conditions, allergies, medications }: {
           {pet.weight_kg && (
             <div>
               <dt className="text-sm text-gray-500">Weight</dt>
-              <dd className="text-gray-900">{pet.weight_kg} kg</dd>
+              <dd className="text-gray-900">{formatWeight(pet.weight_kg, pet.weight_unit)}</dd>
             </div>
           )}
           {pet.microchip_id && (
