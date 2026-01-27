@@ -26,15 +26,15 @@ type TabType = 'overview' | 'conditions' | 'allergies' | 'medications' | 'vaccin
 
 const KG_TO_LBS = 2.20462;
 
-function formatWeight(value: number | string, unit: 'lbs' | 'kg' | null): string {
+function formatWeight(value: number | string, unit: 'lbs' | 'kg' | null): React.ReactNode {
   const numValue = typeof value === 'string' ? parseFloat(value) : value;
   const safeUnit = unit || 'kg';
   if (safeUnit === 'lbs') {
     const kg = numValue / KG_TO_LBS;
-    return `${numValue.toFixed(1)} lbs / ${kg.toFixed(1)} kg`;
+    return <><strong>{numValue.toFixed(1)} lbs</strong> / {kg.toFixed(1)} kg</>;
   } else {
     const lbs = numValue * KG_TO_LBS;
-    return `${lbs.toFixed(1)} lbs / ${numValue.toFixed(1)} kg`;
+    return <>{lbs.toFixed(1)} lbs / <strong>{numValue.toFixed(1)} kg</strong></>;
   }
 }
 

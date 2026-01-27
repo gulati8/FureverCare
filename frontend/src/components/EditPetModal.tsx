@@ -166,10 +166,10 @@ export default function EditPetModal({ pet, onClose, onPetUpdated }: Props) {
                 <select
                   value={formData.weight_unit}
                   onChange={(e) => setFormData({ ...formData, weight_unit: e.target.value as 'lbs' | 'kg' })}
-                  className="input w-20"
+                  className="input w-36"
                 >
-                  <option value="lbs">lbs</option>
-                  <option value="kg">kg</option>
+                  <option value="lbs">pounds (lbs)</option>
+                  <option value="kg">kilograms (kg)</option>
                 </select>
               </div>
             </div>
