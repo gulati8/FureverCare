@@ -62,6 +62,15 @@ export const authApi = {
 
   updateProfile: (data: { name?: string; phone?: string }, token: string) =>
     api.patch<User>('/api/auth/me', data, token),
+
+  forgotPassword: (email: string) =>
+    api.post<{ message: string }>('/api/auth/forgot-password', { email }),
+
+  validateResetToken: (token: string) =>
+    api.get<{ valid: boolean; error?: string }>(`/api/auth/reset-password/${token}`),
+
+  resetPassword: (data: { token: string; password: string }) =>
+    api.post<{ message: string; user: User; token: string }>('/api/auth/reset-password', data),
 };
 
 // Pets API

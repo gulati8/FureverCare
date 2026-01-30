@@ -35,6 +35,21 @@ export const config = {
     allowedMimeTypes: ['application/pdf'],
   },
 
+  email: {
+    provider: process.env.EMAIL_PROVIDER || 'ses',
+    ses: {
+      region: process.env.AWS_SES_REGION || 'us-east-1',
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+    },
+    fromAddress: process.env.EMAIL_FROM_ADDRESS || 'noreply@furevercare.pet',
+    fromName: process.env.EMAIL_FROM_NAME || 'FureverCare',
+  },
+
+  passwordReset: {
+    tokenExpiryMinutes: parseInt(process.env.PASSWORD_RESET_EXPIRY_MINUTES || '60', 10),
+  },
+
   isProduction: process.env.NODE_ENV === 'production',
   isDevelopment: process.env.NODE_ENV !== 'production',
 };

@@ -1,8 +1,20 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
-import { createUser, findUserByEmail, verifyPassword, updateUser } from '../models/user.js';
+import {
+  createUser,
+  findUserByEmail,
+  findUserById,
+  verifyPassword,
+  updateUser,
+  createPasswordResetToken,
+  findValidPasswordResetToken,
+  usePasswordResetToken,
+  updateUserPassword,
+} from '../models/user.js';
 import { generateToken, authenticate, AuthRequest } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
+import { sendEmail, generatePasswordResetEmail } from '../services/email.js';
+import { config } from '../config/index.js';
 
 const router = Router();
 
@@ -21,6 +33,15 @@ const loginSchema = z.object({
 const updateProfileSchema = z.object({
   name: z.string().min(1).optional(),
   phone: z.string().optional(),
+});
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email('Invalid email address'),
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1, 'Reset token is required'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
 });
 
 // Register
@@ -115,6 +136,107 @@ router.patch('/me', authenticate, validate(updateProfileSchema), async (req: Aut
   } catch (error) {
     console.error('Update profile error:', error);
     res.status(500).json({ error: 'Update failed' });
+  }
+});
+
+// Request password reset
+router.post('/forgot-password', validate(forgotPasswordSchema), async (req, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    const user = await findUserByEmail(email);
+
+    // Always return success to prevent email enumeration
+    if (!user) {
+      res.json({ message: 'If an account with that email exists, a password reset link has been sent.' });
+      return;
+    }
+
+    const token = await createPasswordResetToken(user.id);
+    const resetUrl = `${config.frontend.url}/reset-password?token=${token}`;
+
+    const emailContent = generatePasswordResetEmail(resetUrl, user.name);
+
+    await sendEmail({
+      to: user.email,
+      subject: emailContent.subject,
+      textBody: emailContent.textBody,
+      htmlBody: emailContent.htmlBody,
+    });
+
+    res.json({ message: 'If an account with that email exists, a password reset link has been sent.' });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ error: 'Failed to process request' });
+  }
+});
+
+// Reset password with token
+router.post('/reset-password', validate(resetPasswordSchema), async (req, res: Response) => {
+  try {
+    const { token, password } = req.body;
+
+    const resetToken = await findValidPasswordResetToken(token);
+
+    if (!resetToken) {
+      res.status(400).json({ error: 'Invalid or expired reset token' });
+      return;
+    }
+
+    // Update the password
+    const passwordUpdated = await updateUserPassword(resetToken.user_id, password);
+
+    if (!passwordUpdated) {
+      res.status(500).json({ error: 'Failed to update password' });
+      return;
+    }
+
+    // Mark the token as used
+    await usePasswordResetToken(token);
+
+    // Get the user for response
+    const user = await findUserById(resetToken.user_id);
+
+    if (!user) {
+      res.status(500).json({ error: 'User not found' });
+      return;
+    }
+
+    // Generate a new login token
+    const authToken = generateToken(user);
+
+    res.json({
+      message: 'Password has been reset successfully',
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        phone: user.phone,
+      },
+      token: authToken,
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'Failed to reset password' });
+  }
+});
+
+// Validate reset token (for checking if token is still valid)
+router.get('/reset-password/:token', async (req, res: Response) => {
+  try {
+    const { token } = req.params;
+
+    const resetToken = await findValidPasswordResetToken(token);
+
+    if (!resetToken) {
+      res.status(400).json({ valid: false, error: 'Invalid or expired reset token' });
+      return;
+    }
+
+    res.json({ valid: true });
+  } catch (error) {
+    console.error('Validate reset token error:', error);
+    res.status(500).json({ valid: false, error: 'Failed to validate token' });
   }
 });
 

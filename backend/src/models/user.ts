@@ -1,5 +1,7 @@
 import bcrypt from 'bcryptjs';
-import { query, queryOne } from '../db/pool.js';
+import crypto from 'crypto';
+import { pool, query, queryOne } from '../db/pool.js';
+import { config } from '../config/index.js';
 
 export interface User {
   id: number;
@@ -72,4 +74,76 @@ export async function updateUser(id: number, updates: Partial<Pick<User, 'name' 
     `UPDATE users SET ${fields.join(', ')} WHERE id = $${paramCount} RETURNING *`,
     values
   );
+}
+
+// Password reset functions
+
+export interface PasswordResetToken {
+  id: number;
+  user_id: number;
+  token: string;
+  expires_at: Date;
+  used_at: Date | null;
+  created_at: Date;
+}
+
+export async function createPasswordResetToken(userId: number): Promise<string> {
+  // Invalidate any existing unused tokens for this user
+  await query(
+    `UPDATE password_reset_tokens
+     SET used_at = CURRENT_TIMESTAMP
+     WHERE user_id = $1 AND used_at IS NULL`,
+    [userId]
+  );
+
+  // Generate a secure random token
+  const token = crypto.randomBytes(32).toString('hex');
+
+  // Calculate expiry time
+  const expiresAt = new Date();
+  expiresAt.setMinutes(expiresAt.getMinutes() + config.passwordReset.tokenExpiryMinutes);
+
+  await query(
+    `INSERT INTO password_reset_tokens (user_id, token, expires_at)
+     VALUES ($1, $2, $3)`,
+    [userId, token, expiresAt]
+  );
+
+  return token;
+}
+
+export async function findValidPasswordResetToken(token: string): Promise<PasswordResetToken | null> {
+  return queryOne<PasswordResetToken>(
+    `SELECT * FROM password_reset_tokens
+     WHERE token = $1
+       AND expires_at > CURRENT_TIMESTAMP
+       AND used_at IS NULL`,
+    [token]
+  );
+}
+
+export async function usePasswordResetToken(token: string): Promise<boolean> {
+  const result = await pool.query(
+    `UPDATE password_reset_tokens
+     SET used_at = CURRENT_TIMESTAMP
+     WHERE token = $1
+       AND expires_at > CURRENT_TIMESTAMP
+       AND used_at IS NULL`,
+    [token]
+  );
+
+  return (result.rowCount ?? 0) > 0;
+}
+
+export async function updateUserPassword(userId: number, newPassword: string): Promise<boolean> {
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+
+  const result = await pool.query(
+    `UPDATE users
+     SET password_hash = $1, updated_at = CURRENT_TIMESTAMP
+     WHERE id = $2`,
+    [passwordHash, userId]
+  );
+
+  return (result.rowCount ?? 0) > 0;
 }

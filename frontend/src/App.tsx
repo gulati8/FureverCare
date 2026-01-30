@@ -3,6 +3,8 @@ import { useAuth } from './hooks/useAuth';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import PetDetail from './pages/PetDetail';
 import PublicCard from './pages/PublicCard';
@@ -50,6 +52,8 @@ export default function App() {
       {/* Public routes */}
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+      <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+      <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
       <Route path="/card/:shareId" element={<PublicCard />} />
       <Route path="/invite/:inviteCode" element={<AcceptInvite />} />
 
