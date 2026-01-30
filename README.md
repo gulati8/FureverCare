@@ -56,7 +56,6 @@ npm run dev
 
 ## Features
 
-### MVP (Current)
 - User registration and authentication
 - Pet profile management (multiple pets per account)
 - Health records:
@@ -68,13 +67,6 @@ npm run dev
   - Emergency contacts
 - Shareable emergency card with QR code
 - Public view (no login required for ER staff)
-
-### Planned
-- Photo upload
-- PDF export
-- Vaccination reminders
-- Multiple owner access
-- Vet portal
 
 ## API Endpoints
 
