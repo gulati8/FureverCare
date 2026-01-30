@@ -21,8 +21,9 @@ import { PdfUploadZone } from '../components/pdf-import/PdfUploadZone';
 import { PdfUploadList } from '../components/pdf-import/PdfUploadList';
 import { ExtractionReview } from '../components/pdf-import/ExtractionReview';
 import { AuditLogViewer } from '../components/audit/AuditLogViewer';
+import { MedicalTimeline } from '../components/MedicalTimeline';
 
-type TabType = 'overview' | 'conditions' | 'allergies' | 'medications' | 'vaccinations' | 'contacts' | 'vets' | 'import' | 'history';
+type TabType = 'overview' | 'timeline' | 'conditions' | 'allergies' | 'medications' | 'vaccinations' | 'contacts' | 'vets' | 'import' | 'history';
 
 const KG_TO_LBS = 2.20462;
 
@@ -126,8 +127,10 @@ export default function PetDetail() {
 
   if (!pet) return null;
 
+  const timelineEventCount = conditions.length + allergies.length + medications.length + vaccinations.length;
   const tabs: { id: TabType; label: string; count?: number }[] = [
     { id: 'overview', label: 'Overview' },
+    { id: 'timeline', label: 'Timeline', count: timelineEventCount > 0 ? timelineEventCount : undefined },
     { id: 'conditions', label: 'Conditions', count: conditions.length },
     { id: 'allergies', label: 'Allergies', count: allergies.length },
     { id: 'medications', label: 'Medications', count: medications.filter(m => m.is_active).length },
@@ -220,6 +223,15 @@ export default function PetDetail() {
       <div className="card">
         {activeTab === 'overview' && (
           <OverviewTab pet={pet} conditions={conditions} allergies={allergies} medications={medications} />
+        )}
+        {activeTab === 'timeline' && (
+          <MedicalTimeline
+            conditions={conditions}
+            allergies={allergies}
+            medications={medications}
+            vaccinations={vaccinations}
+            dateOfBirth={pet.date_of_birth}
+          />
         )}
         {activeTab === 'conditions' && (
           <ConditionsTab petId={petId} token={token!} conditions={conditions} setConditions={setConditions} />
