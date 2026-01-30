@@ -5,8 +5,9 @@ export interface AuditLogEntry {
   entityId: number;
   action: 'create' | 'update' | 'delete';
   changedBy: number | null;
-  source?: 'manual' | 'pdf_import';
+  source?: 'manual' | 'pdf_import' | 'image_import';
   sourcePdfUploadId?: number | null;
+  sourceImageUploadId?: number | null;
   oldValues?: Record<string, any> | null;
   newValues?: Record<string, any> | null;
   changedFields?: string[];
@@ -67,8 +68,9 @@ export async function logCreate(
   newValues: Record<string, any>,
   changedBy: number | null,
   options?: {
-    source?: 'manual' | 'pdf_import';
+    source?: 'manual' | 'pdf_import' | 'image_import';
     sourcePdfUploadId?: number;
+    sourceImageUploadId?: number;
     ipAddress?: string;
     userAgent?: string;
   }
@@ -94,8 +96,9 @@ export async function logUpdate(
   newValues: Record<string, any>,
   changedBy: number | null,
   options?: {
-    source?: 'manual' | 'pdf_import';
+    source?: 'manual' | 'pdf_import' | 'image_import';
     sourcePdfUploadId?: number;
+    sourceImageUploadId?: number;
     ipAddress?: string;
     userAgent?: string;
   }
@@ -134,8 +137,9 @@ export async function logDelete(
   oldValues: Record<string, any>,
   changedBy: number | null,
   options?: {
-    source?: 'manual' | 'pdf_import';
+    source?: 'manual' | 'pdf_import' | 'image_import';
     sourcePdfUploadId?: number;
+    sourceImageUploadId?: number;
     ipAddress?: string;
     userAgent?: string;
   }

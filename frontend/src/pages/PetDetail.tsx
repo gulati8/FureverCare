@@ -20,10 +20,11 @@ import ShareWallet from '../components/ShareWallet';
 import { PdfUploadZone } from '../components/pdf-import/PdfUploadZone';
 import { PdfUploadList } from '../components/pdf-import/PdfUploadList';
 import { ExtractionReview } from '../components/pdf-import/ExtractionReview';
+import { PhotoImportSection } from '../components/photo-import/PhotoImportSection';
 import { AuditLogViewer } from '../components/audit/AuditLogViewer';
 import { MedicalTimeline } from '../components/MedicalTimeline';
 
-type TabType = 'overview' | 'timeline' | 'conditions' | 'allergies' | 'medications' | 'vaccinations' | 'contacts' | 'vets' | 'import' | 'history';
+type TabType = 'overview' | 'timeline' | 'conditions' | 'allergies' | 'medications' | 'vaccinations' | 'contacts' | 'vets' | 'import' | 'photo-import' | 'history';
 
 const KG_TO_LBS = 2.20462;
 
@@ -137,7 +138,8 @@ export default function PetDetail() {
     { id: 'vaccinations', label: 'Vaccinations', count: vaccinations.length },
     { id: 'vets', label: 'Veterinarians', count: vets.length },
     { id: 'contacts', label: 'Emergency Contacts', count: emergencyContacts.length },
-    { id: 'import', label: 'Import PDF' },
+    { id: 'photo-import', label: 'Photo Import' },
+    { id: 'import', label: 'PDF Import' },
     { id: 'history', label: 'History' },
   ];
 
@@ -250,6 +252,9 @@ export default function PetDetail() {
         )}
         {activeTab === 'contacts' && (
           <ContactsTab petId={petId} token={token!} contacts={emergencyContacts} setContacts={setEmergencyContacts} />
+        )}
+        {activeTab === 'photo-import' && (
+          <PhotoImportSection petId={petId} />
         )}
         {activeTab === 'import' && (
           <ImportTab petId={petId} onImportComplete={() => loadPetData()} />

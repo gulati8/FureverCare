@@ -50,6 +50,12 @@ export const config = {
     tokenExpiryMinutes: parseInt(process.env.PASSWORD_RESET_EXPIRY_MINUTES || '60', 10),
   },
 
+  imageUpload: {
+    maxSizeMB: parseInt(process.env.IMAGE_MAX_SIZE_MB || '10', 10),
+    uploadDir: process.env.IMAGE_UPLOAD_DIR || 'uploads/images',
+    allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+  },
+
   isProduction: process.env.NODE_ENV === 'production',
   isDevelopment: process.env.NODE_ENV !== 'production',
 };

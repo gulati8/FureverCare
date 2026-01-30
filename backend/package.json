@@ -13,6 +13,7 @@
     "db:migrate:weight-units": "node dist/db/migrate-weight-units.js",
     "db:migrate:sex-fixed": "node dist/db/migrate-sex-fixed.js",
     "db:migrate:password-reset": "node dist/db/migrate-password-reset.js",
+    "db:migrate:image-import": "node dist/db/migrate-image-import.js",
     "db:migrate:dev": "tsx src/db/migrate.ts",
     "db:migrate:owners:dev": "tsx src/db/migrate-owners.ts",
     "db:migrate:pdf-import:dev": "tsx src/db/migrate-pdf-import.ts",
@@ -21,6 +22,7 @@
     "db:migrate:password-reset:dev": "tsx src/db/migrate-password-reset.ts",
     "db:migrate:share-tokens": "node dist/db/migrate-share-tokens.js",
     "db:migrate:share-tokens:dev": "tsx src/db/migrate-share-tokens.ts",
+    "db:migrate:image-import:dev": "tsx src/db/migrate-image-import.ts",
     "db:seed": "node dist/db/seed.js",
     "db:seed:dev": "tsx src/db/seed.ts"
   },

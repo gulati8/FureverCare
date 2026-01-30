@@ -490,6 +490,125 @@ export const pdfImportApi = {
     api.patch<PdfExtractionItem>(`/api/pets/${petId}/pdf-import/extraction-items/${itemId}`, { modifiedData }, token),
 };
 
+// Image/Photo Import Types
+export type ImageUploadStatus = 'pending' | 'processing' | 'completed' | 'failed';
+export type ImageDocumentType = 'vaccination_card' | 'medication_label' | 'pet_id_tag' | 'medical_record' | 'other';
+
+export interface ImageUpload {
+  id: number;
+  pet_id: number;
+  uploaded_by: number;
+  filename: string;
+  original_filename: string;
+  file_path: string;
+  file_size: number;
+  mime_type: string;
+  status: ImageUploadStatus;
+  document_type: ImageDocumentType | null;
+  processing_started_at: string | null;
+  processing_completed_at: string | null;
+  error_message: string | null;
+  created_at: string;
+}
+
+export interface ImageExtraction {
+  id: number;
+  image_upload_id: number;
+  raw_extraction: Record<string, any> | null;
+  mapped_data: Record<string, any> | null;
+  extraction_model: string | null;
+  tokens_used: number | null;
+  status: string;
+  reviewed_by: number | null;
+  reviewed_at: string | null;
+  created_at: string;
+}
+
+export interface ImageExtractionItem {
+  id: number;
+  extraction_id: number;
+  record_type: RecordType;
+  extracted_data: Record<string, any>;
+  confidence_score: number | null;
+  user_modified_data: Record<string, any> | null;
+  status: ExtractionItemStatus;
+  created_record_id: number | null;
+  created_record_type: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ImageExtractionWithItems {
+  extraction: ImageExtraction;
+  items: ImageExtractionItem[];
+}
+
+export interface ImageProcessingResult {
+  upload: ImageUpload;
+  extraction?: ImageExtraction;
+  items?: ImageExtractionItem[];
+  error?: string;
+}
+
+// Photo Import API
+export const photoImportApi = {
+  // Upload an image file
+  upload: async (petId: number, file: File, token: string, documentType?: ImageDocumentType): Promise<ImageUpload> => {
+    const formData = new FormData();
+    formData.append('image', file);
+    if (documentType) {
+      formData.append('documentType', documentType);
+    }
+
+    const response = await fetch(`${API_URL}/api/pets/${petId}/photo-import/upload`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Upload failed' }));
+      throw new Error(error.error || 'Upload failed');
+    }
+
+    return response.json();
+  },
+
+  // List all uploads for a pet
+  listUploads: (petId: number, token: string) =>
+    api.get<ImageUpload[]>(`/api/pets/${petId}/photo-import/uploads`, token),
+
+  // Get a specific upload
+  getUpload: (petId: number, uploadId: number, token: string) =>
+    api.get<ImageUpload>(`/api/pets/${petId}/photo-import/uploads/${uploadId}`, token),
+
+  // Delete an upload
+  deleteUpload: (petId: number, uploadId: number, token: string) =>
+    api.delete(`/api/pets/${petId}/photo-import/uploads/${uploadId}`, token),
+
+  // Process an uploaded image
+  processUpload: (petId: number, uploadId: number, token: string) =>
+    api.post<ImageProcessingResult>(`/api/pets/${petId}/photo-import/uploads/${uploadId}/process`, {}, token),
+
+  // Get extraction results
+  getExtraction: (petId: number, uploadId: number, token: string) =>
+    api.get<ImageExtractionWithItems>(`/api/pets/${petId}/photo-import/uploads/${uploadId}/extraction`, token),
+
+  // Approve extraction items
+  approveItems: (petId: number, uploadId: number, itemIds: number[], token: string) =>
+    api.post<ApprovalResult>(`/api/pets/${petId}/photo-import/uploads/${uploadId}/extraction/approve`, { itemIds }, token),
+
+  // Reject extraction items
+  rejectItems: (petId: number, uploadId: number, itemIds: number[], token: string) =>
+    api.post<{ rejected: number[] }>(`/api/pets/${petId}/photo-import/uploads/${uploadId}/extraction/reject`, { itemIds }, token),
+
+  // Edit an extraction item
+  editItem: (petId: number, itemId: number, modifiedData: Record<string, any>, token: string) =>
+    api.patch<ImageExtractionItem>(`/api/pets/${petId}/photo-import/extraction-items/${itemId}`, { modifiedData }, token),
+};
+
 // Audit API
 export const auditApi = {
   // Get audit log for a pet
