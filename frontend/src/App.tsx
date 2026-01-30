@@ -8,6 +8,7 @@ import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import PetDetail from './pages/PetDetail';
 import PublicCard from './pages/PublicCard';
+import TokenCard from './pages/TokenCard';
 import AcceptInvite from './pages/AcceptInvite';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -55,6 +56,7 @@ export default function App() {
       <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
       <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
       <Route path="/card/:shareId" element={<PublicCard />} />
+      <Route path="/share/:token" element={<TokenCard />} />
       <Route path="/invite/:inviteCode" element={<AcceptInvite />} />
 
       {/* Private routes */}

@@ -143,6 +143,28 @@ export const petsApi = {
 export const publicApi = {
   getEmergencyCard: (shareId: string) =>
     api.get<EmergencyCard>(`/api/public/card/${shareId}`),
+
+  // Token-based sharing (time-limited, PIN-protected)
+  getTokenInfo: (token: string) =>
+    api.get<ShareTokenInfo>(`/api/public/token/${token}/info`),
+
+  accessWithToken: (token: string, pin?: string) =>
+    api.post<EmergencyCard>(`/api/public/token/${token}/access`, { pin }),
+};
+
+// Share Tokens API (authenticated)
+export const shareTokensApi = {
+  list: (petId: number, token: string) =>
+    api.get<ShareToken[]>(`/api/pets/${petId}/share-tokens`, token),
+
+  create: (petId: number, data: CreateShareTokenInput, token: string) =>
+    api.post<ShareToken>(`/api/pets/${petId}/share-tokens`, data, token),
+
+  delete: (petId: number, tokenId: number, token: string) =>
+    api.delete(`/api/pets/${petId}/share-tokens/${tokenId}`, token),
+
+  deactivate: (petId: number, tokenId: number, token: string) =>
+    api.patch<ShareToken>(`/api/pets/${petId}/share-tokens/${tokenId}/deactivate`, {}, token),
 };
 
 // Types
@@ -381,6 +403,32 @@ export interface AuditLogResponse {
     offset: number;
     hasMore: boolean;
   };
+}
+
+// Share Token Types
+export interface ShareToken {
+  id: number;
+  token: string;
+  label: string | null;
+  has_pin: boolean;
+  expires_at: string | null;
+  created_at: string;
+  access_count: number;
+  last_accessed_at: string | null;
+  is_active: boolean;
+  is_expired: boolean;
+}
+
+export interface CreateShareTokenInput {
+  label?: string;
+  pin?: string;
+  expires_in_hours?: number;
+}
+
+export interface ShareTokenInfo {
+  requires_pin: boolean;
+  expires_at: string | null;
+  label: string | null;
 }
 
 // PDF Import API

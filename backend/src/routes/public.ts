@@ -1,5 +1,5 @@
 import { Router, Response, Request } from 'express';
-import { findPetByShareId } from '../models/pet.js';
+import { findPetByShareId, findPetById } from '../models/pet.js';
 import { findUserById } from '../models/user.js';
 import {
   getPetVets,
@@ -10,6 +10,12 @@ import {
   getPetEmergencyContacts,
 } from '../models/health-records.js';
 import { cacheGet, cacheSet } from '../db/redis.js';
+import {
+  findShareTokenByToken,
+  verifyShareTokenPin,
+  isShareTokenValid,
+  updateShareTokenAccess,
+} from '../models/share-tokens.js';
 
 const router = Router();
 
@@ -143,6 +149,188 @@ router.get('/card/:shareId', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching emergency card:', error);
     res.status(500).json({ error: 'Failed to fetch emergency card' });
+  }
+});
+
+// Helper function to build emergency card response
+async function buildEmergencyCard(pet: any) {
+  // Fetch owner info
+  const owner = await findUserById(pet.user_id);
+
+  // Fetch all health records in parallel
+  const [vets, conditions, allergies, medications, vaccinations, emergencyContacts] = await Promise.all([
+    getPetVets(pet.id),
+    getPetConditions(pet.id),
+    getPetAllergies(pet.id),
+    getPetMedications(pet.id),
+    getPetVaccinations(pet.id),
+    getPetEmergencyContacts(pet.id),
+  ]);
+
+  // Calculate age from date of birth
+  let age = null;
+  if (pet.date_of_birth) {
+    const dob = new Date(pet.date_of_birth);
+    const now = new Date();
+    const years = now.getFullYear() - dob.getFullYear();
+    const months = now.getMonth() - dob.getMonth();
+    if (years > 0) {
+      age = `${years} year${years > 1 ? 's' : ''}`;
+    } else if (months > 0) {
+      age = `${months} month${months > 1 ? 's' : ''}`;
+    } else {
+      const days = Math.floor((now.getTime() - dob.getTime()) / (1000 * 60 * 60 * 24));
+      age = `${days} day${days !== 1 ? 's' : ''}`;
+    }
+  }
+
+  return {
+    // Pet basic info
+    pet: {
+      name: pet.name,
+      species: pet.species,
+      breed: pet.breed,
+      age,
+      date_of_birth: pet.date_of_birth,
+      weight_kg: pet.weight_kg,
+      weight_unit: pet.weight_unit,
+      sex: pet.sex,
+      is_fixed: pet.is_fixed,
+      microchip_id: pet.microchip_id,
+      photo_url: pet.photo_url,
+      special_instructions: pet.special_instructions,
+    },
+
+    // Owner contact (primary emergency contact)
+    owner: owner ? {
+      name: owner.name,
+      phone: owner.phone,
+      email: owner.email,
+    } : null,
+
+    // Medical information
+    conditions: conditions.map(c => ({
+      name: c.name,
+      severity: c.severity,
+      notes: c.notes,
+    })),
+
+    allergies: allergies.map(a => ({
+      allergen: a.allergen,
+      reaction: a.reaction,
+      severity: a.severity,
+    })),
+
+    medications: medications
+      .filter(m => m.is_active)
+      .map(m => ({
+        name: m.name,
+        dosage: m.dosage,
+        frequency: m.frequency,
+        notes: m.notes,
+      })),
+
+    vaccinations: vaccinations.map(v => ({
+      name: v.name,
+      administered_date: v.administered_date,
+      expiration_date: v.expiration_date,
+    })),
+
+    // Veterinarian info
+    veterinarians: vets.map(v => ({
+      clinic_name: v.clinic_name,
+      vet_name: v.vet_name,
+      phone: v.phone,
+      is_primary: v.is_primary,
+    })),
+
+    // Additional emergency contacts
+    emergency_contacts: emergencyContacts.map(c => ({
+      name: c.name,
+      relationship: c.relationship,
+      phone: c.phone,
+      is_primary: c.is_primary,
+    })),
+
+    // Metadata
+    generated_at: new Date().toISOString(),
+  };
+}
+
+// Check if a share token requires PIN without revealing if it exists
+router.get('/token/:token/info', async (req: Request, res: Response) => {
+  try {
+    const { token } = req.params;
+
+    const shareToken = await findShareTokenByToken(token);
+    if (!shareToken) {
+      res.status(404).json({ error: 'Share link not found' });
+      return;
+    }
+
+    if (!isShareTokenValid(shareToken)) {
+      res.status(410).json({ error: 'This share link has expired or been deactivated' });
+      return;
+    }
+
+    res.json({
+      requires_pin: shareToken.pin_hash !== null,
+      expires_at: shareToken.expires_at,
+      label: shareToken.label,
+    });
+  } catch (error) {
+    console.error('Error fetching token info:', error);
+    res.status(500).json({ error: 'Failed to fetch share link info' });
+  }
+});
+
+// Access pet card via share token (with optional PIN)
+router.post('/token/:token/access', async (req: Request, res: Response) => {
+  try {
+    const { token } = req.params;
+    const { pin } = req.body;
+
+    const shareToken = await findShareTokenByToken(token);
+    if (!shareToken) {
+      res.status(404).json({ error: 'Share link not found' });
+      return;
+    }
+
+    if (!isShareTokenValid(shareToken)) {
+      res.status(410).json({ error: 'This share link has expired or been deactivated' });
+      return;
+    }
+
+    // Verify PIN if required
+    if (shareToken.pin_hash) {
+      if (!pin) {
+        res.status(401).json({ error: 'PIN required', requires_pin: true });
+        return;
+      }
+
+      const pinValid = await verifyShareTokenPin(token, pin);
+      if (!pinValid) {
+        res.status(401).json({ error: 'Invalid PIN' });
+        return;
+      }
+    }
+
+    // Fetch pet
+    const pet = await findPetById(shareToken.pet_id);
+    if (!pet) {
+      res.status(404).json({ error: 'Pet not found' });
+      return;
+    }
+
+    // Update access stats
+    await updateShareTokenAccess(token);
+
+    // Build and return emergency card
+    const emergencyCard = await buildEmergencyCard(pet);
+    res.json(emergencyCard);
+  } catch (error) {
+    console.error('Error accessing token:', error);
+    res.status(500).json({ error: 'Failed to access share link' });
   }
 });
 

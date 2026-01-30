@@ -11,6 +11,7 @@ import uploadRoutes from './routes/upload.js';
 import ownersRoutes from './routes/owners.js';
 import pdfImportRoutes from './routes/pdf-import.js';
 import auditRoutes from './routes/audit.js';
+import shareTokenRoutes from './routes/share-tokens.js';
 
 const app = express();
 
@@ -49,6 +50,7 @@ app.use('/api/pets', auditRoutes);       // Audit routes under /api/pets/:petId/
 app.use('/api/public', publicRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/owners', ownersRoutes);
+app.use('/api', shareTokenRoutes);  // Share token routes under /api/pets/:petId/share-tokens
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

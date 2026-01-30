@@ -19,6 +19,8 @@
     "db:migrate:weight-units:dev": "tsx src/db/migrate-weight-units.ts",
     "db:migrate:sex-fixed:dev": "tsx src/db/migrate-sex-fixed.ts",
     "db:migrate:password-reset:dev": "tsx src/db/migrate-password-reset.ts",
+    "db:migrate:share-tokens": "node dist/db/migrate-share-tokens.js",
+    "db:migrate:share-tokens:dev": "tsx src/db/migrate-share-tokens.ts",
     "db:seed": "node dist/db/seed.js",
     "db:seed:dev": "tsx src/db/seed.ts"
   },
