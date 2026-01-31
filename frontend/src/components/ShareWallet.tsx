@@ -6,7 +6,7 @@ import { shareTokensApi, ShareToken } from '../api/client';
 interface ShareWalletProps {
   petId: number;
   petName: string;
-  permanentShareUrl: string;
+  permanentShareUrl?: string; // No longer used, kept for compatibility
   onClose: () => void;
 }
 
@@ -134,8 +134,8 @@ export default function ShareWallet({ petId, petName, permanentShareUrl, onClose
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b">
           <div>
-            <h2 className="text-xl font-bold">Share {petName}'s Card</h2>
-            <p className="text-sm text-gray-500">Manage share links for emergency access</p>
+            <h2 className="text-xl font-bold">Custom Share Links</h2>
+            <p className="text-sm text-gray-500">Create time-limited or PIN-protected links for {petName}</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -148,37 +148,14 @@ export default function ShareWallet({ petId, petName, permanentShareUrl, onClose
         <div className="flex-1 overflow-y-auto p-6">
           {viewMode === 'list' && (
             <div className="space-y-4">
-              {/* Permanent Share Link */}
-              <div className="border rounded-lg p-4 bg-gray-50">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <h3 className="font-medium text-gray-900">Permanent Link</h3>
-                    <p className="text-xs text-gray-500">No expiration, no PIN</p>
-                  </div>
-                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">Always Active</span>
-                </div>
-                <div className="flex gap-2 mt-3">
-                  <input
-                    type="text"
-                    readOnly
-                    value={permanentShareUrl}
-                    className="input flex-1 text-xs"
-                  />
-                  <button
-                    onClick={() => handleCopy(permanentShareUrl, 'permanent')}
-                    className="btn-secondary text-sm whitespace-nowrap"
-                  >
-                    {copiedId === 'permanent' ? 'Copied!' : 'Copy'}
-                  </button>
-                </div>
-              </div>
-
-              {/* Custom Share Links */}
+              {/* Create New Link Button */}
               <div className="flex items-center justify-between">
-                <h3 className="font-medium text-gray-700">Custom Share Links</h3>
+                <p className="text-sm text-gray-600">
+                  Create links for pet sitters, boarding, or temporary access.
+                </p>
                 <button
                   onClick={() => setViewMode('create')}
-                  className="btn-primary text-sm"
+                  className="btn-primary text-sm whitespace-nowrap"
                 >
                   + New Link
                 </button>
@@ -187,9 +164,9 @@ export default function ShareWallet({ petId, petName, permanentShareUrl, onClose
               {isLoading ? (
                 <div className="text-center py-8 text-gray-500">Loading...</div>
               ) : tokens.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <p>No custom share links yet</p>
-                  <p className="text-sm mt-1">Create a time-limited or PIN-protected link</p>
+                <div className="text-center py-12 text-gray-500">
+                  <p className="mb-2">No custom share links yet</p>
+                  <p className="text-sm">Use these for pet sitters, boarding facilities, or anyone who needs temporary access.</p>
                 </div>
               ) : (
                 <div className="space-y-3">

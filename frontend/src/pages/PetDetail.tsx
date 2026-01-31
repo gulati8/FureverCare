@@ -14,6 +14,7 @@ import {
 } from '../api/client';
 import EditPetModal from '../components/EditPetModal';
 import ManageAccessModal from '../components/ManageAccessModal';
+import ShareModal from '../components/ShareModal';
 import ShareWallet from '../components/ShareWallet';
 import { DocumentImportSection } from '../components/document-import/DocumentImportSection';
 import { AuditLogViewer } from '../components/audit/AuditLogViewer';
@@ -44,6 +45,7 @@ export default function PetDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showLinkWallet, setShowLinkWallet] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAccessModal, setShowAccessModal] = useState(false);
 
@@ -255,13 +257,26 @@ export default function PetDetail() {
         )}
       </div>
 
-      {/* Share Wallet */}
+      {/* Quick Share Modal */}
       {showShareModal && (
+        <ShareModal
+          petName={pet.name}
+          shareUrl={shareUrl}
+          onClose={() => setShowShareModal(false)}
+          onManageLinks={() => {
+            setShowShareModal(false);
+            setShowLinkWallet(true);
+          }}
+        />
+      )}
+
+      {/* Link Management Wallet */}
+      {showLinkWallet && (
         <ShareWallet
           petId={petId}
           petName={pet.name}
           permanentShareUrl={shareUrl}
-          onClose={() => setShowShareModal(false)}
+          onClose={() => setShowLinkWallet(false)}
         />
       )}
 
