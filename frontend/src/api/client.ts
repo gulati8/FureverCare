@@ -609,6 +609,146 @@ export const photoImportApi = {
     api.patch<ImageExtractionItem>(`/api/pets/${petId}/photo-import/extraction-items/${itemId}`, { modifiedData }, token),
 };
 
+// Consolidated Document Import Types
+export type DocumentUploadStatus = 'pending' | 'classifying' | 'classified' | 'processing' | 'completed' | 'failed';
+export type DetectedDocumentType = 'vaccination_record' | 'visit_summary' | 'lab_results' | 'prescription' | 'medication_label' | 'pet_id_tag' | 'other';
+
+export interface DocumentUpload {
+  id: number;
+  pet_id: number;
+  uploaded_by: number;
+  filename: string;
+  original_filename: string;
+  file_path: string;
+  file_size: number;
+  mime_type: string;
+  file_type: 'pdf' | 'image';
+  status: DocumentUploadStatus;
+  detected_document_type: DetectedDocumentType | null;
+  classification_confidence: number | null;
+  classification_explanation: string | null;
+  processing_started_at: string | null;
+  processing_completed_at: string | null;
+  error_message: string | null;
+  created_at: string;
+}
+
+export interface DocumentClassification {
+  document_type: DetectedDocumentType;
+  confidence: number;
+  explanation: string;
+  summary: {
+    medications_count: number;
+    conditions_count: number;
+    vaccinations_count: number;
+    allergies_count: number;
+  };
+}
+
+export interface DocumentExtraction {
+  id: number;
+  document_upload_id: number;
+  raw_extraction: Record<string, any> | null;
+  mapped_data: Record<string, any> | null;
+  extraction_model: string | null;
+  tokens_used: number | null;
+  status: string;
+  reviewed_by: number | null;
+  reviewed_at: string | null;
+  created_at: string;
+}
+
+export interface DocumentExtractionItem {
+  id: number;
+  extraction_id: number;
+  record_type: RecordType;
+  extracted_data: Record<string, any>;
+  confidence_score: number | null;
+  user_modified_data: Record<string, any> | null;
+  status: ExtractionItemStatus;
+  created_record_id: number | null;
+  created_record_type: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DocumentExtractionWithItems {
+  extraction: DocumentExtraction;
+  items: DocumentExtractionItem[];
+}
+
+export interface DocumentProcessingResult {
+  upload: DocumentUpload;
+  classification?: DocumentClassification;
+  extraction?: DocumentExtraction;
+  items?: DocumentExtractionItem[];
+  error?: string;
+}
+
+// Consolidated Document Import API
+export const documentsApi = {
+  // Upload a document (PDF or image)
+  upload: async (petId: number, file: File, token: string): Promise<DocumentUpload> => {
+    const formData = new FormData();
+    formData.append('document', file);
+
+    const response = await fetch(`${API_URL}/api/pets/${petId}/documents/upload`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Upload failed' }));
+      throw new Error(error.error || 'Upload failed');
+    }
+
+    return response.json();
+  },
+
+  // List all document uploads for a pet
+  listUploads: (petId: number, token: string) =>
+    api.get<DocumentUpload[]>(`/api/pets/${petId}/documents/uploads`, token),
+
+  // Get a specific upload
+  getUpload: (petId: number, uploadId: number, token: string) =>
+    api.get<DocumentUpload>(`/api/pets/${petId}/documents/uploads/${uploadId}`, token),
+
+  // Delete an upload
+  deleteUpload: (petId: number, uploadId: number, token: string) =>
+    api.delete(`/api/pets/${petId}/documents/uploads/${uploadId}`, token),
+
+  // Classify an uploaded document (detect type without full extraction)
+  classifyUpload: (petId: number, uploadId: number, token: string) =>
+    api.post<{ upload: DocumentUpload; classification: DocumentClassification }>(
+      `/api/pets/${petId}/documents/uploads/${uploadId}/classify`,
+      {},
+      token
+    ),
+
+  // Process an uploaded document (full extraction)
+  processUpload: (petId: number, uploadId: number, token: string) =>
+    api.post<DocumentProcessingResult>(`/api/pets/${petId}/documents/uploads/${uploadId}/process`, {}, token),
+
+  // Get extraction results
+  getExtraction: (petId: number, uploadId: number, token: string) =>
+    api.get<DocumentExtractionWithItems>(`/api/pets/${petId}/documents/uploads/${uploadId}/extraction`, token),
+
+  // Approve extraction items
+  approveItems: (petId: number, uploadId: number, itemIds: number[], token: string) =>
+    api.post<ApprovalResult>(`/api/pets/${petId}/documents/uploads/${uploadId}/extraction/approve`, { itemIds }, token),
+
+  // Reject extraction items
+  rejectItems: (petId: number, uploadId: number, itemIds: number[], token: string) =>
+    api.post<{ rejected: number[] }>(`/api/pets/${petId}/documents/uploads/${uploadId}/extraction/reject`, { itemIds }, token),
+
+  // Edit an extraction item
+  editItem: (petId: number, itemId: number, modifiedData: Record<string, any>, token: string) =>
+    api.patch<DocumentExtractionItem>(`/api/pets/${petId}/documents/extraction-items/${itemId}`, { modifiedData }, token),
+};
+
 // Audit API
 export const auditApi = {
   // Get audit log for a pet
