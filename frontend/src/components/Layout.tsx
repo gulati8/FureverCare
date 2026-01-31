@@ -1,8 +1,9 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { Cog6ToothIcon } from '@heroicons/react/24/outline';
 
 export default function Layout() {
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -26,6 +27,15 @@ export default function Layout() {
             </div>
 
             <div className="flex items-center space-x-4">
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  className="flex items-center space-x-1 text-primary-600 hover:text-primary-700"
+                >
+                  <Cog6ToothIcon className="w-5 h-5" />
+                  <span>Admin</span>
+                </Link>
+              )}
               <span className="text-gray-600">Hi, {user?.name}</span>
               <button
                 onClick={handleLogout}

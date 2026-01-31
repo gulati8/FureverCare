@@ -26,7 +26,13 @@
     "db:migrate:document-import": "node dist/db/migrate-document-import.js",
     "db:migrate:document-import:dev": "tsx src/db/migrate-document-import.ts",
     "db:seed": "node dist/db/seed.js",
-    "db:seed:dev": "tsx src/db/seed.ts"
+    "db:seed:dev": "tsx src/db/seed.ts",
+    "db:migrate:admin-role": "node dist/db/migrate-admin-role.js",
+    "db:migrate:admin-role:dev": "tsx src/db/migrate-admin-role.ts",
+    "db:migrate:cms": "node dist/db/migrate-cms.js",
+    "db:migrate:cms:dev": "tsx src/db/migrate-cms.ts",
+    "db:seed:cms": "node dist/db/seed-cms.js",
+    "db:seed:cms:dev": "tsx src/db/seed-cms.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
