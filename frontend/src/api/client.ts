@@ -42,6 +42,9 @@ export const api = {
   post: <T>(endpoint: string, data: unknown, token?: string) =>
     request<T>(endpoint, { method: 'POST', body: JSON.stringify(data), token }),
 
+  put: <T>(endpoint: string, data: unknown, token?: string) =>
+    request<T>(endpoint, { method: 'PUT', body: JSON.stringify(data), token }),
+
   patch: <T>(endpoint: string, data: unknown, token?: string) =>
     request<T>(endpoint, { method: 'PATCH', body: JSON.stringify(data), token }),
 

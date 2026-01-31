@@ -6,17 +6,20 @@ import { findUserById, User } from '../models/user.js';
 export interface AuthRequest extends Request {
   user?: User;
   userId?: number;
+  isAdmin?: boolean;
 }
 
 export interface JWTPayload {
   userId: number;
   email: string;
+  isAdmin?: boolean;
 }
 
 export function generateToken(user: User): string {
   const payload: JWTPayload = {
     userId: user.id,
     email: user.email,
+    isAdmin: user.is_admin,
   };
 
   return jwt.sign(payload, config.jwt.secret, {
@@ -52,6 +55,7 @@ export async function authenticate(
 
     req.user = user;
     req.userId = user.id;
+    req.isAdmin = user.is_admin;
     next();
   } catch (error) {
     res.status(401).json({ error: 'Invalid or expired token' });

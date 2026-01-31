@@ -9,6 +9,7 @@ export interface User {
   password_hash: string;
   name: string;
   phone: string | null;
+  is_admin: boolean;
   created_at: Date;
   updated_at: Date;
 }

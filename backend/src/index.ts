@@ -14,6 +14,7 @@ import photoImportRoutes from './routes/photo-import.js';
 import documentImportRoutes from './routes/document-import.js';
 import auditRoutes from './routes/audit.js';
 import shareTokenRoutes from './routes/share-tokens.js';
+import cmsRoutes from './routes/cms.js';
 
 const app = express();
 
@@ -55,6 +56,7 @@ app.use('/api/public', publicRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/owners', ownersRoutes);
 app.use('/api', shareTokenRoutes);  // Share token routes under /api/pets/:petId/share-tokens
+app.use('/api/cms', cmsRoutes);     // CMS routes under /api/cms
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
