@@ -275,7 +275,6 @@ export default function PetDetail() {
         <ShareWallet
           petId={petId}
           petName={pet.name}
-          permanentShareUrl={shareUrl}
           onClose={() => setShowLinkWallet(false)}
         />
       )}

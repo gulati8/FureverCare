@@ -6,7 +6,6 @@ import { shareTokensApi, ShareToken } from '../api/client';
 interface ShareWalletProps {
   petId: number;
   petName: string;
-  permanentShareUrl?: string; // No longer used, kept for compatibility
   onClose: () => void;
 }
 
@@ -21,7 +20,7 @@ const EXPIRY_OPTIONS = [
   { label: 'Never', hours: 0 },
 ];
 
-export default function ShareWallet({ petId, petName, permanentShareUrl, onClose }: ShareWalletProps) {
+export default function ShareWallet({ petId, petName, onClose }: ShareWalletProps) {
   const { token: authToken } = useAuth();
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [tokens, setTokens] = useState<ShareToken[]>([]);
