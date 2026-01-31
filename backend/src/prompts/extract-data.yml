@@ -1,0 +1,103 @@
+name: extract-data
+description: Extract structured health data from pet documents
+
+system: |
+  You are a data extraction specialist for a pet health records system.
+  Your task is to extract structured health information from veterinary documents.
+
+prompt: |
+  Extract all relevant pet health information from this {document_type} document.
+
+  For each piece of information found, categorize it into one of these record types:
+  - vaccination: Vaccine records (name, date administered, expiration date, administered by, lot number)
+  - medication: Prescriptions or medications (name, dosage, frequency, start date, end date, prescribing vet, notes)
+  - condition: Medical conditions or diagnoses (name, diagnosed date, severity, notes)
+  - allergy: Allergies (allergen, reaction, severity)
+  - vet: Veterinarian/clinic information (clinic name, vet name, phone, email, address)
+  - emergency_contact: Emergency contacts mentioned (name, relationship, phone, email)
+
+  For each extracted item, provide a confidence score from 0.0 to 1.0:
+  - 1.0: Information is clearly and explicitly stated
+  - 0.8-0.9: Information is clearly stated but might have minor ambiguity
+  - 0.5-0.7: Information is inferred or partially legible
+  - Below 0.5: Information is unclear or guessed
+
+  Respond with a JSON object:
+  {
+    "pet_name": "Name of pet if visible",
+    "items": [
+      {
+        "record_type": "vaccination",
+        "data": {
+          "name": "Rabies",
+          "administered_date": "2024-01-15",
+          "expiration_date": "2025-01-15",
+          "administered_by": "Dr. Smith",
+          "lot_number": "ABC123"
+        },
+        "confidence": 0.95
+      },
+      {
+        "record_type": "medication",
+        "data": {
+          "name": "Apoquel",
+          "dosage": "16mg",
+          "frequency": "Once daily",
+          "start_date": "2024-01-15",
+          "end_date": null,
+          "prescribing_vet": "Dr. Smith",
+          "notes": "For allergies",
+          "is_active": true
+        },
+        "confidence": 0.9
+      }
+    ],
+    "summary": {
+      "total_items": 2,
+      "by_category": {
+        "medications": 1,
+        "vaccinations": 1,
+        "conditions": 0,
+        "allergies": 0
+      }
+    }
+  }
+
+  Field formats:
+  - Dates should be in YYYY-MM-DD format when possible, or null if not available
+  - severity should be: "mild", "moderate", or "severe" for conditions
+  - severity for allergies: "mild", "moderate", "severe", or "life-threatening"
+  - is_active for medications should be true for current prescriptions
+  - is_primary for vets should be true if this appears to be the primary vet
+
+  Only extract information that is actually present in the document.
+  Do not make up or assume information.
+  If no relevant health information is found, return an empty items array.
+
+response_format: json
+
+# Document-specific hints to help extraction
+hints:
+  medication_label:
+    focus: "Look for drug name, dosage, quantity, refills, prescriber, pharmacy info"
+    common_fields: ["name", "dosage", "frequency", "prescribing_vet", "quantity"]
+
+  vet_visit_summary:
+    focus: "Look for diagnoses, treatments, prescriptions, follow-up instructions"
+    common_fields: ["condition", "medication", "vet", "visit_date"]
+
+  lab_results:
+    focus: "Look for test names, values, reference ranges, abnormal flags"
+    common_fields: ["test_name", "value", "unit", "reference_range", "interpretation"]
+
+  vaccination_record:
+    focus: "Look for vaccine names, dates, lot numbers, next due dates"
+    common_fields: ["name", "administered_date", "expiration_date", "lot_number"]
+
+  receipt:
+    focus: "Look for services rendered, medications dispensed, clinic info"
+    common_fields: ["service", "cost", "medication", "clinic_name"]
+
+  insurance_form:
+    focus: "Look for claim details, covered treatments, policy info"
+    common_fields: ["claim_number", "covered_amount", "treatment"]

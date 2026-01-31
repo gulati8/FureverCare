@@ -56,6 +56,18 @@ export const config = {
     allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
   },
 
+  documentUpload: {
+    maxSizeMB: parseInt(process.env.DOCUMENT_MAX_SIZE_MB || '20', 10),
+    uploadDir: process.env.DOCUMENT_UPLOAD_DIR || 'uploads/documents',
+    allowedMimeTypes: [
+      'application/pdf',
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'image/gif',
+    ],
+  },
+
   isProduction: process.env.NODE_ENV === 'production',
   isDevelopment: process.env.NODE_ENV !== 'production',
 };

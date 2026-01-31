@@ -11,6 +11,7 @@ import uploadRoutes from './routes/upload.js';
 import ownersRoutes from './routes/owners.js';
 import pdfImportRoutes from './routes/pdf-import.js';
 import photoImportRoutes from './routes/photo-import.js';
+import documentImportRoutes from './routes/document-import.js';
 import auditRoutes from './routes/audit.js';
 import shareTokenRoutes from './routes/share-tokens.js';
 
@@ -48,6 +49,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/pets', petRoutes);
 app.use('/api/pets', pdfImportRoutes);    // PDF import routes under /api/pets/:petId/pdf-import
 app.use('/api/pets', photoImportRoutes);  // Photo import routes under /api/pets/:petId/photo-import
+app.use('/api/pets', documentImportRoutes); // Unified document import routes under /api/pets/:petId/documents
 app.use('/api/pets', auditRoutes);        // Audit routes under /api/pets/:petId/audit
 app.use('/api/public', publicRoutes);
 app.use('/api/upload', uploadRoutes);

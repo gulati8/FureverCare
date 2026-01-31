@@ -23,6 +23,8 @@
     "db:migrate:share-tokens": "node dist/db/migrate-share-tokens.js",
     "db:migrate:share-tokens:dev": "tsx src/db/migrate-share-tokens.ts",
     "db:migrate:image-import:dev": "tsx src/db/migrate-image-import.ts",
+    "db:migrate:document-import": "node dist/db/migrate-document-import.js",
+    "db:migrate:document-import:dev": "tsx src/db/migrate-document-import.ts",
     "db:seed": "node dist/db/seed.js",
     "db:seed:dev": "tsx src/db/seed.ts"
   },
