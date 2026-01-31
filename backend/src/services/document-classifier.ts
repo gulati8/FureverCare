@@ -4,6 +4,7 @@ import * as path from 'path';
 import { config } from '../config/index.js';
 import { DocumentType, MediaType } from '../models/document-upload.js';
 import { RecordType } from '../models/document-extraction.js';
+import { storage } from './storage.js';
 
 const anthropic = new Anthropic({
   apiKey: config.claude.apiKey,
@@ -179,13 +180,15 @@ interface ImageContent {
 
 type FileContent = DocumentContent | ImageContent;
 
-function buildDocumentContent(filePath: string, mediaType: MediaType): FileContent {
-  const absolutePath = path.resolve(filePath);
-  if (!fs.existsSync(absolutePath)) {
-    throw new Error(`File not found: ${absolutePath}`);
+async function buildDocumentContent(filePath: string, mediaType: MediaType): Promise<FileContent> {
+  // Download from storage (works with both local paths and S3 keys)
+  let fileBuffer: Buffer;
+  try {
+    fileBuffer = await storage.download(filePath, 'documents');
+  } catch (err) {
+    throw new Error(`File not found: ${filePath}`);
   }
 
-  const fileBuffer = fs.readFileSync(absolutePath);
   const fileBase64 = fileBuffer.toString('base64');
 
   if (mediaType === 'pdf') {
@@ -202,7 +205,7 @@ function buildDocumentContent(filePath: string, mediaType: MediaType): FileConte
       type: 'image',
       source: {
         type: 'base64',
-        media_type: getMimeType(absolutePath),
+        media_type: getMimeType(filePath),
         data: fileBase64,
       },
     };
@@ -213,7 +216,7 @@ export async function classifyDocument(
   filePath: string,
   mediaType: MediaType
 ): Promise<ClassificationResult> {
-  const documentContent = buildDocumentContent(filePath, mediaType);
+  const documentContent = await buildDocumentContent(filePath, mediaType);
 
   const response = await anthropic.messages.create({
     model: config.claude.model,
@@ -267,7 +270,7 @@ export async function extractDocumentData(
   mediaType: MediaType,
   documentType?: DocumentType
 ): Promise<ExtractionResult> {
-  const documentContent = buildDocumentContent(filePath, mediaType);
+  const documentContent = await buildDocumentContent(filePath, mediaType);
 
   const typeHint = documentType ? `\n\nThis appears to be a ${documentType.replace(/_/g, ' ')}.` : '';
 

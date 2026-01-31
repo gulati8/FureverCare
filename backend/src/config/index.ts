@@ -68,6 +68,19 @@ export const config = {
     ],
   },
 
+  storage: {
+    provider: (process.env.STORAGE_PROVIDER || 'local') as 'local' | 's3',
+    s3: {
+      bucket: process.env.S3_BUCKET || 'furevercare-uploads-dev',
+      region: process.env.AWS_REGION || 'us-east-1',
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+    },
+    local: {
+      baseDir: process.env.UPLOAD_BASE_DIR || 'uploads',
+    },
+  },
+
   isProduction: process.env.NODE_ENV === 'production',
   isDevelopment: process.env.NODE_ENV !== 'production',
 };
