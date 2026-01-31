@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FureverCare - Homepage Concept 2 (Ocean Blue & Sand)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #4A90A4;
+      --primary-light: #7AB8C7;
+      --primary-dark: #2E6171;
+      --accent: #D4A574;
+      --accent-light: #E8D5B7;
+      --neutral-100: #F5F5F0;
+      --neutral-200: #E5E5E0;
+      --neutral-500: #708090;
+      --neutral-900: #1E3A4C;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--neutral-900);
+      line-height: 1.6;
+      background: var(--neutral-100);
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'Nunito', sans-serif;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Navigation - Transparent overlay style */
+    .nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 20px 0;
+      transition: background 0.3s;
+    }
+
+    .nav.scrolled {
+      background: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .nav-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-family: 'Nunito', sans-serif;
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--primary-dark);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-badge {
+      background: var(--accent);
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 40px;
+      align-items: center;
+    }
+
+    .nav-link {
+      color: var(--neutral-900);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 15px;
+      transition: color 0.2s;
+    }
+
+    .nav-link:hover {
+      color: var(--primary);
+    }
+
+    .btn {
+      padding: 12px 28px;
+      border-radius: 50px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+      display: inline-block;
+      font-size: 15px;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+      transform: scale(1.02);
+    }
+
+    .btn-accent {
+      background: var(--accent);
+      color: var(--neutral-900);
+    }
+
+    .btn-accent:hover {
+      background: #c49564;
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--neutral-900);
+      border: 2px solid var(--neutral-200);
+    }
+
+    .btn-outline:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    /* Hero - Split screen style */
+    .hero {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .hero-left {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 120px 80px 80px;
+      background: white;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent-light);
+      color: var(--neutral-900);
+      padding: 8px 16px;
+      border-radius: 50px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 32px;
+      width: fit-content;
+    }
+
+    .hero-left h1 {
+      font-size: 56px;
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: 24px;
+    }
+
+    .hero-left h1 .highlight {
+      color: var(--primary);
+      position: relative;
+    }
+
+    .hero-left h1 .highlight::after {
+      content: '';
+      position: absolute;
+      bottom: 4px;
+      left: 0;
+      right: 0;
+      height: 8px;
+      background: var(--accent-light);
+      z-index: -1;
+    }
+
+    .hero-left p {
+      font-size: 18px;
+      color: var(--neutral-500);
+      margin-bottom: 40px;
+      max-width: 480px;
+      line-height: 1.7;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .hero-stat {
+      display: flex;
+      gap: 32px;
+      margin-top: 48px;
+      padding-top: 32px;
+      border-top: 1px solid var(--neutral-200);
+    }
+
+    .stat-item {
+      text-align: left;
+    }
+
+    .stat-number {
+      font-family: 'Nunito', sans-serif;
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .stat-label {
+      font-size: 14px;
+      color: var(--neutral-500);
+    }
+
+    .hero-right {
+      background: linear-gradient(180deg, var(--primary-light) 0%, var(--primary) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 80px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-right::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    }
+
+    .phone-mockup {
+      background: white;
+      border-radius: 32px;
+      padding: 16px;
+      box-shadow: 0 40px 80px rgba(0,0,0,0.2);
+      width: 320px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .phone-screen {
+      background: var(--neutral-100);
+      border-radius: 24px;
+      padding: 24px;
+      min-height: 500px;
+    }
+
+    .phone-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .phone-avatar {
+      width: 56px;
+      height: 56px;
+      background: var(--primary-light);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+    }
+
+    .phone-pet-name {
+      font-family: 'Nunito', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .phone-pet-breed {
+      font-size: 13px;
+      color: var(--neutral-500);
+    }
+
+    .phone-section {
+      background: white;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .phone-section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--neutral-500);
+      margin-bottom: 8px;
+    }
+
+    .phone-section-content {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .alert-badge {
+      display: inline-block;
+      background: #FEE2E2;
+      color: #DC2626;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    /* Features - Horizontal scroll cards */
+    .features {
+      padding: 120px 0;
+      background: white;
+    }
+
+    .section-header {
+      margin-bottom: 64px;
+    }
+
+    .section-header h2 {
+      font-size: 44px;
+      margin-bottom: 16px;
+    }
+
+    .section-header p {
+      font-size: 18px;
+      color: var(--neutral-500);
+      max-width: 500px;
+    }
+
+    .features-row {
+      display: flex;
+      gap: 24px;
+      overflow-x: auto;
+      padding-bottom: 24px;
+      margin: 0 -24px;
+      padding: 0 24px 24px;
+    }
+
+    .feature-card {
+      flex: 0 0 300px;
+      background: var(--neutral-100);
+      border-radius: 24px;
+      padding: 32px;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    }
+
+    .feature-icon {
+      width: 64px;
+      height: 64px;
+      background: var(--primary);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      margin-bottom: 24px;
+    }
+
+    .feature-card h3 {
+      font-size: 20px;
+      margin-bottom: 12px;
+    }
+
+    .feature-card p {
+      color: var(--neutral-500);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* How It Works - Timeline style */
+    .how-it-works {
+      padding: 120px 0;
+      background: var(--neutral-100);
+    }
+
+    .timeline {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 32px 64px;
+      margin-top: 64px;
+    }
+
+    .timeline-item {
+      display: flex;
+      gap: 24px;
+      padding: 32px;
+      background: white;
+      border-radius: 20px;
+      transition: box-shadow 0.3s;
+    }
+
+    .timeline-item:hover {
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    }
+
+    .timeline-number {
+      flex-shrink: 0;
+      width: 48px;
+      height: 48px;
+      background: var(--primary);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Nunito', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .timeline-content h3 {
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    .timeline-content p {
+      color: var(--neutral-500);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* CTA - Card style */
+    .cta {
+      padding: 120px 0;
+      background: white;
+    }
+
+    .cta-card {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      border-radius: 32px;
+      padding: 80px;
+      text-align: center;
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-card::before {
+      content: '';
+      position: absolute;
+      top: -100px;
+      right: -100px;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    }
+
+    .cta-card h2 {
+      font-size: 44px;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .cta-card p {
+      font-size: 18px;
+      opacity: 0.9;
+      margin-bottom: 40px;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+      position: relative;
+    }
+
+    .cta-card .btn {
+      padding: 18px 48px;
+      font-size: 17px;
+      position: relative;
+    }
+
+    /* Footer - Minimal */
+    .footer {
+      padding: 48px 0;
+      background: var(--neutral-900);
+      color: white;
+    }
+
+    .footer-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-logo {
+      font-family: 'Nunito', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 32px;
+    }
+
+    .footer-links a {
+      color: rgba(255,255,255,0.6);
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover {
+      color: white;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .hero {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-left {
+        padding: 140px 40px 60px;
+      }
+
+      .hero-right {
+        padding: 60px 40px;
+        min-height: 500px;
+      }
+
+      .hero-left h1 {
+        font-size: 42px;
+      }
+
+      .timeline {
+        grid-template-columns: 1fr;
+      }
+
+      .cta-card {
+        padding: 60px 40px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .nav-links {
+        display: none;
+      }
+
+      .hero-left {
+        padding: 120px 24px 40px;
+      }
+
+      .hero-left h1 {
+        font-size: 36px;
+      }
+
+      .hero-stat {
+        flex-wrap: wrap;
+        gap: 24px;
+      }
+
+      .features-row {
+        flex-direction: column;
+        overflow-x: visible;
+      }
+
+      .feature-card {
+        flex: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="#" class="logo">
+        <span class="logo-badge">🐾</span>
+        FureverCare
+      </a>
+      <div class="nav-links">
+        <a href="#features" class="nav-link">Features</a>
+        <a href="#how-it-works" class="nav-link">How It Works</a>
+        <a href="#" class="nav-link">Pricing</a>
+        <a href="#" class="btn btn-outline">Log In</a>
+        <a href="#" class="btn btn-primary">Get Started</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section - Split Screen -->
+  <section class="hero">
+    <div class="hero-left">
+      <div class="hero-badge">
+        <span>New</span>
+        PIN-protected sharing now available
+      </div>
+      <h1>Keep Your Pet's <span class="highlight">Health Info</span> Safe & Accessible</h1>
+      <p>Digital emergency cards that give vets instant access to your pet's critical health information. Because every second counts in an emergency.</p>
+      <div class="hero-buttons">
+        <a href="#" class="btn btn-accent">Create Free Card</a>
+        <a href="#" class="btn btn-outline">Watch Demo</a>
+      </div>
+      <div class="hero-stat">
+        <div class="stat-item">
+          <div class="stat-number">10K+</div>
+          <div class="stat-label">Pets Protected</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number">500+</div>
+          <div class="stat-label">ER Vet Uses</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number">4.9</div>
+          <div class="stat-label">User Rating</div>
+        </div>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="phone-mockup">
+        <div class="phone-screen">
+          <div class="phone-header">
+            <div class="phone-avatar">🐱</div>
+            <div>
+              <div class="phone-pet-name">Luna</div>
+              <div class="phone-pet-breed">Siamese Cat, 3 yrs</div>
+            </div>
+          </div>
+          <div class="phone-section">
+            <div class="phone-section-title">Allergies</div>
+            <div class="phone-section-content">
+              <span class="alert-badge">Penicillin - Severe</span>
+            </div>
+          </div>
+          <div class="phone-section">
+            <div class="phone-section-title">Current Medications</div>
+            <div class="phone-section-content">
+              Methimazole 2.5mg (2x daily)<br>
+              Famotidine 5mg (1x daily)
+            </div>
+          </div>
+          <div class="phone-section">
+            <div class="phone-section-title">Primary Vet</div>
+            <div class="phone-section-content">
+              Dr. Sarah Chen<br>
+              Paws & Claws Clinic<br>
+              (555) 123-4567
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="features" id="features">
+    <div class="container">
+      <div class="section-header">
+        <h2>Everything Vets Need to Know</h2>
+        <p>Comprehensive health profiles that help emergency staff provide the best possible care.</p>
+      </div>
+      <div class="features-row">
+        <div class="feature-card">
+          <div class="feature-icon">⚠️</div>
+          <h3>Critical Allergies</h3>
+          <p>Highlight severe allergies with clear warning labels. ER staff see them first.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💊</div>
+          <h3>Medication Tracker</h3>
+          <p>Current meds, dosages, and schedules all in one place. No more guessing.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💉</div>
+          <h3>Vaccination History</h3>
+          <p>Complete vaccination records with dates and upcoming due dates.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📋</div>
+          <h3>Medical Conditions</h3>
+          <p>Document chronic conditions, past surgeries, and ongoing treatments.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📱</div>
+          <h3>QR Code Access</h3>
+          <p>One scan opens the full card. No app download or login required.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔐</div>
+          <h3>PIN Protection</h3>
+          <p>Optional PIN codes for time-limited access. You stay in control.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="how-it-works" id="how-it-works">
+    <div class="container">
+      <div class="section-header">
+        <h2>Get Started in Minutes</h2>
+        <p>Creating your pet's emergency card is simple and fast.</p>
+      </div>
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-number">1</div>
+          <div class="timeline-content">
+            <h3>Create Your Account</h3>
+            <p>Quick signup with email or social login. Free forever for basic features.</p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-number">2</div>
+          <div class="timeline-content">
+            <h3>Add Your Pet</h3>
+            <p>Enter your pet's basic info - name, breed, age, and a photo if you like.</p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-number">3</div>
+          <div class="timeline-content">
+            <h3>Enter Health Details</h3>
+            <p>Add medications, allergies, conditions, and vet contact information.</p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-number">4</div>
+          <div class="timeline-content">
+            <h3>Share Your Card</h3>
+            <p>Get your QR code to print for the collar or share a secure link.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="cta">
+    <div class="container">
+      <div class="cta-card">
+        <h2>Be Prepared for Anything</h2>
+        <p>Your pet can't speak for themselves in an emergency. Make sure their health info can.</p>
+        <a href="#" class="btn btn-accent">Create Your Free Card</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-logo">🐾 FureverCare</div>
+      <div class="footer-links">
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms of Service</a>
+        <a href="#">Contact Us</a>
+        <a href="#">Help Center</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

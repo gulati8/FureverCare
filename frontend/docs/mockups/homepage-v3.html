@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FureverCare - Homepage Concept 3 (Teal & Terracotta)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #2A9D8F;
+      --primary-light: #5CC4B8;
+      --primary-dark: #1D7268;
+      --accent: #E76F51;
+      --accent-light: #F4A98F;
+      --neutral-100: #F7F9F9;
+      --neutral-200: #E8EDED;
+      --neutral-500: #6B7B7B;
+      --neutral-900: #264653;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--neutral-900);
+      line-height: 1.6;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'Nunito', sans-serif;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Navigation - Bold dark style */
+    .nav {
+      background: var(--neutral-900);
+      padding: 16px 0;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+    }
+
+    .nav-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-family: 'Nunito', sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+      color: white;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo span {
+      color: var(--primary-light);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      align-items: center;
+    }
+
+    .nav-link {
+      color: rgba(255,255,255,0.7);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 15px;
+      transition: color 0.2s;
+    }
+
+    .nav-link:hover {
+      color: white;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn-accent {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-accent:hover {
+      background: #d45f43;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: white;
+      border: 1px solid rgba(255,255,255,0.3);
+    }
+
+    .btn-ghost:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.5);
+    }
+
+    .btn-lg {
+      padding: 16px 32px;
+      font-size: 17px;
+    }
+
+    /* Hero - Bold centered layout */
+    .hero {
+      padding: 180px 0 120px;
+      background: var(--neutral-900);
+      color: white;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%232A9D8F' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(42, 157, 143, 0.2);
+      border: 1px solid rgba(42, 157, 143, 0.3);
+      padding: 8px 20px;
+      border-radius: 50px;
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+
+    .hero-pill .dot {
+      width: 8px;
+      height: 8px;
+      background: var(--primary);
+      border-radius: 50%;
+    }
+
+    .hero h1 {
+      font-size: 64px;
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 24px;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .hero h1 .accent {
+      color: var(--accent);
+    }
+
+    .hero p {
+      font-size: 20px;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 40px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      margin-bottom: 64px;
+    }
+
+    .hero-cards {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      perspective: 1000px;
+    }
+
+    .preview-card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      width: 280px;
+      text-align: left;
+      color: var(--neutral-900);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      transform: rotateY(-5deg) rotateX(5deg);
+    }
+
+    .preview-card:nth-child(2) {
+      transform: rotateY(0deg) rotateX(0deg) translateY(-16px);
+    }
+
+    .preview-card:nth-child(3) {
+      transform: rotateY(5deg) rotateX(5deg);
+    }
+
+    .card-pet {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .card-avatar {
+      width: 48px;
+      height: 48px;
+      background: var(--primary-light);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+
+    .card-pet-name {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .card-pet-info {
+      font-size: 13px;
+      color: var(--neutral-500);
+    }
+
+    .card-alert {
+      background: #FEF2F2;
+      border-left: 3px solid var(--accent);
+      padding: 10px 12px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 12px;
+    }
+
+    .card-alert-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .card-alert-text {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .card-detail {
+      font-size: 13px;
+      color: var(--neutral-500);
+      padding: 8px 0;
+      border-bottom: 1px solid var(--neutral-200);
+    }
+
+    .card-detail:last-child {
+      border-bottom: none;
+    }
+
+    .card-detail strong {
+      color: var(--neutral-900);
+      display: block;
+    }
+
+    /* Features - Grid with icons */
+    .features {
+      padding: 120px 0;
+      background: var(--neutral-100);
+    }
+
+    .features-header {
+      text-align: center;
+      margin-bottom: 64px;
+    }
+
+    .features-header .overline {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--primary);
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .features-header h2 {
+      font-size: 44px;
+      margin-bottom: 16px;
+    }
+
+    .features-header p {
+      font-size: 18px;
+      color: var(--neutral-500);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .feature-item {
+      background: white;
+      border-radius: 20px;
+      padding: 32px;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .feature-item:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+    }
+
+    .feature-icon {
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      margin-bottom: 20px;
+    }
+
+    .feature-item h3 {
+      font-size: 20px;
+      margin-bottom: 8px;
+    }
+
+    .feature-item p {
+      color: var(--neutral-500);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* How It Works - Steps with connecting line */
+    .how-it-works {
+      padding: 120px 0;
+      background: white;
+    }
+
+    .steps-container {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      margin-top: 64px;
+      position: relative;
+    }
+
+    .steps-container::before {
+      content: '';
+      position: absolute;
+      top: 48px;
+      left: 12.5%;
+      right: 12.5%;
+      height: 4px;
+      background: var(--neutral-200);
+      z-index: 0;
+    }
+
+    .step {
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .step-icon {
+      width: 96px;
+      height: 96px;
+      background: white;
+      border: 4px solid var(--primary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      margin: 0 auto 24px;
+      position: relative;
+    }
+
+    .step-number {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      width: 32px;
+      height: 32px;
+      background: var(--accent);
+      color: white;
+      border-radius: 50%;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .step h3 {
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    .step p {
+      font-size: 14px;
+      color: var(--neutral-500);
+      max-width: 200px;
+      margin: 0 auto;
+    }
+
+    /* Testimonial / Trust Section */
+    .trust {
+      padding: 80px 0;
+      background: var(--neutral-100);
+    }
+
+    .trust-inner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 64px;
+      flex-wrap: wrap;
+    }
+
+    .trust-stat {
+      text-align: center;
+    }
+
+    .trust-number {
+      font-family: 'Nunito', sans-serif;
+      font-size: 48px;
+      font-weight: 800;
+      color: var(--primary);
+    }
+
+    .trust-label {
+      font-size: 14px;
+      color: var(--neutral-500);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* CTA Section */
+    .cta {
+      padding: 120px 0;
+      background: linear-gradient(135deg, var(--neutral-900) 0%, #1a3a47 100%);
+      color: white;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(42, 157, 143, 0.2) 0%, transparent 70%);
+    }
+
+    .cta h2 {
+      font-size: 48px;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .cta p {
+      font-size: 20px;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 40px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+      position: relative;
+    }
+
+    .cta .btn {
+      position: relative;
+    }
+
+    .cta-feature {
+      display: flex;
+      justify-content: center;
+      gap: 48px;
+      margin-top: 48px;
+      position: relative;
+    }
+
+    .cta-feature-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: rgba(255,255,255,0.7);
+    }
+
+    .cta-feature-item .check {
+      color: var(--primary-light);
+      font-size: 18px;
+    }
+
+    /* Footer */
+    .footer {
+      padding: 48px 0;
+      background: #0d1f27;
+      color: white;
+    }
+
+    .footer-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-logo {
+      font-family: 'Nunito', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .footer-logo span {
+      color: var(--primary-light);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 32px;
+    }
+
+    .footer-links a {
+      color: rgba(255,255,255,0.5);
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover {
+      color: white;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .hero h1 {
+        font-size: 48px;
+      }
+
+      .hero-cards {
+        flex-wrap: wrap;
+      }
+
+      .preview-card {
+        transform: none !important;
+      }
+
+      .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .steps-container {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 40px;
+      }
+
+      .steps-container::before {
+        display: none;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .nav-links {
+        display: none;
+      }
+
+      .hero {
+        padding: 140px 0 80px;
+      }
+
+      .hero h1 {
+        font-size: 36px;
+      }
+
+      .hero-cards {
+        display: none;
+      }
+
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .steps-container {
+        grid-template-columns: 1fr;
+      }
+
+      .trust-inner {
+        gap: 32px;
+      }
+
+      .cta h2 {
+        font-size: 36px;
+      }
+
+      .cta-feature {
+        flex-direction: column;
+        gap: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="#" class="logo">
+        Furever<span>Care</span>
+      </a>
+      <div class="nav-links">
+        <a href="#features" class="nav-link">Features</a>
+        <a href="#how-it-works" class="nav-link">How It Works</a>
+        <a href="#" class="nav-link">Pricing</a>
+        <a href="#" class="btn btn-ghost">Log In</a>
+        <a href="#" class="btn btn-accent">Get Started</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container hero-content">
+      <div class="hero-pill">
+        <span class="dot"></span>
+        Free forever for up to 3 pets
+      </div>
+      <h1>Digital Health Cards for Your <span class="accent">Best Friends</span></h1>
+      <p>Emergency vets get instant access to allergies, medications, and medical history. One scan. No app required. No login.</p>
+      <div class="hero-buttons">
+        <a href="#" class="btn btn-accent btn-lg">Create Your Card</a>
+        <a href="#" class="btn btn-ghost btn-lg">See How It Works</a>
+      </div>
+      <div class="hero-cards">
+        <div class="preview-card">
+          <div class="card-pet">
+            <div class="card-avatar">🐕</div>
+            <div>
+              <div class="card-pet-name">Buddy</div>
+              <div class="card-pet-info">Labrador, 5 yrs</div>
+            </div>
+          </div>
+          <div class="card-alert">
+            <div class="card-alert-label">Allergy Alert</div>
+            <div class="card-alert-text">Beef - Severe</div>
+          </div>
+          <div class="card-detail">
+            <strong>Medication</strong>
+            Apoquel 16mg daily
+          </div>
+        </div>
+        <div class="preview-card">
+          <div class="card-pet">
+            <div class="card-avatar">🐱</div>
+            <div>
+              <div class="card-pet-name">Whiskers</div>
+              <div class="card-pet-info">Maine Coon, 7 yrs</div>
+            </div>
+          </div>
+          <div class="card-alert">
+            <div class="card-alert-label">Condition</div>
+            <div class="card-alert-text">Hyperthyroidism</div>
+          </div>
+          <div class="card-detail">
+            <strong>Medication</strong>
+            Methimazole 2.5mg 2x daily
+          </div>
+        </div>
+        <div class="preview-card">
+          <div class="card-pet">
+            <div class="card-avatar">🐰</div>
+            <div>
+              <div class="card-pet-name">Cotton</div>
+              <div class="card-pet-info">Holland Lop, 2 yrs</div>
+            </div>
+          </div>
+          <div class="card-alert">
+            <div class="card-alert-label">Diet Note</div>
+            <div class="card-alert-text">No cabbage family</div>
+          </div>
+          <div class="card-detail">
+            <strong>Last Checkup</strong>
+            January 15, 2026
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="features" id="features">
+    <div class="container">
+      <div class="features-header">
+        <div class="overline">Why FureverCare</div>
+        <h2>Built for Real Emergencies</h2>
+        <p>When seconds count, ER vets need fast access to critical information. We make that possible.</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-item">
+          <div class="feature-icon">⚠️</div>
+          <h3>Allergies First</h3>
+          <p>Critical allergies are prominently displayed so they're impossible to miss.</p>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">💊</div>
+          <h3>Current Medications</h3>
+          <p>Drug names, dosages, frequencies, and timing - all clearly organized.</p>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">🩺</div>
+          <h3>Medical Conditions</h3>
+          <p>Chronic conditions, past surgeries, and ongoing treatments documented.</p>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">💉</div>
+          <h3>Vaccination Records</h3>
+          <p>Complete history with dates helps vets make informed decisions.</p>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">📲</div>
+          <h3>QR Code Access</h3>
+          <p>One scan opens everything. Works on any phone, no downloads needed.</p>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">🔒</div>
+          <h3>Privacy Controls</h3>
+          <p>Optional PIN protection and time-limited access links keep you in control.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="how-it-works" id="how-it-works">
+    <div class="container">
+      <div class="features-header">
+        <div class="overline">Simple Setup</div>
+        <h2>Ready in Under 5 Minutes</h2>
+        <p>Creating a comprehensive health card for your pet is quick and easy.</p>
+      </div>
+      <div class="steps-container">
+        <div class="step">
+          <div class="step-icon">
+            📝
+            <div class="step-number">1</div>
+          </div>
+          <h3>Sign Up Free</h3>
+          <p>Quick registration with email or Google</p>
+        </div>
+        <div class="step">
+          <div class="step-icon">
+            🐾
+            <div class="step-number">2</div>
+          </div>
+          <h3>Add Your Pet</h3>
+          <p>Name, breed, age, and optional photo</p>
+        </div>
+        <div class="step">
+          <div class="step-icon">
+            📋
+            <div class="step-number">3</div>
+          </div>
+          <h3>Enter Health Info</h3>
+          <p>Medications, allergies, vet contacts</p>
+        </div>
+        <div class="step">
+          <div class="step-icon">
+            📱
+            <div class="step-number">4</div>
+          </div>
+          <h3>Share & Print</h3>
+          <p>Get your QR code for collar tags</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trust Section -->
+  <section class="trust">
+    <div class="container">
+      <div class="trust-inner">
+        <div class="trust-stat">
+          <div class="trust-number">15K+</div>
+          <div class="trust-label">Pets Protected</div>
+        </div>
+        <div class="trust-stat">
+          <div class="trust-number">2K+</div>
+          <div class="trust-label">ER Vet Scans</div>
+        </div>
+        <div class="trust-stat">
+          <div class="trust-number">4.9</div>
+          <div class="trust-label">App Store Rating</div>
+        </div>
+        <div class="trust-stat">
+          <div class="trust-number">100%</div>
+          <div class="trust-label">Uptime</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="cta">
+    <div class="container">
+      <h2>Your Pet Deserves the Best Care</h2>
+      <p>In an emergency, every detail matters. Make sure your pet's health info is always ready.</p>
+      <a href="#" class="btn btn-accent btn-lg">Get Started Free</a>
+      <div class="cta-feature">
+        <div class="cta-feature-item">
+          <span class="check">✓</span>
+          Free for up to 3 pets
+        </div>
+        <div class="cta-feature-item">
+          <span class="check">✓</span>
+          No credit card required
+        </div>
+        <div class="cta-feature-item">
+          <span class="check">✓</span>
+          Set up in under 5 minutes
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-logo">Furever<span>Care</span></div>
+      <div class="footer-links">
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+        <a href="#">Contact</a>
+        <a href="#">Help</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
