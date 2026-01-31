@@ -1,51 +1,13 @@
 import { Router, Response } from 'express';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { nanoid } from 'nanoid';
 import { authenticate, AuthRequest } from '../middleware/auth.js';
+import { uploadPhoto } from '../middleware/upload.js';
+import { storage } from '../services/storage.js';
 import { findPetById, updatePet } from '../models/pet.js';
 
 const router = Router();
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(process.cwd(), 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Configure multer for local storage
-// In production, swap this for S3 storage
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const filename = `${nanoid()}${ext}`;
-    cb(null, filename);
-  },
-});
-
-const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-  if (allowedTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.'));
-  }
-};
-
-const upload = multer({
-  storage,
-  fileFilter,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
-  },
-});
-
 // Upload pet photo
-router.post('/pet/:petId/photo', authenticate, upload.single('photo'), async (req: AuthRequest, res: Response) => {
+router.post('/pet/:petId/photo', authenticate, uploadPhoto.single('photo'), async (req: AuthRequest, res: Response) => {
   try {
     const petId = parseInt(req.params.petId);
     const pet = await findPetById(petId);
@@ -68,23 +30,28 @@ router.post('/pet/:petId/photo', authenticate, upload.single('photo'), async (re
 
     // Delete old photo if exists
     if (pet.photo_url) {
-      const oldFilename = pet.photo_url.split('/').pop();
-      if (oldFilename) {
-        const oldPath = path.join(uploadsDir, oldFilename);
-        if (fs.existsSync(oldPath)) {
-          fs.unlinkSync(oldPath);
-        }
+      try {
+        const oldKey = storage.extractKey(pet.photo_url);
+        await storage.delete(oldKey, 'photos');
+      } catch (err) {
+        // Log but don't fail if old photo deletion fails
+        console.error('Failed to delete old photo:', err);
       }
     }
 
-    // Generate URL for the uploaded file
-    const photoUrl = `/uploads/${req.file.filename}`;
+    // Upload new photo using storage adapter
+    const result = await storage.upload(req.file.buffer, {
+      type: 'photos',
+      petId,
+      originalFilename: req.file.originalname,
+      mimeType: req.file.mimetype,
+    });
 
     // Update pet with new photo URL
-    const updatedPet = await updatePet(petId, req.userId!, { photo_url: photoUrl });
+    const updatedPet = await updatePet(petId, req.userId!, { photo_url: result.url });
 
     res.json({
-      photo_url: photoUrl,
+      photo_url: result.url,
       pet: updatedPet,
     });
   } catch (error) {
@@ -110,12 +77,11 @@ router.delete('/pet/:petId/photo', authenticate, async (req: AuthRequest, res: R
     }
 
     if (pet.photo_url) {
-      const filename = pet.photo_url.split('/').pop();
-      if (filename) {
-        const filePath = path.join(uploadsDir, filename);
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
+      try {
+        const key = storage.extractKey(pet.photo_url);
+        await storage.delete(key, 'photos');
+      } catch (err) {
+        console.error('Failed to delete photo file:', err);
       }
     }
 

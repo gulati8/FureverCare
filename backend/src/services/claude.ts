@@ -4,6 +4,7 @@ import * as path from 'path';
 import { config } from '../config/index.js';
 import { RecordType } from '../models/pdf-extraction.js';
 import { RecordType as ImageRecordType } from '../models/image-extraction.js';
+import { storage } from './storage.js';
 
 const anthropic = new Anthropic({
   apiKey: config.claude.apiKey,
@@ -83,13 +84,14 @@ Only extract information that is actually present in the document. Do not make u
 If no relevant health information is found, return an empty items array.`;
 
 export async function extractPetDataFromPdf(pdfPath: string): Promise<ExtractionResult> {
-  // Read the PDF file
-  const absolutePath = path.resolve(pdfPath);
-  if (!fs.existsSync(absolutePath)) {
-    throw new Error(`PDF file not found: ${absolutePath}`);
+  // Download from storage (works with both local paths and S3 keys)
+  let pdfBuffer: Buffer;
+  try {
+    pdfBuffer = await storage.download(pdfPath, 'pdfs');
+  } catch (err) {
+    throw new Error(`PDF file not found: ${pdfPath}`);
   }
 
-  const pdfBuffer = fs.readFileSync(absolutePath);
   const pdfBase64 = pdfBuffer.toString('base64');
 
   const response = await anthropic.messages.create({
@@ -353,15 +355,16 @@ function getMimeType(filePath: string): 'image/jpeg' | 'image/png' | 'image/gif'
 }
 
 export async function extractPetDataFromImage(imagePath: string): Promise<ImageExtractionResult> {
-  // Read the image file
-  const absolutePath = path.resolve(imagePath);
-  if (!fs.existsSync(absolutePath)) {
-    throw new Error(`Image file not found: ${absolutePath}`);
+  // Download from storage (works with both local paths and S3 keys)
+  let imageBuffer: Buffer;
+  try {
+    imageBuffer = await storage.download(imagePath, 'images');
+  } catch (err) {
+    throw new Error(`Image file not found: ${imagePath}`);
   }
 
-  const imageBuffer = fs.readFileSync(absolutePath);
   const imageBase64 = imageBuffer.toString('base64');
-  const mediaType = getMimeType(absolutePath);
+  const mediaType = getMimeType(imagePath);
 
   const response = await anthropic.messages.create({
     model: config.claude.model,

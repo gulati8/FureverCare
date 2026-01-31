@@ -1,9 +1,7 @@
 import { Router, Response } from 'express';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { nanoid } from 'nanoid';
 import { authenticate, AuthRequest } from '../middleware/auth.js';
+import { uploadImage } from '../middleware/upload.js';
+import { storage } from '../services/storage.js';
 import { userHasPetAccess, userCanEditPet } from '../models/pet-owners.js';
 import { findPetById } from '../models/pet.js';
 import {
@@ -28,40 +26,6 @@ import { config } from '../config/index.js';
 
 const router = Router();
 
-// Ensure image uploads directory exists
-const imageUploadsDir = path.join(process.cwd(), config.imageUpload.uploadDir);
-if (!fs.existsSync(imageUploadsDir)) {
-  fs.mkdirSync(imageUploadsDir, { recursive: true });
-}
-
-// Configure multer for image storage
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, imageUploadsDir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const filename = `${nanoid()}${ext}`;
-    cb(null, filename);
-  },
-});
-
-const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  if (config.imageUpload.allowedMimeTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('Invalid file type. Only JPEG, PNG, WebP, and GIF images are allowed.'));
-  }
-};
-
-const upload = multer({
-  storage,
-  fileFilter,
-  limits: {
-    fileSize: config.imageUpload.maxSizeMB * 1024 * 1024,
-  },
-});
-
 // Helper to verify pet edit access
 async function verifyPetEditAccess(petId: number, userId: number, res: Response): Promise<boolean> {
   const pet = await findPetById(petId);
@@ -80,7 +44,7 @@ async function verifyPetEditAccess(petId: number, userId: number, res: Response)
 }
 
 // POST /api/pets/:petId/photo-import/upload - Upload an image
-router.post('/:petId/photo-import/upload', authenticate, pdfUploadRateLimit, upload.single('image'), async (req: AuthRequest, res: Response) => {
+router.post('/:petId/photo-import/upload', authenticate, pdfUploadRateLimit, uploadImage.single('image'), async (req: AuthRequest, res: Response) => {
   try {
     const petId = parseInt(req.params.petId);
 
@@ -93,13 +57,21 @@ router.post('/:petId/photo-import/upload', authenticate, pdfUploadRateLimit, upl
       return;
     }
 
+    // Upload to storage
+    const uploadResult = await storage.upload(req.file.buffer, {
+      type: 'images',
+      petId,
+      originalFilename: req.file.originalname,
+      mimeType: req.file.mimetype,
+    });
+
     // Create image upload record
     const imageUpload = await createImageUpload({
       petId,
       uploadedBy: req.userId!,
-      filename: req.file.filename,
+      filename: uploadResult.key,
       originalFilename: req.file.originalname,
-      filePath: req.file.path,
+      filePath: uploadResult.filePath,
       fileSize: req.file.size,
       mimeType: req.file.mimetype,
       documentType: req.body.documentType,
@@ -172,9 +144,12 @@ router.delete('/:petId/photo-import/uploads/:id', authenticate, async (req: Auth
       return;
     }
 
-    // Delete the file
-    if (fs.existsSync(upload.file_path)) {
-      fs.unlinkSync(upload.file_path);
+    // Delete from storage
+    try {
+      const key = storage.extractKey(upload.file_path);
+      await storage.delete(key, 'images');
+    } catch (err) {
+      console.error('Failed to delete image file:', err);
     }
 
     await deleteImageUpload(uploadId, petId);
