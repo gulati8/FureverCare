@@ -137,6 +137,10 @@ jobs:
               \"docker compose -f docker-compose.prod.yml run --rm backend npm run db:migrate:pdf-import || true\",
               \"docker compose -f docker-compose.prod.yml run --rm backend npm run db:migrate:weight-units || true\",
               \"docker compose -f docker-compose.prod.yml run --rm backend npm run db:migrate:sex-fixed || true\",
+              \"docker compose -f docker-compose.prod.yml run --rm backend npm run db:migrate:password-reset || true\",
+              \"docker compose -f docker-compose.prod.yml run --rm backend npm run db:migrate:share-tokens || true\",
+              \"docker compose -f docker-compose.prod.yml run --rm backend npm run db:migrate:image-import || true\",
+              \"docker compose -f docker-compose.prod.yml run --rm backend npm run db:migrate:document-import || true\",
               \"docker compose -f docker-compose.prod.yml up -d\",
               \"docker image prune -f\"
             ]" \
