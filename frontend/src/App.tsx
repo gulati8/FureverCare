@@ -1,10 +1,9 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { useAuth } from './hooks/useAuth';
 import Layout from './components/Layout';
 import AdminRoute from './components/AdminRoute';
 import Homepage from './pages/Homepage';
-import Login from './pages/Login';
-import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
@@ -15,8 +14,27 @@ import AcceptInvite from './pages/AcceptInvite';
 import AdminLayout from './pages/admin/AdminLayout';
 import CMSEditor from './pages/admin/CMSEditor';
 
+// Redirects to homepage and opens the auth modal
+function AuthRedirect({ mode }: { mode: 'login' | 'signup' }) {
+  const { user, openAuthModal } = useAuth();
+
+  useEffect(() => {
+    if (!user) {
+      openAuthModal(mode);
+    }
+  }, [user, mode, openAuthModal]);
+
+  return <Navigate to="/" replace />;
+}
+
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, openAuthModal } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      openAuthModal('login');
+    }
+  }, [isLoading, user, openAuthModal]);
 
   if (isLoading) {
     return (
@@ -27,13 +45,13 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;
 }
 
-function PublicRoute({ children }: { children: React.ReactNode }) {
+function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
@@ -57,11 +75,11 @@ export default function App() {
       {/* Public homepage */}
       <Route path="/" element={<Homepage />} />
 
-      {/* Auth routes - redirect to dashboard if logged in */}
-      <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-      <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-      <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
-      <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
+      {/* Auth routes - redirect to homepage with modal */}
+      <Route path="/login" element={<AuthRedirect mode="login" />} />
+      <Route path="/register" element={<AuthRedirect mode="signup" />} />
+      <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPassword /></PublicOnlyRoute>} />
+      <Route path="/reset-password" element={<PublicOnlyRoute><ResetPassword /></PublicOnlyRoute>} />
 
       {/* Public sharing routes */}
       <Route path="/card/:shareId" element={<PublicCard />} />

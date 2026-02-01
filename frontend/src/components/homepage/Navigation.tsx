@@ -5,7 +5,7 @@ import { useAuth } from '../../hooks/useAuth';
 export default function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user } = useAuth();
+  const { user, openAuthModal } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -66,20 +66,20 @@ export default function Navigation() {
               </Link>
             ) : (
               <>
-                <Link
-                  to="/login"
+                <button
+                  onClick={() => openAuthModal('login')}
                   className={`font-medium px-4 py-2 transition-colors ${
                     isScrolled ? 'text-gray-700 hover:text-primary-600' : 'text-gray-700 hover:text-primary-600'
                   }`}
                 >
                   Log In
-                </Link>
-                <Link
-                  to="/register"
+                </button>
+                <button
+                  onClick={() => openAuthModal('signup')}
                   className="btn-accent px-6 py-2"
                 >
                   Get Started
-                </Link>
+                </button>
               </>
             )}
           </div>
@@ -131,20 +131,24 @@ export default function Navigation() {
                 </Link>
               ) : (
                 <>
-                  <Link
-                    to="/login"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="px-4 py-2 text-gray-700 hover:text-primary-600 font-medium"
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      openAuthModal('login');
+                    }}
+                    className="px-4 py-2 text-gray-700 hover:text-primary-600 font-medium text-left"
                   >
                     Log In
-                  </Link>
-                  <Link
-                    to="/register"
-                    onClick={() => setIsMobileMenuOpen(false)}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      openAuthModal('signup');
+                    }}
                     className="mx-4 btn-accent text-center py-3"
                   >
                     Get Started
-                  </Link>
+                  </button>
                 </>
               )}
             </div>

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { CTAContent } from '../../api/cms';
+import { useAuth } from '../../hooks/useAuth';
 
 interface CTASectionProps {
   content: CTAContent;
@@ -7,6 +8,7 @@ interface CTASectionProps {
 
 export default function CTASection({ content }: CTASectionProps) {
   const { headline, subheadline, button } = content;
+  const { user, openAuthModal } = useAuth();
 
   return (
     <section className="relative py-20 md:py-28 bg-gradient-to-br from-primary-500 to-primary-700 overflow-hidden">
@@ -23,12 +25,21 @@ export default function CTASection({ content }: CTASectionProps) {
         <p className="text-lg md:text-xl text-white/90 mb-10 max-w-2xl mx-auto">
           {subheadline}
         </p>
-        <Link
-          to={button.url}
-          className="inline-block bg-accent-400 text-white hover:bg-accent-500 px-10 py-4 rounded-lg text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
-        >
-          {button.text}
-        </Link>
+        {user ? (
+          <Link
+            to="/dashboard"
+            className="inline-block bg-accent-400 text-white hover:bg-accent-500 px-10 py-4 rounded-lg text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+          >
+            Go to Dashboard
+          </Link>
+        ) : (
+          <button
+            onClick={() => openAuthModal('signup')}
+            className="inline-block bg-accent-400 text-white hover:bg-accent-500 px-10 py-4 rounded-lg text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+          >
+            {button.text}
+          </button>
+        )}
       </div>
     </section>
   );

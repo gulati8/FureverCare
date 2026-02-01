@@ -18,6 +18,8 @@ function decodeJwtPayload(token: string): { userId: number; email: string; isAdm
   }
 }
 
+type AuthModalType = 'login' | 'signup' | null;
+
 interface AuthContextType {
   user: User | null;
   token: string | null;
@@ -26,6 +28,9 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string, phone?: string) => Promise<void>;
   logout: () => void;
+  authModal: AuthModalType;
+  openAuthModal: (type: 'login' | 'signup') => void;
+  closeAuthModal: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,6 +42,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [authModal, setAuthModal] = useState<AuthModalType>(null);
+
+  const openAuthModal = (type: 'login' | 'signup') => setAuthModal(type);
+  const closeAuthModal = () => setAuthModal(null);
 
   useEffect(() => {
     const savedToken = localStorage.getItem(TOKEN_KEY);
@@ -88,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, isAdmin, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, isLoading, isAdmin, login, register, logout, authModal, openAuthModal, closeAuthModal }}>
       {children}
     </AuthContext.Provider>
   );

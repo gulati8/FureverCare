@@ -6,6 +6,7 @@ import Features from '../components/homepage/Features';
 import HowItWorks from '../components/homepage/HowItWorks';
 import CTASection from '../components/homepage/CTASection';
 import Footer from '../components/homepage/Footer';
+import AuthModal from '../components/AuthModal';
 
 export default function Homepage() {
   const [page, setPage] = useState<Page | null>(null);
@@ -91,6 +92,9 @@ export default function Homepage() {
           </div>
         </footer>
       )}
+
+      {/* Auth Modal */}
+      <AuthModal />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { HeroContent } from '../../api/cms';
+import { useAuth } from '../../hooks/useAuth';
 
 interface HeroProps {
   content: HeroContent;
@@ -7,6 +8,7 @@ interface HeroProps {
 
 export default function Hero({ content }: HeroProps) {
   const { headline, subheadline, cta_primary, cta_secondary } = content;
+  const { user, openAuthModal } = useAuth();
 
   return (
     <section className="relative min-h-screen flex items-center bg-gradient-to-br from-primary-50 via-white to-accent-50 pt-16 md:pt-20">
@@ -27,12 +29,21 @@ export default function Hero({ content }: HeroProps) {
               {subheadline}
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Link
-                to={cta_primary.url}
-                className="btn-accent px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-shadow"
-              >
-                {cta_primary.text}
-              </Link>
+              {user ? (
+                <Link
+                  to="/dashboard"
+                  className="btn-accent px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-shadow"
+                >
+                  Go to Dashboard
+                </Link>
+              ) : (
+                <button
+                  onClick={() => openAuthModal('signup')}
+                  className="btn-accent px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-shadow"
+                >
+                  {cta_primary.text}
+                </button>
+              )}
               <button
                 onClick={() => {
                   const targetId = cta_secondary.url.replace('#', '');
