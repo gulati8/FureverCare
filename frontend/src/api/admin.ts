@@ -161,6 +161,29 @@ export interface HealthInsights {
   pets_with_microchips_pct: number;
 }
 
+export interface SubscriptionPricing {
+  monthly_price_cents: number;
+  annual_price_cents: number;
+  currency: string;
+}
+
+export interface SubscriptionTrial {
+  trial_days: number;
+  require_card: boolean;
+}
+
+export interface SubscriptionStripe {
+  price_id_monthly: string;
+  price_id_annual: string;
+  webhook_secret: string;
+}
+
+export interface SubscriptionConfig {
+  pricing: SubscriptionPricing;
+  trial: SubscriptionTrial;
+  stripe: SubscriptionStripe;
+}
+
 // ============ Admin API ============
 
 export const adminApi = {
@@ -220,4 +243,17 @@ export const adminApi = {
 
   fetchHealthInsights: (token: string) =>
     api.get<HealthInsights>('/api/admin/analytics/health-insights', token),
+
+  // Subscription config
+  getSubscriptionConfig: (token: string) =>
+    api.get<SubscriptionConfig>('/api/admin/subscription/config', token),
+
+  updatePricing: (token: string, pricing: SubscriptionPricing) =>
+    api.put<SubscriptionPricing>('/api/admin/subscription/pricing', pricing, token),
+
+  updateTrial: (token: string, trial: SubscriptionTrial) =>
+    api.put<SubscriptionTrial>('/api/admin/subscription/trial', trial, token),
+
+  updateStripe: (token: string, stripe: SubscriptionStripe) =>
+    api.put<SubscriptionStripe>('/api/admin/subscription/stripe', stripe, token),
 };

@@ -3,9 +3,13 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { petsApi, Pet } from '../api/client';
 import AddPetModal from '../components/AddPetModal';
+import UpgradeBanner from '../components/UpgradeBanner';
+
+// Pet limits by tier
+const FREE_TIER_PET_LIMIT = 1;
 
 export default function Dashboard() {
-  const { token } = useAuth();
+  const { token, isPremium } = useAuth();
   const [pets, setPets] = useState<Pet[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -31,6 +35,27 @@ export default function Dashboard() {
     setShowAddModal(false);
   };
 
+  // Calculate pet limit based on subscription
+  const petLimit = isPremium ? Infinity : FREE_TIER_PET_LIMIT;
+  const isAtPetLimit = pets.length >= petLimit;
+
+  // Handle add pet button click
+  const handleAddPetClick = () => {
+    if (isAtPetLimit) {
+      // Don't open modal if at limit - the banner will show
+      return;
+    }
+    setShowAddModal(true);
+  };
+
+  // Get pet count display text
+  const getPetCountText = () => {
+    if (isPremium) {
+      return `${pets.length} pet${pets.length !== 1 ? 's' : ''}`;
+    }
+    return `${pets.length}/${petLimit} pet${petLimit !== 1 ? 's' : ''}`;
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -41,15 +66,30 @@ export default function Dashboard() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">My Pets</h1>
+      <div className="flex justify-between items-center mb-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">My Pets</h1>
+          <p className="text-sm text-gray-500 mt-1">{getPetCountText()}</p>
+        </div>
         <button
-          onClick={() => setShowAddModal(true)}
-          className="btn-primary"
+          onClick={handleAddPetClick}
+          disabled={isAtPetLimit}
+          className={`btn-primary ${isAtPetLimit ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           + Add Pet
         </button>
       </div>
+
+      {/* Show upgrade banner when at pet limit */}
+      {isAtPetLimit && (
+        <div className="mb-6">
+          <UpgradeBanner
+            type="pet_limit"
+            petCount={pets.length}
+            petLimit={petLimit}
+          />
+        </div>
+      )}
 
       {pets.length === 0 ? (
         <div className="text-center py-12">

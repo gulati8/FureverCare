@@ -16,6 +16,9 @@ import CMSEditor from './pages/admin/CMSEditor';
 import AnalyticsDashboard from './pages/admin/AnalyticsDashboard';
 import UsersList from './pages/admin/UsersList';
 import PetsList from './pages/admin/PetsList';
+import SubscriptionSettings from './pages/admin/SubscriptionSettings';
+import BillingSettings from './pages/BillingSettings';
+import Pricing from './pages/Pricing';
 
 // Redirects to homepage and opens the auth modal
 function AuthRedirect({ mode }: { mode: 'login' | 'signup' }) {
@@ -93,6 +96,8 @@ export default function App() {
       <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/pets/:id" element={<PetDetail />} />
+        <Route path="/billing" element={<BillingSettings />} />
+        <Route path="/pricing" element={<Pricing />} />
       </Route>
 
       {/* Admin routes */}
@@ -102,6 +107,7 @@ export default function App() {
         <Route path="users" element={<UsersList />} />
         <Route path="pets" element={<PetsList />} />
         <Route path="cms" element={<CMSEditor />} />
+        <Route path="subscriptions" element={<SubscriptionSettings />} />
       </Route>
 
       {/* Catch all */}

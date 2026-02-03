@@ -19,6 +19,7 @@ import ShareWallet from '../components/ShareWallet';
 import { DocumentImportSection } from '../components/document-import/DocumentImportSection';
 import { AuditLogViewer } from '../components/audit/AuditLogViewer';
 import { MedicalTimeline } from '../components/MedicalTimeline';
+import UpgradeBanner from '../components/UpgradeBanner';
 
 type TabType = 'overview' | 'timeline' | 'conditions' | 'allergies' | 'medications' | 'vaccinations' | 'contacts' | 'vets' | 'documents' | 'history';
 
@@ -38,7 +39,7 @@ function formatWeight(value: number | string, unit: 'lbs' | 'kg' | null): React.
 
 export default function PetDetail() {
   const { id } = useParams<{ id: string }>();
-  const { token } = useAuth();
+  const { token, isPremium } = useAuth();
   const navigate = useNavigate();
 
   const [pet, setPet] = useState<Pet | null>(null);
@@ -171,12 +172,22 @@ export default function PetDetail() {
             >
               Edit
             </button>
-            <button
-              onClick={() => setShowAccessModal(true)}
-              className="btn-secondary"
-            >
-              Access
-            </button>
+            {isPremium ? (
+              <button
+                onClick={() => setShowAccessModal(true)}
+                className="btn-secondary"
+              >
+                Access
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowAccessModal(true)}
+                className="btn-secondary opacity-50"
+                title="Premium feature - Upgrade to share pet access with others"
+              >
+                Access
+              </button>
+            )}
             <button
               onClick={() => setShowShareModal(true)}
               className="btn-primary"
@@ -223,13 +234,22 @@ export default function PetDetail() {
           <OverviewTab pet={pet} conditions={conditions} allergies={allergies} medications={medications} />
         )}
         {activeTab === 'timeline' && (
-          <MedicalTimeline
-            conditions={conditions}
-            allergies={allergies}
-            medications={medications}
-            vaccinations={vaccinations}
-            dateOfBirth={pet.date_of_birth}
-          />
+          isPremium ? (
+            <MedicalTimeline
+              conditions={conditions}
+              allergies={allergies}
+              medications={medications}
+              vaccinations={vaccinations}
+              dateOfBirth={pet.date_of_birth}
+            />
+          ) : (
+            <div className="space-y-4">
+              <UpgradeBanner type="feature" feature="timeline" />
+              <p className="text-gray-500 text-center py-4">
+                Upgrade to premium to view a visual timeline of your pet's medical history.
+              </p>
+            </div>
+          )
         )}
         {activeTab === 'conditions' && (
           <ConditionsTab petId={petId} token={token!} conditions={conditions} setConditions={setConditions} />
@@ -250,7 +270,16 @@ export default function PetDetail() {
           <ContactsTab petId={petId} token={token!} contacts={emergencyContacts} setContacts={setEmergencyContacts} />
         )}
         {activeTab === 'documents' && (
-          <DocumentImportSection petId={petId} onImportComplete={() => loadPetData()} />
+          isPremium ? (
+            <DocumentImportSection petId={petId} onImportComplete={() => loadPetData()} />
+          ) : (
+            <div className="space-y-4">
+              <UpgradeBanner type="feature" feature="upload" />
+              <p className="text-gray-500 text-center py-4">
+                Upgrade to premium to import medical records from PDFs and photos.
+              </p>
+            </div>
+          )
         )}
         {activeTab === 'history' && (
           <HistoryTab petId={petId} />
@@ -290,11 +319,29 @@ export default function PetDetail() {
 
       {/* Manage Access Modal */}
       {showAccessModal && (
-        <ManageAccessModal
-          petId={petId}
-          petName={pet.name}
-          onClose={() => setShowAccessModal(false)}
-        />
+        isPremium ? (
+          <ManageAccessModal
+            petId={petId}
+            petName={pet.name}
+            onClose={() => setShowAccessModal(false)}
+          />
+        ) : (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Share Pet Access</h2>
+              <UpgradeBanner type="feature" feature="shared_ownership" />
+              <p className="text-gray-600 text-sm mt-4">
+                With premium, you can invite family members or pet sitters to view and manage your pet's health records.
+              </p>
+              <button
+                onClick={() => setShowAccessModal(false)}
+                className="mt-4 w-full btn-secondary"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )
       )}
     </div>
   );

@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { z } from 'zod';
 import { authenticate, AuthRequest } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
+import { checkPetLimit } from '../middleware/subscription.js';
 import {
   createPet,
   findPetById,
@@ -67,7 +68,7 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
 });
 
 // POST /pets - Create a new pet
-router.post('/', authenticate, validate(createPetSchema), async (req: AuthRequest, res: Response) => {
+router.post('/', authenticate, checkPetLimit, validate(createPetSchema), async (req: AuthRequest, res: Response) => {
   try {
     const pet = await createPet({
       user_id: req.userId!,
