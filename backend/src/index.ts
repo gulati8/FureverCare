@@ -15,6 +15,9 @@ import documentImportRoutes from './routes/document-import.js';
 import auditRoutes from './routes/audit.js';
 import shareTokenRoutes from './routes/share-tokens.js';
 import cmsRoutes from './routes/cms.js';
+import adminUsersRoutes from './routes/admin-users.js';
+import adminPetsRoutes from './routes/admin-pets.js';
+import adminAnalyticsRoutes from './routes/admin-analytics.js';
 
 const app = express();
 
@@ -57,6 +60,9 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/owners', ownersRoutes);
 app.use('/api', shareTokenRoutes);  // Share token routes under /api/pets/:petId/share-tokens
 app.use('/api/cms', cmsRoutes);     // CMS routes under /api/cms
+app.use('/api/admin/users', adminUsersRoutes);  // Admin users routes
+app.use('/api/admin/pets', adminPetsRoutes);    // Admin pets routes
+app.use('/api/admin/analytics', adminAnalyticsRoutes);  // Admin analytics routes
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
