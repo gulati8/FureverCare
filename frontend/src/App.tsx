@@ -13,6 +13,9 @@ import TokenCard from './pages/TokenCard';
 import AcceptInvite from './pages/AcceptInvite';
 import AdminLayout from './pages/admin/AdminLayout';
 import CMSEditor from './pages/admin/CMSEditor';
+import AnalyticsDashboard from './pages/admin/AnalyticsDashboard';
+import UsersList from './pages/admin/UsersList';
+import PetsList from './pages/admin/PetsList';
 
 // Redirects to homepage and opens the auth modal
 function AuthRedirect({ mode }: { mode: 'login' | 'signup' }) {
@@ -94,7 +97,10 @@ export default function App() {
 
       {/* Admin routes */}
       <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
-        <Route index element={<Navigate to="/admin/cms" replace />} />
+        <Route index element={<Navigate to="/admin/analytics" replace />} />
+        <Route path="analytics" element={<AnalyticsDashboard />} />
+        <Route path="users" element={<UsersList />} />
+        <Route path="pets" element={<PetsList />} />
         <Route path="cms" element={<CMSEditor />} />
       </Route>
 
