@@ -3,6 +3,9 @@ import crypto from 'crypto';
 import { pool, query, queryOne } from '../db/pool.js';
 import { config } from '../config/index.js';
 
+export type SubscriptionStatus = 'free' | 'trialing' | 'active' | 'past_due' | 'canceled';
+export type SubscriptionTier = 'free' | 'premium';
+
 export interface User {
   id: number;
   email: string;
@@ -10,6 +13,11 @@ export interface User {
   name: string;
   phone: string | null;
   is_admin: boolean;
+  stripe_customer_id: string | null;
+  subscription_status: SubscriptionStatus;
+  subscription_tier: SubscriptionTier;
+  subscription_current_period_end: Date | null;
+  subscription_stripe_id: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -147,4 +155,147 @@ export async function updateUserPassword(userId: number, newPassword: string): P
   );
 
   return (result.rowCount ?? 0) > 0;
+}
+
+// Subscription-related functions
+
+export interface SubscriptionUpdates {
+  stripe_customer_id?: string;
+  subscription_status?: SubscriptionStatus;
+  subscription_tier?: SubscriptionTier;
+  subscription_current_period_end?: Date | null;
+  subscription_stripe_id?: string | null;
+}
+
+export interface SubscriptionInfo {
+  subscription_status: SubscriptionStatus;
+  subscription_tier: SubscriptionTier;
+  subscription_current_period_end: Date | null;
+  subscription_stripe_id: string | null;
+  stripe_customer_id: string | null;
+}
+
+export async function updateSubscription(userId: number, updates: SubscriptionUpdates): Promise<User> {
+  const fields: string[] = [];
+  const values: any[] = [];
+  let paramCount = 1;
+
+  if (updates.stripe_customer_id !== undefined) {
+    fields.push(`stripe_customer_id = $${paramCount++}`);
+    values.push(updates.stripe_customer_id);
+  }
+  if (updates.subscription_status !== undefined) {
+    fields.push(`subscription_status = $${paramCount++}`);
+    values.push(updates.subscription_status);
+  }
+  if (updates.subscription_tier !== undefined) {
+    fields.push(`subscription_tier = $${paramCount++}`);
+    values.push(updates.subscription_tier);
+  }
+  if (updates.subscription_current_period_end !== undefined) {
+    fields.push(`subscription_current_period_end = $${paramCount++}`);
+    values.push(updates.subscription_current_period_end);
+  }
+  if (updates.subscription_stripe_id !== undefined) {
+    fields.push(`subscription_stripe_id = $${paramCount++}`);
+    values.push(updates.subscription_stripe_id);
+  }
+
+  if (fields.length === 0) {
+    const user = await findUserById(userId);
+    if (!user) throw new Error('User not found');
+    return user;
+  }
+
+  fields.push(`updated_at = CURRENT_TIMESTAMP`);
+  values.push(userId);
+
+  const result = await queryOne<User>(
+    `UPDATE users SET ${fields.join(', ')} WHERE id = $${paramCount} RETURNING *`,
+    values
+  );
+
+  if (!result) throw new Error('User not found');
+  return result;
+}
+
+export async function findUserByStripeCustomerId(stripeCustomerId: string): Promise<User | null> {
+  return queryOne<User>(
+    'SELECT * FROM users WHERE stripe_customer_id = $1',
+    [stripeCustomerId]
+  );
+}
+
+export async function getUserSubscriptionInfo(userId: number): Promise<SubscriptionInfo> {
+  const result = await queryOne<SubscriptionInfo>(
+    `SELECT subscription_status, subscription_tier, subscription_current_period_end,
+            subscription_stripe_id, stripe_customer_id
+     FROM users WHERE id = $1`,
+    [userId]
+  );
+
+  if (!result) {
+    return {
+      subscription_status: 'free',
+      subscription_tier: 'free',
+      subscription_current_period_end: null,
+      subscription_stripe_id: null,
+      stripe_customer_id: null,
+    };
+  }
+
+  return result;
+}
+
+const FREE_TIER_PET_LIMIT = 1;
+const PREMIUM_FEATURES = ['upload', 'timeline', 'shared_ownership'];
+
+export async function canUserAddPet(userId: number): Promise<{allowed: boolean, reason?: string, petCount: number, limit: number}> {
+  const user = await findUserById(userId);
+  if (!user) {
+    return { allowed: false, reason: 'User not found', petCount: 0, limit: 0 };
+  }
+
+  // Premium users have unlimited pets
+  if (user.subscription_tier === 'premium') {
+    const countResult = await queryOne<{ count: string }>(
+      `SELECT COUNT(*) as count FROM pets WHERE user_id = $1`,
+      [userId]
+    );
+    const petCount = parseInt(countResult?.count || '0', 10);
+    return { allowed: true, petCount, limit: Infinity };
+  }
+
+  // Free tier users have a pet limit
+  const countResult = await queryOne<{ count: string }>(
+    `SELECT COUNT(*) as count FROM pets WHERE user_id = $1`,
+    [userId]
+  );
+  const petCount = parseInt(countResult?.count || '0', 10);
+
+  if (petCount >= FREE_TIER_PET_LIMIT) {
+    return {
+      allowed: false,
+      reason: `Free tier limited to ${FREE_TIER_PET_LIMIT} pet. Upgrade to premium for unlimited pets.`,
+      petCount,
+      limit: FREE_TIER_PET_LIMIT,
+    };
+  }
+
+  return { allowed: true, petCount, limit: FREE_TIER_PET_LIMIT };
+}
+
+export async function canUserUseFeature(userId: number, feature: string): Promise<boolean> {
+  // If not a premium feature, allow all users
+  if (!PREMIUM_FEATURES.includes(feature)) {
+    return true;
+  }
+
+  const user = await findUserById(userId);
+  if (!user) {
+    return false;
+  }
+
+  // Premium tier users can use all features
+  return user.subscription_tier === 'premium';
 }

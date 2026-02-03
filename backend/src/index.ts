@@ -18,6 +18,9 @@ import cmsRoutes from './routes/cms.js';
 import adminUsersRoutes from './routes/admin-users.js';
 import adminPetsRoutes from './routes/admin-pets.js';
 import adminAnalyticsRoutes from './routes/admin-analytics.js';
+import billingRoutes from './routes/billing.js';
+import subscriptionAdminRoutes from './routes/subscription-admin.js';
+import stripeWebhookRoutes from './routes/stripe-webhook.js';
 
 const app = express();
 
@@ -35,6 +38,9 @@ const limiter = rateLimit({
   message: { error: 'Too many requests, please try again later.' },
 });
 app.use(limiter);
+
+// Stripe webhook route (must be before body parsing - needs raw body)
+app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }), stripeWebhookRoutes);
 
 // Body parsing
 app.use(express.json());
@@ -63,6 +69,8 @@ app.use('/api/cms', cmsRoutes);     // CMS routes under /api/cms
 app.use('/api/admin/users', adminUsersRoutes);  // Admin users routes
 app.use('/api/admin/pets', adminPetsRoutes);    // Admin pets routes
 app.use('/api/admin/analytics', adminAnalyticsRoutes);  // Admin analytics routes
+app.use('/api/billing', billingRoutes);  // Billing routes under /api/billing
+app.use('/api/subscription-admin', subscriptionAdminRoutes);  // Subscription admin routes
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

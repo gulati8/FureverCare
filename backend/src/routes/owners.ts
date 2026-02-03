@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { z } from 'zod';
 import { authenticate, AuthRequest } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
+import { requireFeature } from '../middleware/subscription.js';
 import { findPetById } from '../models/pet.js';
 import { findUserByEmail } from '../models/user.js';
 import {
@@ -60,7 +61,7 @@ router.get('/pets/:petId', authenticate, async (req: AuthRequest, res: Response)
 });
 
 // POST /owners/pets/:petId/invite - Invite someone to share pet access
-router.post('/pets/:petId/invite', authenticate, validate(inviteSchema), async (req: AuthRequest, res: Response) => {
+router.post('/pets/:petId/invite', authenticate, requireFeature('shared_ownership'), validate(inviteSchema), async (req: AuthRequest, res: Response) => {
   try {
     const petId = parseInt(req.params.petId);
     const { email, role } = req.body;

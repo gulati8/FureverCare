@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { authenticate, AuthRequest } from '../middleware/auth.js';
 import { uploadDocument } from '../middleware/upload.js';
+import { requireFeature } from '../middleware/subscription.js';
 import { storage } from '../services/storage.js';
 import { userHasPetAccess, userCanEditPet } from '../models/pet-owners.js';
 import { findPetById } from '../models/pet.js';
@@ -46,7 +47,7 @@ async function verifyPetEditAccess(petId: number, userId: number, res: Response)
 }
 
 // POST /api/pets/:petId/documents/upload - Upload and process a document (unified endpoint)
-router.post('/:petId/documents/upload', authenticate, pdfUploadRateLimit, claudeRateLimit, uploadDocument.single('document'), async (req: AuthRequest, res: Response) => {
+router.post('/:petId/documents/upload', authenticate, requireFeature('upload'), pdfUploadRateLimit, claudeRateLimit, uploadDocument.single('document'), async (req: AuthRequest, res: Response) => {
   try {
     const petId = parseInt(req.params.petId);
 
