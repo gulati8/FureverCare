@@ -515,18 +515,37 @@ export async function findPetByIdWithDetails(id: number): Promise<AdminPetDetail
 // ============ Analytics Queries ============
 
 export async function getAnalyticsOverview(): Promise<AnalyticsOverview> {
-  const result = await queryOne<AnalyticsOverview>(
+  const result = await queryOne<{
+    total_users: number;
+    total_pets: number;
+    new_users_this_week: number;
+    new_pets_this_week: number;
+    most_common_species: string;
+    users_with_pets: number;
+  }>(
     `SELECT
       (SELECT COUNT(*) FROM users) as total_users,
       (SELECT COUNT(*) FROM pets) as total_pets,
       (SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '7 days') as new_users_this_week,
       (SELECT COUNT(*) FROM pets WHERE created_at >= NOW() - INTERVAL '7 days') as new_pets_this_week,
       (SELECT species FROM pets GROUP BY species ORDER BY COUNT(*) DESC LIMIT 1) as most_common_species,
-      ROUND((SELECT COUNT(DISTINCT user_id)::float FROM pet_owners) / NULLIF((SELECT COUNT(*)::float FROM users), 0) * 100, 2) as adoption_rate
+      (SELECT COUNT(DISTINCT user_id) FROM pet_owners) as users_with_pets
     `
   );
 
-  return result!;
+  const data = result!;
+  const adoption_rate = data.total_users > 0
+    ? Math.round((data.users_with_pets / data.total_users) * 10000) / 100
+    : 0;
+
+  return {
+    total_users: data.total_users,
+    total_pets: data.total_pets,
+    new_users_this_week: data.new_users_this_week,
+    new_pets_this_week: data.new_pets_this_week,
+    most_common_species: data.most_common_species,
+    adoption_rate,
+  };
 }
 
 export async function getActivityMetrics(days: number = 30): Promise<ActivityMetrics[]> {
@@ -588,18 +607,31 @@ export async function getHealthInsights(): Promise<HealthInsights> {
     LIMIT 10`
   );
 
-  // Get allergy and microchip percentages
-  const stats = await queryOne<{ pets_with_allergies_pct: number; pets_with_microchips_pct: number }>(
+  // Get raw counts for percentage calculations
+  const stats = await queryOne<{
+    total_pets: number;
+    pets_with_allergies: number;
+    pets_with_microchips: number;
+  }>(
     `SELECT
-      ROUND((SELECT COUNT(DISTINCT pet_id)::float FROM pet_allergies) / NULLIF((SELECT COUNT(*)::float FROM pets), 0) * 100, 2) as pets_with_allergies_pct,
-      ROUND((SELECT COUNT(*)::float FROM pets WHERE microchip_number IS NOT NULL) / NULLIF((SELECT COUNT(*)::float FROM pets), 0) * 100, 2) as pets_with_microchips_pct
+      (SELECT COUNT(*) FROM pets) as total_pets,
+      (SELECT COUNT(DISTINCT pet_id) FROM pet_allergies) as pets_with_allergies,
+      (SELECT COUNT(*) FROM pets WHERE microchip_id IS NOT NULL) as pets_with_microchips
     `
   );
+
+  const totalPets = stats?.total_pets || 0;
+  const pets_with_allergies_pct = totalPets > 0
+    ? Math.round((stats!.pets_with_allergies / totalPets) * 10000) / 100
+    : 0;
+  const pets_with_microchips_pct = totalPets > 0
+    ? Math.round((stats!.pets_with_microchips / totalPets) * 10000) / 100
+    : 0;
 
   return {
     most_common_conditions: conditions,
     most_common_medications: medications,
-    pets_with_allergies_pct: stats?.pets_with_allergies_pct || 0,
-    pets_with_microchips_pct: stats?.pets_with_microchips_pct || 0,
+    pets_with_allergies_pct,
+    pets_with_microchips_pct,
   };
 }
