@@ -1,7 +1,22 @@
 import Stripe from 'stripe';
 import { config } from '../config/index.js';
 
-const stripe = new Stripe(config.stripe.secretKey);
+const stripe = config.stripe.secretKey
+  ? new Stripe(config.stripe.secretKey)
+  : null;
+
+/**
+ * Check if Stripe is configured
+ */
+export function isStripeConfigured(): boolean {
+  return stripe !== null;
+}
+
+function assertStripeConfigured(): asserts stripe is Stripe {
+  if (!stripe) {
+    throw new Error('Stripe is not configured. Set STRIPE_SECRET_KEY environment variable.');
+  }
+}
 
 /**
  * Create a new Stripe customer
@@ -10,6 +25,7 @@ const stripe = new Stripe(config.stripe.secretKey);
  * @returns The Stripe customer ID
  */
 export async function createCustomer(email: string, name: string): Promise<string> {
+  assertStripeConfigured();
   const customer = await stripe.customers.create({
     email,
     name,
@@ -33,6 +49,7 @@ export async function createCheckoutSession(
   cancelUrl: string,
   trialDays?: number
 ): Promise<string> {
+  assertStripeConfigured();
   const sessionParams: Stripe.Checkout.SessionCreateParams = {
     customer: customerId,
     mode: 'subscription',
@@ -71,6 +88,7 @@ export async function createPortalSession(
   customerId: string,
   returnUrl: string
 ): Promise<string> {
+  assertStripeConfigured();
   const session = await stripe.billingPortal.sessions.create({
     customer: customerId,
     return_url: returnUrl,
@@ -84,6 +102,7 @@ export async function createPortalSession(
  * @param subscriptionId - Stripe subscription ID
  */
 export async function cancelSubscription(subscriptionId: string): Promise<void> {
+  assertStripeConfigured();
   await stripe.subscriptions.cancel(subscriptionId);
 }
 
@@ -93,6 +112,7 @@ export async function cancelSubscription(subscriptionId: string): Promise<void> 
  * @returns The Stripe subscription object
  */
 export async function getSubscription(subscriptionId: string): Promise<Stripe.Subscription> {
+  assertStripeConfigured();
   return await stripe.subscriptions.retrieve(subscriptionId);
 }
 
@@ -106,6 +126,7 @@ export function constructWebhookEvent(
   payload: string | Buffer,
   signature: string
 ): Stripe.Event {
+  assertStripeConfigured();
   return stripe.webhooks.constructEvent(
     payload,
     signature,
@@ -113,5 +134,5 @@ export function constructWebhookEvent(
   );
 }
 
-// Export the stripe instance for advanced use cases
+// Export the stripe instance for advanced use cases (may be null if not configured)
 export { stripe };
