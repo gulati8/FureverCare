@@ -17,6 +17,7 @@ interface SeedUser {
   password: string;
   name: string;
   phone: string;
+  is_admin?: boolean;
 }
 
 interface SeedPet {
@@ -33,6 +34,13 @@ interface SeedPet {
 
 // Realistic sample users
 const users: SeedUser[] = [
+  {
+    email: 'admin@furevercare.com',
+    password: 'admin123',
+    name: 'Admin',
+    phone: '',
+    is_admin: true,
+  },
   {
     email: 'sarah.chen@example.com',
     password: 'FureverCare2024!',
@@ -173,10 +181,10 @@ async function seed() {
 
       const passwordHash = await bcrypt.hash(user.password, 12);
       const result = await queryOne<{ id: number; email: string; name: string }>(
-        `INSERT INTO users (email, password_hash, name, phone)
-         VALUES ($1, $2, $3, $4)
+        `INSERT INTO users (email, password_hash, name, phone, is_admin)
+         VALUES ($1, $2, $3, $4, $5)
          RETURNING id, email, name`,
-        [user.email.toLowerCase(), passwordHash, user.name, user.phone]
+        [user.email.toLowerCase(), passwordHash, user.name, user.phone, user.is_admin || false]
       );
 
       if (result) {
@@ -195,14 +203,15 @@ async function seed() {
     // pets[2], pets[3] -> users[2] (Emily Rodriguez)
     // pets[4], pets[5], pets[6] -> users[3] & users[4] (James & Priya) - shared
 
+    // Note: Admin user is at index 0, so regular users start at index 1
     const petOwnershipMap = [
-      { petIndex: 0, ownerIndices: [0] },           // Biscuit -> Sarah
-      { petIndex: 1, ownerIndices: [1] },           // Whiskers -> Marcus
-      { petIndex: 2, ownerIndices: [2] },           // Duke -> Emily
-      { petIndex: 3, ownerIndices: [2] },           // Luna -> Emily
-      { petIndex: 4, ownerIndices: [3, 4] },        // Cheddar -> James (owner) & Priya (editor)
-      { petIndex: 5, ownerIndices: [3, 4] },        // Maple -> James (owner) & Priya (editor)
-      { petIndex: 6, ownerIndices: [4, 3] },        // Oliver -> Priya (owner) & James (editor)
+      { petIndex: 0, ownerIndices: [1] },           // Biscuit -> Sarah
+      { petIndex: 1, ownerIndices: [2] },           // Whiskers -> Marcus
+      { petIndex: 2, ownerIndices: [3] },           // Duke -> Emily
+      { petIndex: 3, ownerIndices: [3] },           // Luna -> Emily
+      { petIndex: 4, ownerIndices: [4, 5] },        // Cheddar -> James (owner) & Priya (editor)
+      { petIndex: 5, ownerIndices: [4, 5] },        // Maple -> James (owner) & Priya (editor)
+      { petIndex: 6, ownerIndices: [5, 4] },        // Oliver -> Priya (owner) & James (editor)
     ];
 
     for (const mapping of petOwnershipMap) {
@@ -286,11 +295,16 @@ async function seed() {
     console.log('─'.repeat(50));
     console.log(`Users created: ${createdUsers.length}`);
     console.log(`Pets created: ${createdPets.length}`);
-    console.log('\n📧 Login credentials (all use same password):');
+    console.log('\n🔐 Admin credentials:');
+    console.log('   Email: admin@furevercare.com');
+    console.log('   Password: admin123');
+    console.log('\n📧 Regular user credentials (all use same password):');
     console.log('   Password: FureverCare2024!');
     console.log('   Emails:');
     for (const user of createdUsers) {
-      console.log(`   - ${user.email}`);
+      if (user.email !== 'admin@furevercare.com') {
+        console.log(`   - ${user.email}`);
+      }
     }
     console.log('\n🔗 Pet share links:');
     for (const pet of createdPets) {
