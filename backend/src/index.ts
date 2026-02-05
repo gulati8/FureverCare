@@ -70,7 +70,7 @@ app.use('/api/admin/users', adminUsersRoutes);  // Admin users routes
 app.use('/api/admin/pets', adminPetsRoutes);    // Admin pets routes
 app.use('/api/admin/analytics', adminAnalyticsRoutes);  // Admin analytics routes
 app.use('/api/billing', billingRoutes);  // Billing routes under /api/billing
-app.use('/api/subscription-admin', subscriptionAdminRoutes);  // Subscription admin routes
+app.use('/api/admin/subscription', subscriptionAdminRoutes);  // Subscription admin routes
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
