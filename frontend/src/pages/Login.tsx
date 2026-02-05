@@ -16,8 +16,8 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      await login(email, password);
-      navigate('/dashboard');
+      const { isAdmin } = await login(email, password);
+      navigate(isAdmin ? '/admin/analytics' : '/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
