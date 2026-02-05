@@ -154,14 +154,14 @@ export default function CMSEditor() {
 
       {/* Controls bar */}
       <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           {/* Page selector */}
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
             <label className="text-sm font-medium text-gray-700">Page:</label>
             <select
               value={selectedPageId || ''}
               onChange={(e) => setSelectedPageId(Number(e.target.value))}
-              className="input max-w-xs"
+              className="input w-full sm:w-auto sm:max-w-xs"
             >
               {pages.map((page) => (
                 <option key={page.id} value={page.id}>
@@ -172,7 +172,7 @@ export default function CMSEditor() {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 justify-end">
             <button
               onClick={handlePreview}
               className="btn-secondary flex items-center space-x-2"
@@ -219,13 +219,13 @@ export default function CMSEditor() {
         {/* Status indicator */}
         {currentPage && (
           <div className="mt-3 pt-3 border-t border-gray-100">
-            <div className="flex items-center space-x-2 text-sm">
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-2 text-sm">
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium w-fit ${
                 currentPage.is_published ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
               }`}>
                 {currentPage.is_published ? 'Published' : 'Draft'}
               </span>
-              <span className="text-gray-500">
+              <span className="text-gray-500 text-xs sm:text-sm">
                 Last updated: {new Date(currentPage.updated_at).toLocaleString()}
               </span>
             </div>
@@ -249,7 +249,7 @@ export default function CMSEditor() {
               currentPage.blocks.map((block) => (
                 <div
                   key={block.id}
-                  className={`p-4 flex items-center justify-between ${
+                  className={`p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${
                     !block.is_visible ? 'bg-gray-50 opacity-60' : ''
                   }`}
                 >
@@ -267,7 +267,7 @@ export default function CMSEditor() {
                     )}
                   </div>
 
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 justify-end">
                     <button
                       onClick={() => handleToggleBlockVisibility(block)}
                       className={`p-2 rounded-lg transition-colors ${

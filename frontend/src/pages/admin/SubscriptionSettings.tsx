@@ -356,7 +356,7 @@ export default function SubscriptionSettings() {
               <p className="text-xs text-gray-500 mt-1">Find this in Stripe Webhooks settings</p>
             </div>
           </div>
-          <div className="pt-4 flex items-center justify-between">
+          <div className="pt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <button type="submit" disabled={savingStripe} className="btn-primary flex items-center">
               {savingStripe ? (
                 <>
