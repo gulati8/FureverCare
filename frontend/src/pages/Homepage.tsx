@@ -35,26 +35,36 @@ export default function Homepage() {
     return block ? (block.content as T) : null;
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  const heroContent = findBlock<HeroContent>('hero');
+  const featuresContent = findBlock<FeaturesContent>('features');
+  const howItWorksContent = findBlock<HowItWorksContent>('how_it_works');
+  const ctaContent = findBlock<CTAContent>('cta');
+  const footerContent = findBlock<FooterContent>('footer');
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center max-w-md mx-auto px-4">
-          <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Page Not Found</h1>
-          <p className="text-gray-600 mb-6">Sorry, we couldn't load this page. Please try again later.</p>
+  // Default hero content for immediate display while CMS loads
+  const defaultHeroContent: HeroContent = {
+    headline: "Your Pet's Emergency Info, Always Ready",
+    subheadline: "Create digital emergency health cards for your pets. Share vital information instantly with vets, pet sitters, or anyone who needs it.",
+    cta_primary: { text: "Get Started Free", url: "/signup" },
+    cta_secondary: { text: "Learn More", url: "#features" }
+  };
+
+  return (
+    <div className="min-h-screen">
+      {/* Navigation always visible immediately */}
+      <Navigation />
+
+      {/* Hero section - show immediately with default or CMS content */}
+      <Hero content={heroContent || defaultHeroContent} />
+
+      {/* Progressive loading for below-fold content */}
+      {isLoading ? (
+        <div className="py-20 flex justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        </div>
+      ) : error ? (
+        <div className="py-20 text-center max-w-md mx-auto px-4">
+          <p className="text-gray-600 mb-4">Some content couldn't be loaded.</p>
           <button
             onClick={() => window.location.reload()}
             className="btn-primary px-6 py-2"
@@ -62,25 +72,14 @@ export default function Homepage() {
             Refresh Page
           </button>
         </div>
-      </div>
-    );
-  }
-
-  const heroContent = findBlock<HeroContent>('hero');
-  const featuresContent = findBlock<FeaturesContent>('features');
-  const howItWorksContent = findBlock<HowItWorksContent>('how_it_works');
-  const ctaContent = findBlock<CTAContent>('cta');
-  const footerContent = findBlock<FooterContent>('footer');
-
-  return (
-    <div className="min-h-screen">
-      <Navigation />
-
-      {heroContent && <Hero content={heroContent} />}
-      {featuresContent && <Features content={featuresContent} />}
-      {howItWorksContent && <HowItWorks content={howItWorksContent} />}
-      {ctaContent && <CTASection content={ctaContent} />}
-      {footerContent && <Footer content={footerContent} />}
+      ) : (
+        <>
+          {featuresContent && <Features content={featuresContent} />}
+          {howItWorksContent && <HowItWorks content={howItWorksContent} />}
+          {ctaContent && <CTASection content={ctaContent} />}
+          {footerContent && <Footer content={footerContent} />}
+        </>
+      )}
 
       {/* Fallback footer if no CMS footer block */}
       {!footerContent && (
