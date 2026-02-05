@@ -1,15 +1,7 @@
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+import nodemailer from 'nodemailer';
+import type { Transporter } from 'nodemailer';
 import { config } from '../config/index.js';
-
-const sesClient = new SESClient({
-  region: config.email.ses.region,
-  credentials: config.email.ses.accessKeyId && config.email.ses.secretAccessKey
-    ? {
-        accessKeyId: config.email.ses.accessKeyId,
-        secretAccessKey: config.email.ses.secretAccessKey,
-      }
-    : undefined,
-});
 
 export interface SendEmailParams {
   to: string;
@@ -18,52 +10,170 @@ export interface SendEmailParams {
   htmlBody?: string;
 }
 
-export async function sendEmail(params: SendEmailParams): Promise<boolean> {
-  const { to, subject, textBody, htmlBody } = params;
+export interface SendEmailResult {
+  success: boolean;
+  messageId?: string;
+  error?: string;
+}
 
-  if (config.isDevelopment && !config.email.ses.accessKeyId) {
-    console.log('=== DEV MODE: Email would be sent ===');
+// Email provider interface
+interface EmailProvider {
+  send(params: SendEmailParams): Promise<SendEmailResult>;
+}
+
+// Console email provider (for development without external services)
+class ConsoleEmailProvider implements EmailProvider {
+  async send(params: SendEmailParams): Promise<SendEmailResult> {
+    const { to, subject, textBody } = params;
+
+    console.log('=== CONSOLE EMAIL PROVIDER ===');
     console.log(`To: ${to}`);
+    console.log(`From: ${config.email.fromName} <${config.email.fromAddress}>`);
     console.log(`Subject: ${subject}`);
-    console.log(`Body: ${textBody}`);
-    console.log('=====================================');
-    return true;
-  }
+    console.log('--- Body ---');
+    console.log(textBody);
+    console.log('=============================');
 
-  try {
-    const command = new SendEmailCommand({
-      Source: `${config.email.fromName} <${config.email.fromAddress}>`,
-      Destination: {
-        ToAddresses: [to],
-      },
-      Message: {
-        Subject: {
-          Data: subject,
-          Charset: 'UTF-8',
-        },
-        Body: {
-          Text: {
-            Data: textBody,
-            Charset: 'UTF-8',
-          },
-          ...(htmlBody && {
-            Html: {
-              Data: htmlBody,
-              Charset: 'UTF-8',
-            },
-          }),
-        },
-      },
-    });
-
-    await sesClient.send(command);
-    return true;
-  } catch (error) {
-    console.error('Failed to send email:', error);
-    return false;
+    return { success: true, messageId: `console-${Date.now()}` };
   }
 }
 
+// SMTP email provider (for local testing with Mailhog, ethereal.email, etc.)
+class SMTPEmailProvider implements EmailProvider {
+  private transporter: Transporter;
+
+  constructor() {
+    const authConfig = config.email.smtp.auth.user && config.email.smtp.auth.pass
+      ? { auth: config.email.smtp.auth }
+      : {};
+
+    this.transporter = nodemailer.createTransport({
+      host: config.email.smtp.host,
+      port: config.email.smtp.port,
+      secure: config.email.smtp.secure,
+      ...authConfig,
+    });
+  }
+
+  async send(params: SendEmailParams): Promise<SendEmailResult> {
+    const { to, subject, textBody, htmlBody } = params;
+
+    try {
+      const info = await this.transporter.sendMail({
+        from: `${config.email.fromName} <${config.email.fromAddress}>`,
+        to,
+        subject,
+        text: textBody,
+        html: htmlBody,
+      });
+
+      return { success: true, messageId: info.messageId };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('SMTP send failed:', message);
+      return { success: false, error: message };
+    }
+  }
+}
+
+// SES email provider (for production)
+class SESEmailProvider implements EmailProvider {
+  private client: SESClient;
+
+  constructor() {
+    this.client = new SESClient({
+      region: config.email.ses.region,
+      credentials: config.email.ses.accessKeyId && config.email.ses.secretAccessKey
+        ? {
+            accessKeyId: config.email.ses.accessKeyId,
+            secretAccessKey: config.email.ses.secretAccessKey,
+          }
+        : undefined,
+    });
+  }
+
+  async send(params: SendEmailParams): Promise<SendEmailResult> {
+    const { to, subject, textBody, htmlBody } = params;
+
+    try {
+      const command = new SendEmailCommand({
+        Source: `${config.email.fromName} <${config.email.fromAddress}>`,
+        Destination: {
+          ToAddresses: [to],
+        },
+        Message: {
+          Subject: {
+            Data: subject,
+            Charset: 'UTF-8',
+          },
+          Body: {
+            Text: {
+              Data: textBody,
+              Charset: 'UTF-8',
+            },
+            ...(htmlBody && {
+              Html: {
+                Data: htmlBody,
+                Charset: 'UTF-8',
+              },
+            }),
+          },
+        },
+      });
+
+      const response = await this.client.send(command);
+      return { success: true, messageId: response.MessageId };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('SES send failed:', message);
+      return { success: false, error: message };
+    }
+  }
+}
+
+// Factory function to create the appropriate provider based on config
+function createEmailProvider(): EmailProvider {
+  switch (config.email.provider) {
+    case 'ses':
+      console.log('Using SES email provider');
+      return new SESEmailProvider();
+    case 'smtp':
+      console.log(`Using SMTP email provider (${config.email.smtp.host}:${config.email.smtp.port})`);
+      return new SMTPEmailProvider();
+    case 'console':
+    default:
+      console.log('Using console email provider (emails logged to console)');
+      return new ConsoleEmailProvider();
+  }
+}
+
+// Singleton email provider instance
+const emailProvider = createEmailProvider();
+
+// Export email adapter (matches storage service pattern)
+export const email = {
+  async send(params: SendEmailParams): Promise<SendEmailResult> {
+    return emailProvider.send(params);
+  },
+
+  // Helper to check current provider
+  getProvider(): string {
+    return config.email.provider;
+  },
+
+  // Check if we're using a real email service (not console)
+  isConfigured(): boolean {
+    return config.email.provider !== 'console';
+  },
+};
+
+// Legacy export for backwards compatibility
+export async function sendEmail(params: SendEmailParams): Promise<boolean> {
+  const result = await email.send(params);
+  return result.success;
+}
+
+// Email templates
 export function generatePasswordResetEmail(resetUrl: string, userName: string): { subject: string; textBody: string; htmlBody: string } {
   const subject = 'Reset Your FureverCare Password';
 
