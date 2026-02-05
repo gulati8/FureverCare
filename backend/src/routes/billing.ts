@@ -98,7 +98,7 @@ router.post('/checkout', authenticate, validate(checkoutSchema), async (req: Aut
     const trialDays = trialConfig.trial_days;
 
     // Create checkout session
-    const successUrl = `${config.frontend.url}/billing/success?session_id={CHECKOUT_SESSION_ID}`;
+    const successUrl = `${config.frontend.url}/dashboard?session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${config.frontend.url}/billing/cancel`;
 
     const url = await createCheckoutSession(
