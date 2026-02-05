@@ -36,11 +36,20 @@ export const config = {
   },
 
   email: {
-    provider: process.env.EMAIL_PROVIDER || 'ses',
+    provider: (process.env.EMAIL_PROVIDER || 'console') as 'ses' | 'smtp' | 'console',
     ses: {
       region: process.env.AWS_SES_REGION || 'us-east-1',
       accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+    },
+    smtp: {
+      host: process.env.SMTP_HOST || 'localhost',
+      port: parseInt(process.env.SMTP_PORT || '1025', 10),
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: {
+        user: process.env.SMTP_USER || '',
+        pass: process.env.SMTP_PASS || '',
+      },
     },
     fromAddress: process.env.EMAIL_FROM_ADDRESS || 'noreply@furevercare.pet',
     fromName: process.env.EMAIL_FROM_NAME || 'FureverCare',
