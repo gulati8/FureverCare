@@ -29,8 +29,13 @@ const checkoutSchema = z.object({
 // GET /billing/subscription - Get current user's subscription status
 router.get('/subscription', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const subscriptionInfo = await getUserSubscriptionInfo(req.userId!);
-    res.json(subscriptionInfo);
+    const info = await getUserSubscriptionInfo(req.userId!);
+    // Transform to frontend expected format
+    res.json({
+      status: info.subscription_status,
+      tier: info.subscription_tier,
+      currentPeriodEnd: info.subscription_current_period_end,
+    });
   } catch (error) {
     console.error('Error fetching subscription:', error);
     res.status(500).json({ error: 'Failed to fetch subscription' });
