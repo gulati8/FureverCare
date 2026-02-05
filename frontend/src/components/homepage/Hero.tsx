@@ -12,10 +12,10 @@ export default function Hero({ content }: HeroProps) {
 
   return (
     <section className="relative min-h-screen flex items-center bg-gradient-to-br from-primary-50 via-white to-accent-50 pt-16 md:pt-20">
-      {/* Background decoration */}
+      {/* Background decoration - reduced blur on mobile for performance */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary-100 rounded-full opacity-50 blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-accent-100 rounded-full opacity-50 blur-3xl" />
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary-100 rounded-full opacity-50 blur-xl md:blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-accent-100 rounded-full opacity-50 blur-xl md:blur-3xl" />
       </div>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">
@@ -112,13 +112,13 @@ export default function Hero({ content }: HeroProps) {
         </div>
       </div>
 
-      {/* Scroll indicator */}
+      {/* Scroll indicator - hover animation only for stability */}
       <button
         onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
-        className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce cursor-pointer hover:text-primary-500 transition-colors"
+        className="absolute bottom-8 left-1/2 transform -translate-x-1/2 cursor-pointer transition-transform duration-300 hover:-translate-y-1"
         aria-label="Scroll to features"
       >
-        <svg className="w-6 h-6 text-gray-400 hover:text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-6 h-6 text-gray-400 hover:text-primary-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
         </svg>
       </button>
