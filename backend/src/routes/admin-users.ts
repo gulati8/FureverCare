@@ -17,7 +17,7 @@ const router = Router();
 const getUsersQuerySchema = z.object({
   limit: z.string().optional().transform((val) => parseInt(val || '25')),
   offset: z.string().optional().transform((val) => parseInt(val || '0')),
-  sortBy: z.enum(['id', 'name', 'email', 'is_admin', 'created_at', 'owned_pet_count', 'shared_pet_count']).optional().default('id'),
+  sortBy: z.enum(['id', 'name', 'email', 'is_admin', 'subscription_status', 'subscription_tier', 'created_at', 'owned_pet_count', 'shared_pet_count']).optional().default('id'),
   sortOrder: z.enum(['ASC', 'DESC']).optional().default('DESC'),
   search: z.string().optional(),
   isAdmin: z.string().optional().transform((val) => val === 'true' ? true : val === 'false' ? false : undefined),

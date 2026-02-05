@@ -74,6 +74,9 @@ export const authApi = {
 
   resetPassword: (data: { token: string; password: string }) =>
     api.post<{ message: string; user: User; token: string }>('/api/auth/reset-password', data),
+
+  changePassword: (data: { currentPassword: string; newPassword: string }, token: string) =>
+    api.post<{ message: string }>('/api/auth/change-password', data, token),
 };
 
 // Pets API

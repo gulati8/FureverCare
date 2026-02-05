@@ -8,6 +8,9 @@ export interface AdminUser {
   name: string;
   phone: string | null;
   is_admin: boolean;
+  subscription_status: string;
+  subscription_tier: string;
+  subscription_current_period_end: Date | null;
   created_at: Date;
   updated_at: Date;
   owned_pet_count: number;
@@ -197,7 +200,7 @@ export async function findAllUsersWithPagination(
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
   // Validate sortBy to prevent SQL injection
-  const validSortColumns = ['id', 'name', 'email', 'is_admin', 'created_at', 'owned_pet_count', 'shared_pet_count'];
+  const validSortColumns = ['id', 'name', 'email', 'is_admin', 'subscription_status', 'subscription_tier', 'created_at', 'owned_pet_count', 'shared_pet_count'];
   const sortColumn = validSortColumns.includes(sortBy) ? sortBy : 'id';
 
   // Get total count
@@ -217,6 +220,9 @@ export async function findAllUsersWithPagination(
       u.name,
       u.phone,
       u.is_admin,
+      u.subscription_status,
+      u.subscription_tier,
+      u.subscription_current_period_end,
       u.created_at,
       u.updated_at,
       COUNT(DISTINCT CASE WHEN po.role = 'owner' THEN po.pet_id END) as owned_pet_count,
@@ -251,6 +257,9 @@ export async function findUserByIdWithStats(id: number): Promise<AdminUserDetail
       u.name,
       u.phone,
       u.is_admin,
+      u.subscription_status,
+      u.subscription_tier,
+      u.subscription_current_period_end,
       u.created_at,
       u.updated_at,
       COUNT(DISTINCT CASE WHEN po.role = 'owner' THEN po.pet_id END) as owned_pet_count,

@@ -116,6 +116,54 @@ export default function UserDetailModal({ userId, onClose }: Props) {
                 </div>
               </div>
 
+              {/* Subscription Info */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Subscription</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Plan</label>
+                    <p className="text-gray-900 capitalize">{user.subscription_tier}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Status</label>
+                    <p>
+                      {user.subscription_tier === 'premium' ? (
+                        <>
+                          {user.subscription_status === 'active' && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Active</span>
+                          )}
+                          {user.subscription_status === 'trialing' && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">Trial</span>
+                          )}
+                          {user.subscription_status === 'past_due' && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">Past Due</span>
+                          )}
+                          {user.subscription_status === 'canceled' && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">Canceled</span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">Free</span>
+                      )}
+                    </p>
+                  </div>
+                  {user.subscription_current_period_end && (
+                    <div className="md:col-span-2">
+                      <label className="text-sm font-medium text-gray-500">
+                        {user.subscription_status === 'canceled' ? 'Access Until' : 'Current Period Ends'}
+                      </label>
+                      <p className="text-gray-900">
+                        {new Date(user.subscription_current_period_end).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Account Info */}
               <div className="bg-gray-50 rounded-lg p-4">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Account Info</h3>

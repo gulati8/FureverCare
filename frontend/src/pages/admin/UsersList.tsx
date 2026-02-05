@@ -92,6 +92,22 @@ export default function UsersList() {
     return `${Math.floor(diffDays / 365)}y ago`;
   };
 
+  const getSubscriptionBadge = (status: string, tier: string) => {
+    if (tier === 'premium') {
+      switch (status) {
+        case 'active':
+          return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Premium</span>;
+        case 'trialing':
+          return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">Trial</span>;
+        case 'past_due':
+          return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">Past Due</span>;
+        case 'canceled':
+          return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">Canceled</span>;
+      }
+    }
+    return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">Free</span>;
+  };
+
   const SortIcon = ({ column }: { column: string }) => {
     if (sortBy !== column) {
       return (
@@ -216,6 +232,15 @@ export default function UsersList() {
                     </th>
                     <th className="px-4 py-3 text-left">
                       <button
+                        onClick={() => handleSort('subscription_status')}
+                        className="flex items-center space-x-1 text-xs font-medium text-gray-700 uppercase tracking-wider hover:text-primary-600"
+                      >
+                        <span>Subscription</span>
+                        <SortIcon column="subscription_status" />
+                      </button>
+                    </th>
+                    <th className="px-4 py-3 text-left">
+                      <button
                         onClick={() => handleSort('owned_pet_count')}
                         className="flex items-center space-x-1 text-xs font-medium text-gray-700 uppercase tracking-wider hover:text-primary-600"
                       >
@@ -257,6 +282,9 @@ export default function UsersList() {
                             Admin
                           </span>
                         )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {getSubscriptionBadge(user.subscription_status, user.subscription_tier)}
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-sm text-gray-900">
