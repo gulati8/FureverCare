@@ -12,10 +12,11 @@ export function isStripeConfigured(): boolean {
   return stripe !== null;
 }
 
-function assertStripeConfigured(): asserts stripe is Stripe {
+function getStripe(): Stripe {
   if (!stripe) {
     throw new Error('Stripe is not configured. Set STRIPE_SECRET_KEY environment variable.');
   }
+  return stripe;
 }
 
 /**
@@ -25,8 +26,7 @@ function assertStripeConfigured(): asserts stripe is Stripe {
  * @returns The Stripe customer ID
  */
 export async function createCustomer(email: string, name: string): Promise<string> {
-  assertStripeConfigured();
-  const customer = await stripe.customers.create({
+  const customer = await getStripe().customers.create({
     email,
     name,
   });
@@ -49,7 +49,6 @@ export async function createCheckoutSession(
   cancelUrl: string,
   trialDays?: number
 ): Promise<string> {
-  assertStripeConfigured();
   const sessionParams: Stripe.Checkout.SessionCreateParams = {
     customer: customerId,
     mode: 'subscription',
@@ -69,7 +68,7 @@ export async function createCheckoutSession(
     };
   }
 
-  const session = await stripe.checkout.sessions.create(sessionParams);
+  const session = await getStripe().checkout.sessions.create(sessionParams);
 
   if (!session.url) {
     throw new Error('Failed to create checkout session: no URL returned');
@@ -88,8 +87,7 @@ export async function createPortalSession(
   customerId: string,
   returnUrl: string
 ): Promise<string> {
-  assertStripeConfigured();
-  const session = await stripe.billingPortal.sessions.create({
+  const session = await getStripe().billingPortal.sessions.create({
     customer: customerId,
     return_url: returnUrl,
   });
@@ -102,8 +100,7 @@ export async function createPortalSession(
  * @param subscriptionId - Stripe subscription ID
  */
 export async function cancelSubscription(subscriptionId: string): Promise<void> {
-  assertStripeConfigured();
-  await stripe.subscriptions.cancel(subscriptionId);
+  await getStripe().subscriptions.cancel(subscriptionId);
 }
 
 /**
@@ -112,8 +109,7 @@ export async function cancelSubscription(subscriptionId: string): Promise<void> 
  * @returns The Stripe subscription object
  */
 export async function getSubscription(subscriptionId: string): Promise<Stripe.Subscription> {
-  assertStripeConfigured();
-  return await stripe.subscriptions.retrieve(subscriptionId);
+  return await getStripe().subscriptions.retrieve(subscriptionId);
 }
 
 /**
@@ -126,8 +122,7 @@ export function constructWebhookEvent(
   payload: string | Buffer,
   signature: string
 ): Stripe.Event {
-  assertStripeConfigured();
-  return stripe.webhooks.constructEvent(
+  return getStripe().webhooks.constructEvent(
     payload,
     signature,
     config.stripe.webhookSecret
