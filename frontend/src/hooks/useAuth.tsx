@@ -34,7 +34,7 @@ interface AuthContextType {
   isAdmin: boolean;
   subscription: Subscription | null;
   isPremium: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<{ isAdmin: boolean }>;
   register: (email: string, password: string, name: string, phone?: string) => Promise<void>;
   logout: () => void;
   refreshSubscription: () => Promise<void>;
@@ -126,14 +126,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<{ isAdmin: boolean }> => {
     const response = await authApi.login({ email, password });
     setUser(response.user);
     setToken(response.token);
     localStorage.setItem(TOKEN_KEY, response.token);
     // Decode isAdmin from JWT
     const payload = decodeJwtPayload(response.token);
-    setIsAdmin(payload?.isAdmin ?? false);
+    const userIsAdmin = payload?.isAdmin ?? false;
+    setIsAdmin(userIsAdmin);
     // Fetch subscription status after successful login
     try {
       const info = await billingApi.getSubscription(response.token);
@@ -141,6 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       setSubscription(null);
     }
+    return { isAdmin: userIsAdmin };
   };
 
   const register = async (email: string, password: string, name: string, phone?: string) => {

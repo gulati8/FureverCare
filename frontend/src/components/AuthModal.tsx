@@ -57,9 +57,9 @@ export default function AuthModal() {
     setIsLoading(true);
 
     try {
-      await login(loginEmail, loginPassword);
+      const { isAdmin } = await login(loginEmail, loginPassword);
       closeAuthModal();
-      navigate('/dashboard');
+      navigate(isAdmin ? '/admin/analytics' : '/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
