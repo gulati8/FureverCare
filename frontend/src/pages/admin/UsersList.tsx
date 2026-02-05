@@ -288,7 +288,7 @@ export default function UsersList() {
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-sm text-gray-900">
-                          {user.owned_pet_count + user.shared_pet_count}
+                          {Number(user.owned_pet_count) + Number(user.shared_pet_count)}
                         </span>
                       </td>
                       <td className="px-4 py-3">

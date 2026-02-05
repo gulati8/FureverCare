@@ -93,11 +93,11 @@ export default function PetsList() {
 
   const getTotalRecords = (pet: AdminPet) => {
     return (
-      pet.condition_count +
-      pet.medication_count +
-      pet.vaccination_count +
-      pet.allergy_count +
-      pet.vet_count
+      Number(pet.condition_count) +
+      Number(pet.medication_count) +
+      Number(pet.vaccination_count) +
+      Number(pet.allergy_count) +
+      Number(pet.vet_count)
     );
   };
 
