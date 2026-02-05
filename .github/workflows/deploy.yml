@@ -98,6 +98,8 @@ jobs:
 
           # Base64 encode secrets to avoid shell escaping issues
           CLAUDE_KEY_B64=$(echo -n '${{ secrets.CLAUDE_API_KEY }}' | base64 -w 0)
+          STRIPE_KEY_B64=$(echo -n '${{ secrets.STRIPE_SECRET_KEY }}' | base64 -w 0)
+          STRIPE_WEBHOOK_B64=$(echo -n '${{ secrets.STRIPE_WEBHOOK_SECRET }}' | base64 -w 0)
           AWS_KEY_B64=$(echo -n '${{ secrets.AWS_ACCESS_KEY_ID }}' | base64 -w 0)
           AWS_SECRET_B64=$(echo -n '${{ secrets.AWS_SECRET_ACCESS_KEY }}' | base64 -w 0)
           S3_BUCKET_B64=$(echo -n '${{ secrets.S3_BUCKET }}' | base64 -w 0)
@@ -110,6 +112,8 @@ jobs:
               \"sudo mkdir -p /srv/furevercare\",
               \"echo '$COMPOSE_CONTENT' | base64 -d | sudo tee /srv/furevercare/docker-compose.prod.yml > /dev/null\",
               \"CLAUDE_KEY=\$(echo '$CLAUDE_KEY_B64' | base64 -d) && grep -q '^CLAUDE_API_KEY=' /srv/furevercare/.env 2>/dev/null && sudo sed -i \\\"s/^CLAUDE_API_KEY=.*/CLAUDE_API_KEY=\$CLAUDE_KEY/\\\" /srv/furevercare/.env || echo \\\"CLAUDE_API_KEY=\$CLAUDE_KEY\\\" | sudo tee -a /srv/furevercare/.env > /dev/null\",
+              \"STRIPE_KEY=\$(echo '$STRIPE_KEY_B64' | base64 -d) && grep -q '^STRIPE_SECRET_KEY=' /srv/furevercare/.env 2>/dev/null && sudo sed -i \\\"s/^STRIPE_SECRET_KEY=.*/STRIPE_SECRET_KEY=\$STRIPE_KEY/\\\" /srv/furevercare/.env || echo \\\"STRIPE_SECRET_KEY=\$STRIPE_KEY\\\" | sudo tee -a /srv/furevercare/.env > /dev/null\",
+              \"STRIPE_WEBHOOK=\$(echo '$STRIPE_WEBHOOK_B64' | base64 -d) && grep -q '^STRIPE_WEBHOOK_SECRET=' /srv/furevercare/.env 2>/dev/null && sudo sed -i \\\"s/^STRIPE_WEBHOOK_SECRET=.*/STRIPE_WEBHOOK_SECRET=\$STRIPE_WEBHOOK/\\\" /srv/furevercare/.env || echo \\\"STRIPE_WEBHOOK_SECRET=\$STRIPE_WEBHOOK\\\" | sudo tee -a /srv/furevercare/.env > /dev/null\",
               \"grep -q '^STORAGE_PROVIDER=' /srv/furevercare/.env 2>/dev/null && sudo sed -i 's/^STORAGE_PROVIDER=.*/STORAGE_PROVIDER=s3/' /srv/furevercare/.env || echo 'STORAGE_PROVIDER=s3' | sudo tee -a /srv/furevercare/.env > /dev/null\",
               \"S3_BUCKET_VAL=\$(echo '$S3_BUCKET_B64' | base64 -d) && grep -q '^S3_BUCKET=' /srv/furevercare/.env 2>/dev/null && sudo sed -i \\\"s/^S3_BUCKET=.*/S3_BUCKET=\$S3_BUCKET_VAL/\\\" /srv/furevercare/.env || echo \\\"S3_BUCKET=\$S3_BUCKET_VAL\\\" | sudo tee -a /srv/furevercare/.env > /dev/null\",
               \"grep -q '^AWS_REGION=' /srv/furevercare/.env 2>/dev/null && sudo sed -i 's/^AWS_REGION=.*/AWS_REGION=us-east-1/' /srv/furevercare/.env || echo 'AWS_REGION=us-east-1' | sudo tee -a /srv/furevercare/.env > /dev/null\",
