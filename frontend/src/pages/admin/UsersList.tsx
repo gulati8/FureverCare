@@ -148,8 +148,8 @@ export default function UsersList() {
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-        <div className="flex flex-wrap gap-4">
-          <div className="flex-1 min-w-[200px]">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1">
             <input
               type="text"
               placeholder="Search by name or email..."
@@ -158,7 +158,7 @@ export default function UsersList() {
               className="input w-full"
             />
           </div>
-          <div className="w-48">
+          <div className="w-full sm:w-48">
             <select
               value={adminFilter}
               onChange={(e) => {
@@ -301,22 +301,22 @@ export default function UsersList() {
             </div>
 
             {/* Pagination */}
-            <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-              <div className="text-sm text-gray-700">
+            <div className="px-4 py-3 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="text-sm text-gray-700 text-center sm:text-left">
                 Showing {page * limit + 1} to {Math.min((page + 1) * limit, total)} of {total} users
               </div>
               <div className="flex space-x-2">
                 <button
                   onClick={handlePrevPage}
                   disabled={page === 0}
-                  className="px-3 py-1 rounded border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1.5 rounded border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Previous
                 </button>
                 <button
                   onClick={handleNextPage}
                   disabled={(page + 1) * limit >= total}
-                  className="px-3 py-1 rounded border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1.5 rounded border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next
                 </button>
