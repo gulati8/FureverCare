@@ -38,6 +38,7 @@ interface AuthContextType {
   register: (email: string, password: string, name: string, phone?: string) => Promise<void>;
   logout: () => void;
   refreshSubscription: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
   authModal: AuthModalType;
   openAuthModal: (type: 'login' | 'signup') => void;
   closeAuthModal: () => void;
@@ -80,6 +81,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // If fetching subscription fails, set to null (free tier)
       setSubscription(null);
+    }
+  }, [token]);
+
+  // Function to refresh user profile
+  const refreshProfile = useCallback(async () => {
+    if (!token) return;
+    try {
+      const userProfile = await authApi.getProfile(token);
+      setUser(userProfile);
+    } catch {
+      // If fetching profile fails, don't update
     }
   }, [token]);
 
@@ -157,7 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, isAdmin, subscription, isPremium, login, register, logout, refreshSubscription, authModal, openAuthModal, closeAuthModal }}>
+    <AuthContext.Provider value={{ user, token, isLoading, isAdmin, subscription, isPremium, login, register, logout, refreshSubscription, refreshProfile, authModal, openAuthModal, closeAuthModal }}>
       {children}
     </AuthContext.Provider>
   );

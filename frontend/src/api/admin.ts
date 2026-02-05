@@ -8,6 +8,9 @@ export interface AdminUser {
   name: string;
   phone: string | null;
   is_admin: boolean;
+  subscription_status: 'free' | 'trialing' | 'active' | 'past_due' | 'canceled';
+  subscription_tier: 'free' | 'premium';
+  subscription_current_period_end: string | null;
   created_at: string;
   updated_at: string;
   owned_pet_count: number;
@@ -119,7 +122,7 @@ export interface PaginatedResponse<T> {
 export interface UsersQueryOptions {
   limit?: number;
   offset?: number;
-  sortBy?: 'id' | 'name' | 'email' | 'is_admin' | 'created_at' | 'owned_pet_count' | 'shared_pet_count';
+  sortBy?: 'id' | 'name' | 'email' | 'is_admin' | 'subscription_status' | 'subscription_tier' | 'created_at' | 'owned_pet_count' | 'shared_pet_count';
   sortOrder?: 'ASC' | 'DESC';
   search?: string;
   isAdmin?: boolean;

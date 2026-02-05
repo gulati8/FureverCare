@@ -19,6 +19,7 @@ import PetsList from './pages/admin/PetsList';
 import SubscriptionSettings from './pages/admin/SubscriptionSettings';
 import BillingSettings from './pages/BillingSettings';
 import Pricing from './pages/Pricing';
+import AccountSettings from './pages/AccountSettings';
 
 // Redirects to homepage and opens the auth modal
 function AuthRedirect({ mode }: { mode: 'login' | 'signup' }) {
@@ -96,6 +97,7 @@ export default function App() {
       <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/pets/:id" element={<PetDetail />} />
+        <Route path="/settings" element={<AccountSettings />} />
         <Route path="/billing" element={<BillingSettings />} />
         <Route path="/pricing" element={<Pricing />} />
       </Route>

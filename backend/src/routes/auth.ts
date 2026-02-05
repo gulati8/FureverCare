@@ -44,6 +44,11 @@ const resetPasswordSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters'),
 });
 
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required'),
+  newPassword: z.string().min(8, 'New password must be at least 8 characters'),
+});
+
 // Register
 router.post('/register', validate(registerSchema), async (req, res: Response) => {
   try {
@@ -136,6 +141,34 @@ router.patch('/me', authenticate, validate(updateProfileSchema), async (req: Aut
   } catch (error) {
     console.error('Update profile error:', error);
     res.status(500).json({ error: 'Update failed' });
+  }
+});
+
+// Change password (for authenticated users)
+router.post('/change-password', authenticate, validate(changePasswordSchema), async (req: AuthRequest, res: Response) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    const user = await findUserById(req.userId!);
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    // Verify current password
+    const isValid = await verifyPassword(user, currentPassword);
+    if (!isValid) {
+      res.status(401).json({ error: 'Current password is incorrect' });
+      return;
+    }
+
+    // Update password
+    await updateUserPassword(user.id, newPassword);
+
+    res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ error: 'Failed to change password' });
   }
 });
 
