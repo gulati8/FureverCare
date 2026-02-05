@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emergency Card - Variant 1: Critical Banner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --critical-red: #DC2626;
+      --critical-red-light: #FEE2E2;
+      --alert-orange: #EA580C;
+      --alert-orange-light: #FFEDD5;
+      --warning-yellow: #CA8A04;
+      --warning-yellow-light: #FEF3C7;
+      --info-blue: #2563EB;
+      --info-blue-light: #DBEAFE;
+      --success-green: #16A34A;
+      --success-green-light: #DCFCE7;
+      --neutral-50: #F8FAFC;
+      --neutral-100: #F1F5F9;
+      --neutral-200: #E2E8F0;
+      --neutral-500: #64748B;
+      --neutral-700: #334155;
+      --neutral-900: #0F172A;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--neutral-100);
+      color: var(--neutral-900);
+      line-height: 1.5;
+    }
+
+    .page {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      background: white;
+    }
+
+    /* Emergency Header - Always visible */
+    .emergency-header {
+      background: var(--critical-red);
+      color: white;
+      padding: 12px 16px;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .emergency-header h1 {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .emergency-header p {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    /* CRITICAL ALERT BANNER - The key innovation */
+    .critical-banner {
+      background: linear-gradient(135deg, #7F1D1D 0%, #991B1B 100%);
+      color: white;
+      padding: 16px;
+      border-bottom: 4px solid var(--critical-red);
+    }
+
+    .critical-banner-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .alert-icon {
+      width: 24px;
+      height: 24px;
+      background: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .critical-banner-header h2 {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .critical-items {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .critical-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      background: rgba(255,255,255,0.15);
+      padding: 10px 12px;
+      border-radius: 8px;
+      border-left: 3px solid white;
+    }
+
+    .critical-item-icon {
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .critical-item-content {
+      flex: 1;
+    }
+
+    .critical-item-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      opacity: 0.8;
+    }
+
+    .critical-item-value {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .severity-badge {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 6px;
+      text-transform: uppercase;
+    }
+
+    .severity-life-threatening {
+      background: white;
+      color: var(--critical-red);
+    }
+
+    .severity-severe {
+      background: rgba(255,255,255,0.3);
+    }
+
+    /* Pet ID Section */
+    .pet-section {
+      padding: 20px 16px;
+      background: white;
+    }
+
+    .pet-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .pet-photo {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: var(--neutral-100);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      flex-shrink: 0;
+      border: 3px solid var(--neutral-200);
+    }
+
+    .pet-info h2 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .pet-info p {
+      color: var(--neutral-500);
+      font-size: 14px;
+    }
+
+    .pet-vitals {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--neutral-200);
+    }
+
+    .vital {
+      text-align: center;
+    }
+
+    .vital-label {
+      font-size: 11px;
+      color: var(--neutral-500);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .vital-value {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--neutral-900);
+    }
+
+    .vital-value.weight {
+      color: var(--info-blue);
+      font-size: 18px;
+    }
+
+    /* Section Cards */
+    .section {
+      margin: 0 16px 16px;
+      background: white;
+      border-radius: 12px;
+      border: 1px solid var(--neutral-200);
+      overflow: hidden;
+    }
+
+    .section-header {
+      padding: 12px 16px;
+      font-weight: 700;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-header.medications {
+      background: var(--info-blue-light);
+      color: var(--info-blue);
+    }
+
+    .section-header.conditions {
+      background: var(--alert-orange-light);
+      color: var(--alert-orange);
+    }
+
+    .section-header.contacts {
+      background: var(--neutral-100);
+      color: var(--neutral-700);
+    }
+
+    .section-content {
+      padding: 12px 16px;
+    }
+
+    /* Medication Items */
+    .medication-item {
+      padding: 10px 0;
+      border-bottom: 1px solid var(--neutral-100);
+    }
+
+    .medication-item:last-child {
+      border-bottom: none;
+    }
+
+    .medication-name {
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--neutral-900);
+    }
+
+    .medication-details {
+      font-size: 13px;
+      color: var(--neutral-500);
+      margin-top: 2px;
+    }
+
+    .interaction-warning {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--warning-yellow-light);
+      color: var(--warning-yellow);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-top: 6px;
+    }
+
+    /* Condition Items */
+    .condition-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--neutral-100);
+    }
+
+    .condition-item:last-child {
+      border-bottom: none;
+    }
+
+    .condition-severity {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-top: 6px;
+      flex-shrink: 0;
+    }
+
+    .condition-severity.critical {
+      background: var(--critical-red);
+    }
+
+    .condition-severity.important {
+      background: var(--alert-orange);
+    }
+
+    .condition-severity.informational {
+      background: var(--warning-yellow);
+    }
+
+    .condition-name {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .condition-notes {
+      font-size: 13px;
+      color: var(--neutral-500);
+      margin-top: 2px;
+    }
+
+    /* Contact Items */
+    .contact-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--neutral-100);
+    }
+
+    .contact-item:last-child {
+      border-bottom: none;
+    }
+
+    .contact-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--neutral-100);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .contact-info {
+      flex: 1;
+    }
+
+    .contact-name {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .contact-role {
+      font-size: 12px;
+      color: var(--neutral-500);
+    }
+
+    .contact-phone {
+      background: var(--success-green);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 14px;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 24px 16px;
+      color: var(--neutral-500);
+      font-size: 12px;
+      background: var(--neutral-50);
+    }
+
+    .footer a {
+      color: var(--info-blue);
+      text-decoration: none;
+    }
+
+    /* Responsive */
+    @media (max-width: 360px) {
+      .pet-vitals {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- Emergency Header -->
+    <header class="emergency-header">
+      <h1>PET EMERGENCY CARD</h1>
+      <p>FureverCare</p>
+    </header>
+
+    <!-- CRITICAL ALERT BANNER - All life-threatening info in one place -->
+    <div class="critical-banner">
+      <div class="critical-banner-header">
+        <div class="alert-icon">!</div>
+        <h2>CRITICAL ALERTS</h2>
+      </div>
+      <div class="critical-items">
+        <div class="critical-item">
+          <span class="critical-item-icon">!!!</span>
+          <div class="critical-item-content">
+            <div class="critical-item-label">Drug Allergy</div>
+            <div class="critical-item-value">
+              Penicillin
+              <span class="severity-badge severity-life-threatening">Anaphylaxis Risk</span>
+            </div>
+          </div>
+        </div>
+        <div class="critical-item">
+          <span class="critical-item-icon">!!!</span>
+          <div class="critical-item-content">
+            <div class="critical-item-label">Food Allergy</div>
+            <div class="critical-item-value">
+              Chicken
+              <span class="severity-badge severity-severe">Severe GI</span>
+            </div>
+          </div>
+        </div>
+        <div class="critical-item">
+          <span class="critical-item-icon">!!</span>
+          <div class="critical-item-content">
+            <div class="critical-item-label">Critical Condition</div>
+            <div class="critical-item-value">Heart Murmur (Grade III) - Limit stress</div>
+          </div>
+        </div>
+        <div class="critical-item">
+          <span class="critical-item-icon">Rx</span>
+          <div class="critical-item-content">
+            <div class="critical-item-label">Current Medications</div>
+            <div class="critical-item-value">Phenobarbital 60mg, Carprofen 75mg</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pet Identification -->
+    <div class="pet-section">
+      <div class="pet-header">
+        <div class="pet-photo">dog</div>
+        <div class="pet-info">
+          <h2>Max</h2>
+          <p>Golden Retriever (Male, Neutered)</p>
+        </div>
+      </div>
+      <div class="pet-vitals">
+        <div class="vital">
+          <div class="vital-label">Weight</div>
+          <div class="vital-value weight">32.5 kg</div>
+        </div>
+        <div class="vital">
+          <div class="vital-label">Age</div>
+          <div class="vital-value">6 years</div>
+        </div>
+        <div class="vital">
+          <div class="vital-label">Microchip</div>
+          <div class="vital-value">Yes</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Medications Section (Detailed) -->
+    <div class="section">
+      <div class="section-header medications">
+        <span>Rx</span>
+        Current Medications
+      </div>
+      <div class="section-content">
+        <div class="medication-item">
+          <div class="medication-name">Phenobarbital</div>
+          <div class="medication-details">60mg twice daily (seizure control)</div>
+          <div class="interaction-warning">
+            <span>!</span> Check interactions before sedation
+          </div>
+        </div>
+        <div class="medication-item">
+          <div class="medication-name">Carprofen (Rimadyl)</div>
+          <div class="medication-details">75mg once daily (arthritis)</div>
+          <div class="interaction-warning">
+            <span>!</span> NSAID - No corticosteroids
+          </div>
+        </div>
+        <div class="medication-item">
+          <div class="medication-name">Apoquel</div>
+          <div class="medication-details">16mg once daily (allergies)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Medical Conditions -->
+    <div class="section">
+      <div class="section-header conditions">
+        <span>!</span>
+        Medical Conditions
+      </div>
+      <div class="section-content">
+        <div class="condition-item">
+          <div class="condition-severity critical"></div>
+          <div>
+            <div class="condition-name">Heart Murmur (Grade III)</div>
+            <div class="condition-notes">Avoid stress, monitor during procedures</div>
+          </div>
+        </div>
+        <div class="condition-item">
+          <div class="condition-severity critical"></div>
+          <div>
+            <div class="condition-name">Epilepsy</div>
+            <div class="condition-notes">Last seizure: 3 months ago. On phenobarbital.</div>
+          </div>
+        </div>
+        <div class="condition-item">
+          <div class="condition-severity important"></div>
+          <div>
+            <div class="condition-name">Hip Dysplasia</div>
+            <div class="condition-notes">Bilateral, moderate. Handle rear legs gently.</div>
+          </div>
+        </div>
+        <div class="condition-item">
+          <div class="condition-severity informational"></div>
+          <div>
+            <div class="condition-name">Environmental Allergies</div>
+            <div class="condition-notes">Grass, pollen. Managed with Apoquel.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Emergency Contacts -->
+    <div class="section">
+      <div class="section-header contacts">
+        <span>Phone</span>
+        Emergency Contacts
+      </div>
+      <div class="section-content">
+        <div class="contact-item">
+          <div class="contact-icon">person</div>
+          <div class="contact-info">
+            <div class="contact-name">Sarah Johnson</div>
+            <div class="contact-role">Owner</div>
+          </div>
+          <a href="tel:+15551234567" class="contact-phone">
+            <span>Call</span> 555-123-4567
+          </a>
+        </div>
+        <div class="contact-item">
+          <div class="contact-icon">vet</div>
+          <div class="contact-info">
+            <div class="contact-name">Pawsitive Care Vet</div>
+            <div class="contact-role">Primary Veterinarian - Dr. Smith</div>
+          </div>
+          <a href="tel:+15559876543" class="contact-phone">
+            <span>Call</span> 555-987-6543
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>Generated Feb 5, 2026 at 10:30 AM</p>
+      <p>Powered by <a href="#">FureverCare</a></p>
+    </footer>
+  </div>
+</body>
+</html>

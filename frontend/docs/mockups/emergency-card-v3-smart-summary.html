@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emergency Card - Variant 3: Smart Summary</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --critical-red: #DC2626;
+      --critical-red-dark: #991B1B;
+      --critical-red-light: #FEE2E2;
+      --alert-orange: #EA580C;
+      --alert-orange-light: #FFEDD5;
+      --warning-yellow: #CA8A04;
+      --warning-yellow-light: #FEF3C7;
+      --info-blue: #2563EB;
+      --info-blue-light: #DBEAFE;
+      --success-green: #16A34A;
+      --success-green-light: #DCFCE7;
+      --neutral-50: #F8FAFC;
+      --neutral-100: #F1F5F9;
+      --neutral-200: #E2E8F0;
+      --neutral-300: #CBD5E1;
+      --neutral-500: #64748B;
+      --neutral-700: #334155;
+      --neutral-900: #0F172A;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--neutral-100);
+      color: var(--neutral-900);
+      line-height: 1.5;
+    }
+
+    .page {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      background: white;
+    }
+
+    /* Header */
+    .header {
+      background: var(--critical-red);
+      color: white;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-icon {
+      width: 32px;
+      height: 32px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .header h1 {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .header p {
+      font-size: 11px;
+      opacity: 0.8;
+    }
+
+    /* SMART SUMMARY - The key innovation */
+    .smart-summary {
+      background: linear-gradient(135deg, var(--critical-red-dark) 0%, var(--critical-red) 100%);
+      color: white;
+      padding: 20px;
+    }
+
+    .summary-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .alert-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.2);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .alert-badge-number {
+      background: white;
+      color: var(--critical-red);
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .summary-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .summary-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: rgba(255,255,255,0.1);
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .summary-item-icon {
+      width: 28px;
+      height: 28px;
+      background: white;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .summary-item-icon.allergy {
+      color: var(--critical-red);
+    }
+
+    .summary-item-icon.medication {
+      color: var(--info-blue);
+    }
+
+    .summary-item-icon.condition {
+      color: var(--alert-orange);
+    }
+
+    .summary-item-content {
+      flex: 1;
+    }
+
+    .summary-item-title {
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 2px;
+    }
+
+    .summary-item-detail {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    /* Alternative: No Alerts Version */
+    .smart-summary.no-alerts {
+      background: var(--success-green);
+      text-align: center;
+      padding: 24px 20px;
+    }
+
+    .no-alerts-icon {
+      width: 48px;
+      height: 48px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin: 0 auto 12px;
+    }
+
+    .no-alerts-text {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .no-alerts-subtext {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    /* Pet Quick Info Bar */
+    .pet-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      background: white;
+      border-bottom: 1px solid var(--neutral-200);
+    }
+
+    .pet-photo-small {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--neutral-100);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      flex-shrink: 0;
+    }
+
+    .pet-quick-info {
+      flex: 1;
+    }
+
+    .pet-quick-info h2 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+
+    .pet-quick-info p {
+      font-size: 12px;
+      color: var(--neutral-500);
+    }
+
+    .weight-badge {
+      background: var(--info-blue-light);
+      color: var(--info-blue);
+      padding: 8px 12px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .weight-badge-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .weight-badge-value {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    /* Content Sections */
+    .content {
+      padding: 16px;
+    }
+
+    .section {
+      margin-bottom: 20px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .section-title.allergies {
+      color: var(--critical-red);
+    }
+
+    .section-title.medications {
+      color: var(--info-blue);
+    }
+
+    .section-title.conditions {
+      color: var(--alert-orange);
+    }
+
+    .section-title.contacts {
+      color: var(--neutral-700);
+    }
+
+    .section-count {
+      font-size: 11px;
+      color: var(--neutral-500);
+      font-weight: 500;
+    }
+
+    /* Cards */
+    .card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .card {
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .card.allergy {
+      background: var(--critical-red-light);
+      border: 1px solid rgba(220, 38, 38, 0.2);
+    }
+
+    .card.medication {
+      background: var(--info-blue-light);
+      border: 1px solid rgba(37, 99, 235, 0.2);
+    }
+
+    .card.condition {
+      background: var(--alert-orange-light);
+      border: 1px solid rgba(234, 88, 12, 0.2);
+    }
+
+    .card.condition.low {
+      background: var(--neutral-100);
+      border: 1px solid var(--neutral-200);
+    }
+
+    .card-indicator {
+      width: 4px;
+      height: 100%;
+      min-height: 32px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .card-indicator.critical {
+      background: var(--critical-red);
+    }
+
+    .card-indicator.high {
+      background: var(--alert-orange);
+    }
+
+    .card-indicator.medium {
+      background: var(--warning-yellow);
+    }
+
+    .card-indicator.low {
+      background: var(--neutral-300);
+    }
+
+    .card-content {
+      flex: 1;
+    }
+
+    .card-title {
+      font-weight: 600;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .severity-chip {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    .severity-chip.anaphylaxis {
+      background: var(--critical-red);
+      color: white;
+    }
+
+    .severity-chip.severe {
+      background: var(--alert-orange);
+      color: white;
+    }
+
+    .card-detail {
+      font-size: 12px;
+      color: var(--neutral-700);
+      margin-top: 4px;
+    }
+
+    .card-warning {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--warning-yellow);
+      margin-top: 6px;
+    }
+
+    /* Contact Cards */
+    .contact-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: var(--neutral-50);
+      border-radius: 10px;
+      margin-bottom: 8px;
+    }
+
+    .contact-card:last-child {
+      margin-bottom: 0;
+    }
+
+    .contact-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--neutral-200);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .contact-info {
+      flex: 1;
+    }
+
+    .contact-name {
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .contact-role {
+      font-size: 11px;
+      color: var(--neutral-500);
+    }
+
+    .call-button {
+      background: var(--success-green);
+      color: white;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 13px;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .call-button:hover {
+      background: #15803D;
+    }
+
+    /* Expandable Section */
+    .expandable {
+      border: 1px solid var(--neutral-200);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .expandable-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px;
+      background: var(--neutral-50);
+      cursor: pointer;
+    }
+
+    .expandable-header:hover {
+      background: var(--neutral-100);
+    }
+
+    .expandable-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--neutral-700);
+    }
+
+    .expandable-content {
+      padding: 12px;
+      border-top: 1px solid var(--neutral-200);
+    }
+
+    .vacc-list {
+      list-style: none;
+    }
+
+    .vacc-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--neutral-100);
+      font-size: 12px;
+    }
+
+    .vacc-item:last-child {
+      border-bottom: none;
+    }
+
+    .vacc-status {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .vacc-status.current {
+      background: var(--success-green-light);
+      color: var(--success-green);
+    }
+
+    .vacc-status.expired {
+      background: var(--critical-red-light);
+      color: var(--critical-red);
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 20px 16px;
+      background: var(--neutral-50);
+      font-size: 11px;
+      color: var(--neutral-500);
+    }
+
+    .footer a {
+      color: var(--info-blue);
+      text-decoration: none;
+    }
+
+    /* Mobile optimizations */
+    @media (max-width: 360px) {
+      .pet-bar {
+        flex-wrap: wrap;
+      }
+      .weight-badge {
+        width: 100%;
+        margin-top: 8px;
+      }
+    }
+
+    /* Demo toggle for no-alerts version */
+    .demo-toggle {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      background: var(--neutral-900);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      cursor: pointer;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <div class="header-icon">heart</div>
+        <div>
+          <h1>EMERGENCY PET CARD</h1>
+          <p>FureverCare</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- SMART SUMMARY - Contextually relevant alerts -->
+    <div class="smart-summary" id="smartSummary">
+      <div class="summary-header">
+        <div class="alert-badge">
+          <span class="alert-badge-number">4</span>
+          ALERTS FOR MAX
+        </div>
+      </div>
+      <div class="summary-list">
+        <div class="summary-item">
+          <div class="summary-item-icon allergy">!!</div>
+          <div class="summary-item-content">
+            <div class="summary-item-title">Penicillin Allergy (ANAPHYLAXIS RISK)</div>
+            <div class="summary-item-detail">Prior reaction: throat swelling, collapse</div>
+          </div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-item-icon medication">Rx</div>
+          <div class="summary-item-content">
+            <div class="summary-item-title">On Phenobarbital - Check drug interactions</div>
+            <div class="summary-item-detail">60mg BID for seizure control</div>
+          </div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-item-icon medication">Rx</div>
+          <div class="summary-item-content">
+            <div class="summary-item-title">On Carprofen (NSAID) - No corticosteroids</div>
+            <div class="summary-item-detail">75mg daily for arthritis</div>
+          </div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-item-icon condition">heart</div>
+          <div class="summary-item-content">
+            <div class="summary-item-title">Heart Murmur (Grade III)</div>
+            <div class="summary-item-detail">Limit stress, monitor during procedures</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pet Quick Info Bar -->
+    <div class="pet-bar">
+      <div class="pet-photo-small">dog</div>
+      <div class="pet-quick-info">
+        <h2>Max</h2>
+        <p>Golden Retriever | Male, Neutered | 6 years</p>
+      </div>
+      <div class="weight-badge">
+        <div class="weight-badge-label">Weight</div>
+        <div class="weight-badge-value">32.5 kg</div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+      <!-- Allergies -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title allergies">
+            <span>!!</span> Allergies
+          </div>
+          <span class="section-count">2 items</span>
+        </div>
+        <div class="card-list">
+          <div class="card allergy">
+            <div class="card-indicator critical"></div>
+            <div class="card-content">
+              <div class="card-title">
+                Penicillin
+                <span class="severity-chip anaphylaxis">Anaphylaxis</span>
+              </div>
+              <div class="card-detail">Prior reaction: throat swelling, collapse, required epinephrine</div>
+            </div>
+          </div>
+          <div class="card allergy">
+            <div class="card-indicator high"></div>
+            <div class="card-content">
+              <div class="card-title">
+                Chicken
+                <span class="severity-chip severe">Severe</span>
+              </div>
+              <div class="card-detail">Causes severe GI distress, vomiting, diarrhea</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Medications -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title medications">
+            <span>Rx</span> Current Medications
+          </div>
+          <span class="section-count">3 items</span>
+        </div>
+        <div class="card-list">
+          <div class="card medication">
+            <div class="card-indicator high"></div>
+            <div class="card-content">
+              <div class="card-title">Phenobarbital</div>
+              <div class="card-detail">60mg twice daily - Seizure control</div>
+              <div class="card-warning">
+                <span>!</span> Check interactions before sedation
+              </div>
+            </div>
+          </div>
+          <div class="card medication">
+            <div class="card-indicator high"></div>
+            <div class="card-content">
+              <div class="card-title">Carprofen (Rimadyl)</div>
+              <div class="card-detail">75mg once daily - Arthritis management</div>
+              <div class="card-warning">
+                <span>!</span> NSAID - Do not combine with corticosteroids
+              </div>
+            </div>
+          </div>
+          <div class="card medication">
+            <div class="card-indicator low"></div>
+            <div class="card-content">
+              <div class="card-title">Apoquel</div>
+              <div class="card-detail">16mg once daily - Allergy management</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Medical Conditions -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title conditions">
+            <span>!</span> Medical Conditions
+          </div>
+          <span class="section-count">4 items</span>
+        </div>
+        <div class="card-list">
+          <div class="card condition">
+            <div class="card-indicator critical"></div>
+            <div class="card-content">
+              <div class="card-title">Heart Murmur (Grade III)</div>
+              <div class="card-detail">Avoid stress, monitor closely during any procedures</div>
+            </div>
+          </div>
+          <div class="card condition">
+            <div class="card-indicator high"></div>
+            <div class="card-content">
+              <div class="card-title">Epilepsy</div>
+              <div class="card-detail">Controlled with phenobarbital. Last seizure 3 months ago.</div>
+            </div>
+          </div>
+          <div class="card condition">
+            <div class="card-indicator medium"></div>
+            <div class="card-content">
+              <div class="card-title">Hip Dysplasia (Bilateral)</div>
+              <div class="card-detail">Handle rear legs gently. May need assist standing.</div>
+            </div>
+          </div>
+          <div class="card condition low">
+            <div class="card-indicator low"></div>
+            <div class="card-content">
+              <div class="card-title">Environmental Allergies</div>
+              <div class="card-detail">Grass, pollen. Managed with daily Apoquel.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Emergency Contacts -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title contacts">
+            <span>Phone</span> Emergency Contacts
+          </div>
+        </div>
+        <div class="contact-card">
+          <div class="contact-avatar">person</div>
+          <div class="contact-info">
+            <div class="contact-name">Sarah Johnson</div>
+            <div class="contact-role">Owner</div>
+          </div>
+          <a href="tel:+15551234567" class="call-button">
+            <span>Call</span>
+          </a>
+        </div>
+        <div class="contact-card">
+          <div class="contact-avatar">vet</div>
+          <div class="contact-info">
+            <div class="contact-name">Pawsitive Care Vet</div>
+            <div class="contact-role">Primary Vet - Dr. Smith</div>
+          </div>
+          <a href="tel:+15559876543" class="call-button">
+            <span>Call</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Vaccinations (Expandable) -->
+      <div class="section">
+        <div class="expandable">
+          <div class="expandable-header">
+            <span class="expandable-title">Vaccination Records</span>
+            <span>expand</span>
+          </div>
+          <div class="expandable-content">
+            <ul class="vacc-list">
+              <li class="vacc-item">
+                <span>Rabies</span>
+                <span class="vacc-status current">Current - Exp 03/2027</span>
+              </li>
+              <li class="vacc-item">
+                <span>DHPP</span>
+                <span class="vacc-status current">Current - Exp 08/2026</span>
+              </li>
+              <li class="vacc-item">
+                <span>Bordetella</span>
+                <span class="vacc-status expired">Expired 01/2026</span>
+              </li>
+              <li class="vacc-item">
+                <span>Lyme</span>
+                <span class="vacc-status current">Current - Exp 05/2026</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>Generated Feb 5, 2026 at 10:30 AM</p>
+      <p>Powered by <a href="#">FureverCare</a></p>
+    </footer>
+  </div>
+
+  <!--
+    ALTERNATIVE: No Alerts Version
+    For healthy pets with no critical issues, the smart summary would show:
+
+    <div class="smart-summary no-alerts">
+      <div class="no-alerts-icon">check</div>
+      <div class="no-alerts-text">No known allergies or critical conditions</div>
+      <div class="no-alerts-subtext">Max | Golden Retriever | 32.5 kg</div>
+    </div>
+  -->
+</body>
+</html>
