@@ -1,0 +1,25 @@
+VETERINARY HEALTH RECORD
+
+Patient: Buddy
+Species: Dog
+Breed: Golden Retriever
+Date of Birth: 2020-03-15
+Weight: 65 lbs
+
+VACCINATIONS:
+- Rabies: 2024-01-15 (Expires: 2025-01-15)
+- DHPP: 2024-01-15 (Expires: 2025-01-15)
+- Bordetella: 2024-06-01 (Expires: 2025-06-01)
+
+CURRENT MEDICATIONS:
+- Heartgard Plus, 51-100 lbs, Monthly
+
+ALLERGIES:
+- Chicken (Mild skin irritation)
+
+MEDICAL CONDITIONS:
+- Mild hip dysplasia
+
+Veterinarian: Dr. Smith
+Clinic: Happy Paws Veterinary Clinic
+Phone: (555) 123-4567
