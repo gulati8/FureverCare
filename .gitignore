@@ -42,3 +42,4 @@ state.json
 
 # Uploaded files (keep directory structure only)
 backend/uploads/**/*.pdf
+playwright-report/
