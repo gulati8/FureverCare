@@ -49,6 +49,10 @@ services:
       AWS_REGION: ${AWS_REGION:-us-east-1}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-ses}
+      AWS_SES_REGION: ${AWS_SES_REGION:-us-east-1}
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-noreply@furevercare.pet}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-FureverCare}
     volumes:
       - uploads_data:/app/uploads
     depends_on:

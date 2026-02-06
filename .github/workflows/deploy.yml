@@ -118,7 +118,8 @@ jobs:
               \"S3_BUCKET_VAL=\$(echo '$S3_BUCKET_B64' | base64 -d) && grep -q '^S3_BUCKET=' /srv/furevercare/.env 2>/dev/null && sudo sed -i \\\"s/^S3_BUCKET=.*/S3_BUCKET=\$S3_BUCKET_VAL/\\\" /srv/furevercare/.env || echo \\\"S3_BUCKET=\$S3_BUCKET_VAL\\\" | sudo tee -a /srv/furevercare/.env > /dev/null\",
               \"grep -q '^AWS_REGION=' /srv/furevercare/.env 2>/dev/null && sudo sed -i 's/^AWS_REGION=.*/AWS_REGION=us-east-1/' /srv/furevercare/.env || echo 'AWS_REGION=us-east-1' | sudo tee -a /srv/furevercare/.env > /dev/null\",
               \"AWS_KEY_VAL=\$(echo '$AWS_KEY_B64' | base64 -d) && grep -q '^AWS_ACCESS_KEY_ID=' /srv/furevercare/.env 2>/dev/null && sudo sed -i \\\"s/^AWS_ACCESS_KEY_ID=.*/AWS_ACCESS_KEY_ID=\$AWS_KEY_VAL/\\\" /srv/furevercare/.env || echo \\\"AWS_ACCESS_KEY_ID=\$AWS_KEY_VAL\\\" | sudo tee -a /srv/furevercare/.env > /dev/null\",
-              \"AWS_SECRET_VAL=\$(echo '$AWS_SECRET_B64' | base64 -d) && grep -q '^AWS_SECRET_ACCESS_KEY=' /srv/furevercare/.env 2>/dev/null && sudo sed -i \\\"s|^AWS_SECRET_ACCESS_KEY=.*|AWS_SECRET_ACCESS_KEY=\$AWS_SECRET_VAL|\\\" /srv/furevercare/.env || echo \\\"AWS_SECRET_ACCESS_KEY=\$AWS_SECRET_VAL\\\" | sudo tee -a /srv/furevercare/.env > /dev/null\"
+              \"AWS_SECRET_VAL=\$(echo '$AWS_SECRET_B64' | base64 -d) && grep -q '^AWS_SECRET_ACCESS_KEY=' /srv/furevercare/.env 2>/dev/null && sudo sed -i \\\"s|^AWS_SECRET_ACCESS_KEY=.*|AWS_SECRET_ACCESS_KEY=\$AWS_SECRET_VAL|\\\" /srv/furevercare/.env || echo \\\"AWS_SECRET_ACCESS_KEY=\$AWS_SECRET_VAL\\\" | sudo tee -a /srv/furevercare/.env > /dev/null\",
+              \"grep -q '^EMAIL_PROVIDER=' /srv/furevercare/.env 2>/dev/null && sudo sed -i 's/^EMAIL_PROVIDER=.*/EMAIL_PROVIDER=ses/' /srv/furevercare/.env || echo 'EMAIL_PROVIDER=ses' | sudo tee -a /srv/furevercare/.env > /dev/null\"
             ]" \
             --query 'Command.CommandId' \
             --output text)
@@ -153,9 +154,6 @@ jobs:
               \"docker compose -f docker-compose.prod.yml run --rm backend npm run db:migrate:share-tokens || true\",
               \"docker compose -f docker-compose.prod.yml run --rm backend npm run db:migrate:image-import || true\",
               \"docker compose -f docker-compose.prod.yml run --rm backend npm run db:migrate:document-import || true\",
-              \"docker compose -f docker-compose.prod.yml run --rm backend npm run db:migrate:admin-role || true\",
-              \"docker compose -f docker-compose.prod.yml run --rm backend npm run db:migrate:cms || true\",
-              \"docker compose -f docker-compose.prod.yml run --rm backend npm run db:seed:cms || true\",
               \"docker compose -f docker-compose.prod.yml up -d\",
               \"docker image prune -f\"
             ]" \
