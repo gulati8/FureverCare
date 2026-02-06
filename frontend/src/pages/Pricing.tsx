@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { billingApi, PricingConfig, TrialConfig } from '../api/billing';
 import { CheckIcon, XMarkIcon } from '@heroicons/react/24/solid';
@@ -24,6 +25,7 @@ function formatPrice(cents: number): string {
 }
 
 export default function Pricing() {
+  const navigate = useNavigate();
   const { user, token, isPremium, subscription, openAuthModal } = useAuth();
   const [pricing, setPricing] = useState<PricingConfig | null>(null);
   const [trialConfig, setTrialConfig] = useState<TrialConfig | null>(null);
@@ -62,27 +64,12 @@ export default function Pricing() {
     setError(null);
 
     try {
-      const response = await billingApi.createCheckout(token, 'premium', billingInterval);
-      window.location.href = response.url;
+      const { clientSecret } = await billingApi.createSubscription(token, billingInterval);
+      const isSetup = trialConfig != null && trialConfig.trial_days > 0;
+      navigate('/payment', { state: { clientSecret, isSetup } });
     } catch (err) {
-      console.error('Failed to create checkout:', err);
+      console.error('Failed to create subscription:', err);
       setError('Failed to start checkout. Please try again.');
-      setIsCheckoutLoading(false);
-    }
-  };
-
-  const handleManageSubscription = async () => {
-    if (!token) return;
-
-    setIsCheckoutLoading(true);
-    setError(null);
-
-    try {
-      const response = await billingApi.createPortal(token);
-      window.location.href = response.url;
-    } catch (err) {
-      console.error('Failed to open billing portal:', err);
-      setError('Failed to open billing portal. Please try again.');
       setIsCheckoutLoading(false);
     }
   };
@@ -252,11 +239,10 @@ export default function Pricing() {
 
           {hasActiveSubscription ? (
             <button
-              onClick={handleManageSubscription}
-              disabled={isCheckoutLoading}
+              onClick={() => navigate('/billing')}
               className="w-full btn-secondary"
             >
-              {isCheckoutLoading ? 'Loading...' : 'Manage Subscription'}
+              Manage Subscription
             </button>
           ) : user ? (
             <button

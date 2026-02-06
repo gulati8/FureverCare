@@ -2,32 +2,20 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { billingApi } from '../api/billing';
+import PaymentMethodList from '../components/PaymentMethodList';
+import AddPaymentMethodModal from '../components/AddPaymentMethodModal';
 
 export default function BillingSettings() {
   const { token, subscription, refreshSubscription } = useAuth();
-  const [isLoadingPortal, setIsLoadingPortal] = useState(false);
   const [isLoadingCancel, setIsLoadingCancel] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showUpdatePayment, setShowUpdatePayment] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
   const isFreeTier = !subscription || subscription.tier === 'free';
   const isPremium = subscription?.tier === 'premium';
   const isActive = subscription?.status === 'active' || subscription?.status === 'trialing';
-
-  const handleManageSubscription = async () => {
-    if (!token) return;
-    setError('');
-    setIsLoadingPortal(true);
-    try {
-      const { url } = await billingApi.createPortal(token);
-      window.location.href = url;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to open billing portal');
-    } finally {
-      setIsLoadingPortal(false);
-    }
-  };
 
   const handleCancelSubscription = async () => {
     if (!token) return;
@@ -130,16 +118,6 @@ export default function BillingSettings() {
             </div>
           ) : (
             <>
-              {isActive && (
-                <button
-                  onClick={handleManageSubscription}
-                  disabled={isLoadingPortal}
-                  className="w-full btn-primary"
-                >
-                  {isLoadingPortal ? 'Opening Portal...' : 'Manage Subscription'}
-                </button>
-              )}
-
               {isActive && subscription?.status !== 'canceled' && (
                 <button
                   onClick={() => setShowCancelConfirm(true)}
@@ -172,8 +150,7 @@ export default function BillingSettings() {
                     Your payment is past due. Please update your payment method to continue your subscription.
                   </p>
                   <button
-                    onClick={handleManageSubscription}
-                    disabled={isLoadingPortal}
+                    onClick={() => setShowUpdatePayment(true)}
                     className="text-sm text-primary-600 hover:text-primary-500 font-medium"
                   >
                     Update Payment Method
@@ -184,6 +161,24 @@ export default function BillingSettings() {
           )}
         </div>
       </div>
+
+      {/* Payment Methods */}
+      {isPremium && (
+        <div className="card mt-6">
+          <PaymentMethodList />
+        </div>
+      )}
+
+      {/* Update Payment Method Modal (for past_due) */}
+      {showUpdatePayment && (
+        <AddPaymentMethodModal
+          onClose={() => setShowUpdatePayment(false)}
+          onAdded={() => {
+            setShowUpdatePayment(false);
+            setSuccessMessage('Payment method updated successfully.');
+          }}
+        />
+      )}
 
       {/* Cancel Confirmation Modal */}
       {showCancelConfirm && (

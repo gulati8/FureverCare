@@ -19,6 +19,8 @@ import PetsList from './pages/admin/PetsList';
 import SubscriptionSettings from './pages/admin/SubscriptionSettings';
 import BillingSettings from './pages/BillingSettings';
 import Pricing from './pages/Pricing';
+import Payment from './pages/Payment';
+import PaymentConfirm from './pages/PaymentConfirm';
 import AccountSettings from './pages/AccountSettings';
 
 // Redirects to homepage and opens the auth modal
@@ -100,6 +102,8 @@ export default function App() {
         <Route path="/settings" element={<AccountSettings />} />
         <Route path="/billing" element={<BillingSettings />} />
         <Route path="/pricing" element={<Pricing />} />
+        <Route path="/payment" element={<Payment />} />
+        <Route path="/payment/confirm" element={<PaymentConfirm />} />
       </Route>
 
       {/* Admin routes */}
