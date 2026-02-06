@@ -17,6 +17,12 @@ import {
   createCheckoutSession,
   createPortalSession,
   cancelSubscription,
+  createSubscriptionWithPaymentIntent,
+  listPaymentMethods,
+  getCustomerDefaultPaymentMethod,
+  createSetupIntent,
+  detachPaymentMethod,
+  setDefaultPaymentMethod,
 } from '../services/stripe.js';
 import { config } from '../config/index.js';
 
@@ -168,6 +174,157 @@ router.delete('/subscription', authenticate, async (req: AuthRequest, res: Respo
   } catch (error) {
     console.error('Error cancelling subscription:', error);
     res.status(500).json({ error: 'Failed to cancel subscription' });
+  }
+});
+
+// --- Stripe Elements routes ---
+
+const subscribeSchema = z.object({
+  interval: z.enum(['monthly', 'annual']),
+});
+
+// GET /billing/config - Get Stripe publishable key (public, no auth)
+router.get('/config', async (req, res: Response) => {
+  try {
+    res.json({ publishableKey: config.stripe.publishableKey });
+  } catch (error) {
+    console.error('Error fetching billing config:', error);
+    res.status(500).json({ error: 'Failed to fetch billing config' });
+  }
+});
+
+// POST /billing/subscribe - Create subscription with Payment Element
+router.post('/subscribe', authenticate, validate(subscribeSchema), async (req: AuthRequest, res: Response) => {
+  try {
+    const { interval } = req.body;
+    const user = await findUserById(req.userId!);
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    // Create Stripe customer if needed
+    let stripeCustomerId = user.stripe_customer_id;
+    if (!stripeCustomerId) {
+      stripeCustomerId = await createCustomer(user.email, user.name);
+      await updateSubscription(user.id, { stripe_customer_id: stripeCustomerId });
+    }
+
+    // Get price ID based on interval
+    const stripeConfig = await getStripeConfig();
+    const priceId = interval === 'monthly'
+      ? stripeConfig.price_id_monthly
+      : stripeConfig.price_id_annual;
+
+    if (!priceId) {
+      res.status(400).json({ error: `No price ID configured for ${interval} billing` });
+      return;
+    }
+
+    // Get trial config
+    const trialConfig = await getTrialConfig();
+    const trialDays = trialConfig.trial_days;
+
+    const result = await createSubscriptionWithPaymentIntent(
+      stripeCustomerId,
+      priceId,
+      trialDays
+    );
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error creating subscription:', error);
+    res.status(500).json({ error: 'Failed to create subscription' });
+  }
+});
+
+// GET /billing/payment-methods - List saved payment methods with default flag
+router.get('/payment-methods', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = await findUserById(req.userId!);
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    if (!user.stripe_customer_id) {
+      res.json({ paymentMethods: [], defaultPaymentMethodId: null });
+      return;
+    }
+
+    const [methods, defaultId] = await Promise.all([
+      listPaymentMethods(user.stripe_customer_id),
+      getCustomerDefaultPaymentMethod(user.stripe_customer_id),
+    ]);
+
+    res.json({
+      paymentMethods: methods,
+      defaultPaymentMethodId: defaultId,
+    });
+  } catch (error) {
+    console.error('Error fetching payment methods:', error);
+    res.status(500).json({ error: 'Failed to fetch payment methods' });
+  }
+});
+
+// POST /billing/payment-methods - Create SetupIntent for adding a new payment method
+router.post('/payment-methods', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = await findUserById(req.userId!);
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    if (!user.stripe_customer_id) {
+      res.status(400).json({ error: 'No Stripe customer found' });
+      return;
+    }
+
+    const result = await createSetupIntent(user.stripe_customer_id);
+    res.json(result);
+  } catch (error) {
+    console.error('Error creating setup intent:', error);
+    res.status(500).json({ error: 'Failed to create setup intent' });
+  }
+});
+
+// DELETE /billing/payment-methods/:id - Remove a payment method
+router.delete('/payment-methods/:id', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    await detachPaymentMethod(id);
+    res.json({ message: 'Payment method removed' });
+  } catch (error) {
+    console.error('Error removing payment method:', error);
+    res.status(500).json({ error: 'Failed to remove payment method' });
+  }
+});
+
+// PUT /billing/payment-methods/:id/default - Set default payment method
+router.put('/payment-methods/:id/default', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = await findUserById(req.userId!);
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    if (!user.stripe_customer_id) {
+      res.status(400).json({ error: 'No Stripe customer found' });
+      return;
+    }
+
+    await setDefaultPaymentMethod(user.stripe_customer_id, id);
+    res.json({ message: 'Default payment method updated' });
+  } catch (error) {
+    console.error('Error setting default payment method:', error);
+    res.status(500).json({ error: 'Failed to set default payment method' });
   }
 });
 

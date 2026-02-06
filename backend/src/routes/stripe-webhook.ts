@@ -57,6 +57,12 @@ router.post(
           break;
         }
 
+        case 'invoice.paid': {
+          const invoice = event.data.object as Stripe.Invoice;
+          await handleInvoicePaid(invoice);
+          break;
+        }
+
         default:
           console.log(`Unhandled event type: ${event.type}`);
       }
@@ -98,6 +104,12 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Pro
   const user = await findUserByStripeCustomerId(customerId);
   if (!user) {
     console.error(`No user found for Stripe customer: ${customerId}`);
+    return;
+  }
+
+  // Skip DB update for incomplete status — wait for payment confirmation
+  if (subscription.status === 'incomplete') {
+    console.log(`Subscription ${subscription.id} is incomplete, skipping DB update (waiting for payment)`);
     return;
   }
 
@@ -175,6 +187,18 @@ async function handlePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
   });
 
   console.log(`Payment failed for user ${user.id}`);
+}
+
+async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
+  const customerId = invoice.customer as string;
+
+  const user = await findUserByStripeCustomerId(customerId);
+  if (!user) {
+    console.error(`No user found for Stripe customer: ${customerId}`);
+    return;
+  }
+
+  console.log(`Invoice paid for user ${user.id}, invoice: ${invoice.id}`);
 }
 
 export default router;

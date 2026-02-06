@@ -54,6 +54,9 @@ app.get('/health', (req, res) => {
 // Static files (uploads)
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
+// Apple Pay domain verification
+app.use('/.well-known', express.static(path.join(process.cwd(), '.well-known')));
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/pets', petRoutes);
