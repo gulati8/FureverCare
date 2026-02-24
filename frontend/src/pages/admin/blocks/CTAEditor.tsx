@@ -64,7 +64,7 @@ export default function CTAEditor({ content, onChange }: CTAEditorProps) {
               value={content.button?.text || ''}
               onChange={(e) => handleButtonChange('text', e.target.value)}
               className="input"
-              placeholder="Start Free Today"
+              placeholder="Start Today"
             />
           </div>
           <div>
