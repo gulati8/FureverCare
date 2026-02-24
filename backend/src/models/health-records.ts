@@ -201,6 +201,13 @@ export async function getPetMedications(petId: number): Promise<PetMedication[]>
   return query<PetMedication>('SELECT * FROM pet_medications WHERE pet_id = $1 ORDER BY is_active DESC, created_at DESC', [petId]);
 }
 
+export async function findPetMedicationByName(petId: number, name: string): Promise<PetMedication | null> {
+  return queryOne<PetMedication>(
+    'SELECT * FROM pet_medications WHERE pet_id = $1 AND LOWER(TRIM(name)) = LOWER(TRIM($2))',
+    [petId, name]
+  ) ?? null;
+}
+
 export async function updatePetMedication(id: number, petId: number, updates: Partial<Omit<PetMedication, 'id' | 'pet_id' | 'created_at'>>, audit?: AuditContext): Promise<PetMedication | null> {
   // Get existing record for audit
   const existing = await queryOne<PetMedication>('SELECT * FROM pet_medications WHERE id = $1 AND pet_id = $2', [id, petId]);

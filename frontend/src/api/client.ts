@@ -377,9 +377,14 @@ export interface ApprovalResult {
     itemId: number;
     recordType: string;
     createdRecordId: number;
+    action?: 'created' | 'updated';
   }>;
   rejected: number[];
   errors: Array<{ itemId: number; error: string }>;
+}
+
+export interface DuplicateCheckResult {
+  duplicates: Record<number, { existingId: number; existingName: string }>;
 }
 
 // Audit Log Types
@@ -741,6 +746,10 @@ export const documentsApi = {
   // Get extraction results
   getExtraction: (petId: number, uploadId: number, token: string) =>
     api.get<DocumentExtractionWithItems>(`/api/pets/${petId}/documents/uploads/${uploadId}/extraction`, token),
+
+  // Check for duplicate medications in extraction
+  checkDuplicates: (petId: number, uploadId: number, token: string) =>
+    api.post<DuplicateCheckResult>(`/api/pets/${petId}/documents/uploads/${uploadId}/extraction/check-duplicates`, {}, token),
 
   // Approve extraction items
   approveItems: (petId: number, uploadId: number, itemIds: number[], token: string) =>

@@ -23,6 +23,7 @@ export function DocumentExtractionReview({
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [duplicates, setDuplicates] = useState<Record<number, { existingId: number; existingName: string }>>({});
 
   useEffect(() => {
     loadExtraction();
@@ -43,6 +44,14 @@ export function DocumentExtractionReview({
         .filter((item) => item.status === 'pending' || item.status === 'modified')
         .map((item) => item.id);
       setSelectedIds(new Set(pendingIds));
+
+      // Check for duplicate medications
+      try {
+        const dupResult = await documentsApi.checkDuplicates(petId, upload.id, token);
+        setDuplicates(dupResult.duplicates);
+      } catch {
+        // Non-critical — don't block the review if check fails
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to load extraction');
     } finally {
@@ -119,9 +128,12 @@ export function DocumentExtractionReview({
       await loadExtraction();
 
       if (result.approved.length > 0) {
-        alert(
-          `Successfully added ${result.approved.length} record(s) to your pet's health profile!`
-        );
+        const created = result.approved.filter((a) => a.action !== 'updated').length;
+        const updated = result.approved.filter((a) => a.action === 'updated').length;
+        const parts: string[] = [];
+        if (created > 0) parts.push(`${created} created`);
+        if (updated > 0) parts.push(`${updated} updated (existing records merged)`);
+        alert(`Successfully processed ${result.approved.length} record(s): ${parts.join(', ')}.`);
       }
 
       // Check if all items are now processed
@@ -280,6 +292,7 @@ export function DocumentExtractionReview({
                 isSelected={selectedIds.has(item.id)}
                 onToggleSelect={() => toggleItemSelection(item.id)}
                 onModify={(data) => handleModifyItem(item.id, data)}
+                duplicateOf={duplicates[item.id]?.existingName}
               />
             ))}
           </div>

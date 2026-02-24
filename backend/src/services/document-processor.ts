@@ -23,6 +23,8 @@ import {
 import {
   createPetVaccination,
   createPetMedication,
+  updatePetMedication,
+  findPetMedicationByName,
   createPetCondition,
   createPetAllergy,
   createPetVet,
@@ -128,6 +130,7 @@ export interface ApprovalResult {
     itemId: number;
     recordType: string;
     createdRecordId: number;
+    action: 'created' | 'updated';
   }[];
   rejected: number[];
   errors: { itemId: number; error: string }[];
@@ -165,6 +168,7 @@ export async function approveDocumentExtractionItems(
       // Create the health record based on type
       let createdRecord: any;
       let recordType: string;
+      let action: 'created' | 'updated' = 'created';
 
       switch (item.record_type) {
         case 'vaccination':
@@ -172,10 +176,35 @@ export async function approveDocumentExtractionItems(
           recordType = 'pet_vaccinations';
           break;
 
-        case 'medication':
-          createdRecord = await createPetMedication(petId, dataToSave as any);
+        case 'medication': {
+          // Check for existing medication by name (case-insensitive)
+          const existingMed = dataToSave.name
+            ? await findPetMedicationByName(petId, dataToSave.name)
+            : null;
+
+          if (existingMed) {
+            // Merge: update existing record with new non-null fields
+            const updates: Record<string, any> = {};
+            const fields = ['dosage', 'frequency', 'start_date', 'end_date', 'prescribing_vet', 'notes', 'is_active'] as const;
+            for (const field of fields) {
+              if (dataToSave[field] !== undefined && dataToSave[field] !== null) {
+                updates[field] = dataToSave[field];
+              }
+            }
+            const updated = await updatePetMedication(existingMed.id, petId, updates, {
+              userId,
+              source: 'document_import' as any,
+              ipAddress: options?.ipAddress,
+              userAgent: options?.userAgent,
+            });
+            createdRecord = updated ?? existingMed;
+            action = 'updated';
+          } else {
+            createdRecord = await createPetMedication(petId, dataToSave as any);
+          }
           recordType = 'pet_medications';
           break;
+        }
 
         case 'condition':
           createdRecord = await createPetCondition(petId, dataToSave as any);
@@ -205,17 +234,20 @@ export async function approveDocumentExtractionItems(
       await updateDocumentExtractionItemStatus(item.id, 'approved', createdRecord.id, recordType);
 
       // Log audit entry
-      await logCreate(recordType, createdRecord.id, dataToSave, userId, {
-        source: 'document_import',
-        sourceDocumentUploadId: documentUploadId,
-        ipAddress: options?.ipAddress,
-        userAgent: options?.userAgent,
-      });
+      if (action === 'created') {
+        await logCreate(recordType, createdRecord.id, dataToSave, userId, {
+          source: 'document_import',
+          sourceDocumentUploadId: documentUploadId,
+          ipAddress: options?.ipAddress,
+          userAgent: options?.userAgent,
+        });
+      }
 
       result.approved.push({
         itemId: item.id,
         recordType,
         createdRecordId: createdRecord.id,
+        action,
       });
     } catch (error: any) {
       result.errors.push({

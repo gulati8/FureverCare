@@ -22,6 +22,7 @@ import {
   approveDocumentExtractionItems,
   rejectDocumentExtractionItems,
 } from '../services/document-processor.js';
+import { findPetMedicationByName } from '../models/health-records.js';
 import { generateExtractedItemsSummary } from '../services/document-classifier.js';
 import { extractRequestMetadata } from '../services/audit-logger.js';
 import { claudeRateLimit, pdfUploadRateLimit } from '../middleware/rate-limit-claude.js';
@@ -263,6 +264,50 @@ router.get('/:petId/documents/uploads/:id/extraction', authenticate, async (req:
   } catch (error) {
     console.error('Error fetching extraction:', error);
     res.status(500).json({ error: 'Failed to fetch extraction' });
+  }
+});
+
+// POST /api/pets/:petId/documents/uploads/:id/extraction/check-duplicates - Check for duplicate medications
+router.post('/:petId/documents/uploads/:id/extraction/check-duplicates', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const petId = parseInt(req.params.petId);
+    const uploadId = parseInt(req.params.id);
+
+    const hasAccess = await userHasPetAccess(petId, req.userId!);
+    if (!hasAccess) {
+      res.status(404).json({ error: 'Pet not found' });
+      return;
+    }
+
+    const upload = await getDocumentUploadById(uploadId);
+    if (!upload || upload.pet_id !== petId) {
+      res.status(404).json({ error: 'Upload not found' });
+      return;
+    }
+
+    const extraction = await getDocumentExtractionWithItems(uploadId);
+    if (!extraction) {
+      res.status(404).json({ error: 'No extraction found' });
+      return;
+    }
+
+    // Check each medication item for duplicates
+    const duplicates: Record<number, { existingId: number; existingName: string }> = {};
+    for (const item of extraction.items) {
+      if (item.record_type !== 'medication') continue;
+      const data = item.user_modified_data || item.extracted_data;
+      if (!data.name) continue;
+
+      const existing = await findPetMedicationByName(petId, data.name);
+      if (existing) {
+        duplicates[item.id] = { existingId: existing.id, existingName: existing.name };
+      }
+    }
+
+    res.json({ duplicates });
+  } catch (error: any) {
+    console.error('Error checking duplicates:', error);
+    res.status(500).json({ error: error.message || 'Duplicate check failed' });
   }
 });
 
