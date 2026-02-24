@@ -135,7 +135,7 @@ async function seedCms() {
           headline: "Ready to simplify pet health management?",
           subheadline: "Join thousands of pet parents who trust FureverCare",
           button: {
-            text: "Start Free Today",
+            text: "Start Today",
             url: "/register"
           }
         }
