@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, closed]
 
 env:
   REGISTRY: ghcr.io
@@ -13,6 +16,7 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    if: github.event.action != 'closed'
     permissions:
       contents: read
       packages: write
@@ -31,14 +35,14 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Extract metadata for backend
-        id: meta-backend
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.BACKEND_IMAGE }}
-          tags: |
-            type=sha,prefix=
-            type=raw,value=latest
+      - name: Determine tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "tag=pr-${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Build and push backend image
         uses: docker/build-push-action@v5
@@ -47,19 +51,11 @@ jobs:
           file: ./backend/Dockerfile
           target: production
           push: true
-          tags: ${{ steps.meta-backend.outputs.tags }}
-          labels: ${{ steps.meta-backend.outputs.labels }}
+          tags: |
+            ${{ env.BACKEND_IMAGE }}:${{ steps.tag.outputs.tag }}
+            ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Extract metadata for frontend
-        id: meta-frontend
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.FRONTEND_IMAGE }}
-          tags: |
-            type=sha,prefix=
-            type=raw,value=latest
 
       - name: Build and push frontend image
         uses: docker/build-push-action@v5
@@ -68,17 +64,18 @@ jobs:
           file: ./frontend/Dockerfile
           target: production
           push: true
-          tags: ${{ steps.meta-frontend.outputs.tags }}
-          labels: ${{ steps.meta-frontend.outputs.labels }}
+          tags: |
+            ${{ env.FRONTEND_IMAGE }}:${{ steps.tag.outputs.tag }}
+            ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
-    env:
-      AWS_REGION: us-east-1
-      EC2_INSTANCE_ID: i-021ca6be74a5d9b16
+    permissions:
+      contents: read
+      pull-requests: read
 
     steps:
       - name: Checkout repository
@@ -89,14 +86,28 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: us-east-1
 
-      - name: Copy deployment files via SSM
+      - name: Determine deploy target
+        id: target
         run: |
-          # Read and base64 encode the docker-compose file
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            PR_NUM="${{ github.event.pull_request.number }}"
+            echo "app_name=furevercare-pr-${PR_NUM}" >> "$GITHUB_OUTPUT"
+            echo "image_tag=pr-${PR_NUM}" >> "$GITHUB_OUTPUT"
+            echo "is_pr=true" >> "$GITHUB_OUTPUT"
+            echo "uat_url=https://furevercare-pr-${PR_NUM}.gulatilabs.me" >> "$GITHUB_OUTPUT"
+          else
+            echo "app_name=furevercare" >> "$GITHUB_OUTPUT"
+            echo "image_tag=latest" >> "$GITHUB_OUTPUT"
+            echo "is_pr=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy production to EC2
+        if: steps.target.outputs.is_pr == 'false'
+        run: |
           COMPOSE_CONTENT=$(base64 -w 0 deploy/docker-compose.prod.yml)
 
-          # Base64 encode secrets to avoid shell escaping issues
           CLAUDE_KEY_B64=$(echo -n '${{ secrets.CLAUDE_API_KEY }}' | base64 -w 0)
           STRIPE_KEY_B64=$(echo -n '${{ secrets.STRIPE_SECRET_KEY }}' | base64 -w 0)
           STRIPE_WEBHOOK_B64=$(echo -n '${{ secrets.STRIPE_WEBHOOK_SECRET }}' | base64 -w 0)
@@ -104,9 +115,8 @@ jobs:
           AWS_SECRET_B64=$(echo -n '${{ secrets.AWS_SECRET_ACCESS_KEY }}' | base64 -w 0)
           S3_BUCKET_B64=$(echo -n '${{ secrets.S3_BUCKET }}' | base64 -w 0)
 
-          # Send command to create directory and write file
           COMMAND_ID=$(aws ssm send-command \
-            --instance-ids "$EC2_INSTANCE_ID" \
+            --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
             --parameters "commands=[
               \"sudo mkdir -p /srv/furevercare\",
@@ -119,29 +129,7 @@ jobs:
               \"grep -q '^AWS_REGION=' /srv/furevercare/.env 2>/dev/null && sudo sed -i 's/^AWS_REGION=.*/AWS_REGION=us-east-1/' /srv/furevercare/.env || echo 'AWS_REGION=us-east-1' | sudo tee -a /srv/furevercare/.env > /dev/null\",
               \"AWS_KEY_VAL=\$(echo '$AWS_KEY_B64' | base64 -d) && grep -q '^AWS_ACCESS_KEY_ID=' /srv/furevercare/.env 2>/dev/null && sudo sed -i \\\"s/^AWS_ACCESS_KEY_ID=.*/AWS_ACCESS_KEY_ID=\$AWS_KEY_VAL/\\\" /srv/furevercare/.env || echo \\\"AWS_ACCESS_KEY_ID=\$AWS_KEY_VAL\\\" | sudo tee -a /srv/furevercare/.env > /dev/null\",
               \"AWS_SECRET_VAL=\$(echo '$AWS_SECRET_B64' | base64 -d) && grep -q '^AWS_SECRET_ACCESS_KEY=' /srv/furevercare/.env 2>/dev/null && sudo sed -i \\\"s|^AWS_SECRET_ACCESS_KEY=.*|AWS_SECRET_ACCESS_KEY=\$AWS_SECRET_VAL|\\\" /srv/furevercare/.env || echo \\\"AWS_SECRET_ACCESS_KEY=\$AWS_SECRET_VAL\\\" | sudo tee -a /srv/furevercare/.env > /dev/null\",
-              \"grep -q '^EMAIL_PROVIDER=' /srv/furevercare/.env 2>/dev/null && sudo sed -i 's/^EMAIL_PROVIDER=.*/EMAIL_PROVIDER=ses/' /srv/furevercare/.env || echo 'EMAIL_PROVIDER=ses' | sudo tee -a /srv/furevercare/.env > /dev/null\"
-            ]" \
-            --query 'Command.CommandId' \
-            --output text)
-
-          # Wait for command to complete
-          aws ssm wait command-executed \
-            --command-id "$COMMAND_ID" \
-            --instance-id "$EC2_INSTANCE_ID" || true
-
-          # Check result
-          aws ssm get-command-invocation \
-            --command-id "$COMMAND_ID" \
-            --instance-id "$EC2_INSTANCE_ID" \
-            --query '[Status, StatusDetails]' \
-            --output text
-
-      - name: Deploy to EC2 via SSM
-        run: |
-          COMMAND_ID=$(aws ssm send-command \
-            --instance-ids "$EC2_INSTANCE_ID" \
-            --document-name "AWS-RunShellScript" \
-            --parameters "commands=[
+              \"grep -q '^EMAIL_PROVIDER=' /srv/furevercare/.env 2>/dev/null && sudo sed -i 's/^EMAIL_PROVIDER=.*/EMAIL_PROVIDER=ses/' /srv/furevercare/.env || echo 'EMAIL_PROVIDER=ses' | sudo tee -a /srv/furevercare/.env > /dev/null\",
               \"cd /srv/furevercare\",
               \"echo '${{ secrets.GHCR_PAT }}' | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin\",
               \"docker compose -f docker-compose.prod.yml pull\",
@@ -162,36 +150,227 @@ jobs:
 
           echo "Command ID: $COMMAND_ID"
 
-          # Wait for command to complete (up to 5 minutes)
           for i in {1..30}; do
             STATUS=$(aws ssm get-command-invocation \
               --command-id "$COMMAND_ID" \
-              --instance-id "$EC2_INSTANCE_ID" \
+              --instance-id "${{ secrets.EC2_INSTANCE_ID }}" \
               --query 'Status' \
               --output text 2>/dev/null || echo "Pending")
 
-            echo "Status: $STATUS"
-
-            if [[ "$STATUS" == "Success" ]]; then
+            if [ "$STATUS" = "Success" ]; then
               echo "Deployment successful!"
-              aws ssm get-command-invocation \
-                --command-id "$COMMAND_ID" \
-                --instance-id "$EC2_INSTANCE_ID" \
-                --query 'StandardOutputContent' \
-                --output text
               exit 0
-            elif [[ "$STATUS" == "Failed" || "$STATUS" == "Cancelled" || "$STATUS" == "TimedOut" ]]; then
+            elif [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ]; then
               echo "Deployment failed!"
               aws ssm get-command-invocation \
                 --command-id "$COMMAND_ID" \
-                --instance-id "$EC2_INSTANCE_ID" \
-                --query '[StandardOutputContent, StandardErrorContent]' \
+                --instance-id "${{ secrets.EC2_INSTANCE_ID }}" \
+                --query 'StandardErrorContent' \
                 --output text
               exit 1
             fi
-
+            echo "Waiting for deployment... ($STATUS)"
             sleep 10
           done
-
-          echo "Timeout waiting for deployment"
+          echo "Deployment timed out"
           exit 1
+
+      - name: Deploy PR environment to EC2
+        if: steps.target.outputs.is_pr == 'true'
+        run: |
+          APP_NAME="${{ steps.target.outputs.app_name }}"
+          IMAGE_TAG="${{ steps.target.outputs.image_tag }}"
+
+          # PR environments reuse production postgres/redis but run their own API + frontend
+          COMPOSE=$(cat <<'COMPOSEOF'
+          services:
+            backend:
+              image: ghcr.io/gulati8/furevercare-api:IMAGE_TAG_PLACEHOLDER
+              container_name: APP_NAME_PLACEHOLDER-api
+              environment:
+                NODE_ENV: production
+                PORT: 3001
+                DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@furevercare-db:5432/${POSTGRES_DB}
+                REDIS_URL: redis://furevercare-redis:6379
+                JWT_SECRET: ${JWT_SECRET}
+                FRONTEND_URL: https://APP_NAME_PLACEHOLDER.gulatilabs.me
+                CLAUDE_API_KEY: ${CLAUDE_API_KEY:-}
+                STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+                STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+                STORAGE_PROVIDER: ${STORAGE_PROVIDER:-local}
+                S3_BUCKET: ${S3_BUCKET:-}
+                AWS_REGION: ${AWS_REGION:-us-east-1}
+                AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+                AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+                EMAIL_PROVIDER: ${EMAIL_PROVIDER:-ses}
+              restart: unless-stopped
+              networks:
+                - proxy
+                - furevercare_internal
+
+            frontend:
+              image: ghcr.io/gulati8/furevercare-web:IMAGE_TAG_PLACEHOLDER
+              container_name: APP_NAME_PLACEHOLDER-web
+              depends_on:
+                - backend
+              restart: unless-stopped
+              networks:
+                - proxy
+
+          networks:
+            proxy:
+              external: true
+            furevercare_internal:
+              external: true
+          COMPOSEOF
+          )
+
+          COMPOSE=$(echo "$COMPOSE" | sed "s/IMAGE_TAG_PLACEHOLDER/${IMAGE_TAG}/g" | sed "s/APP_NAME_PLACEHOLDER/${APP_NAME}/g")
+          COMPOSE_B64=$(echo "$COMPOSE" | base64 -w 0)
+
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "commands=[
+              \"mkdir -p /srv/${APP_NAME}\",
+              \"cp /srv/furevercare/.env /srv/${APP_NAME}/.env 2>/dev/null || true\",
+              \"echo '${COMPOSE_B64}' | base64 -d > /srv/${APP_NAME}/docker-compose.yml\",
+              \"echo '${{ secrets.GHCR_PAT }}' | docker login ghcr.io -u gulati8 --password-stdin\",
+              \"cd /srv/${APP_NAME} && docker compose pull && docker compose up -d --remove-orphans\",
+              \"grep -q '${APP_NAME}.gulatilabs.me' /srv/proxy/Caddyfile 2>/dev/null || printf '\\\\n${APP_NAME}.gulatilabs.me {\\\\n  reverse_proxy ${APP_NAME}-web:80\\\\n}\\\\n' >> /srv/proxy/Caddyfile\",
+              \"docker exec proxy-caddy-1 caddy reload --config /etc/caddy/Caddyfile 2>/dev/null || docker exec caddy caddy reload --config /etc/caddy/Caddyfile 2>/dev/null || true\"
+            ]" \
+            --query 'Command.CommandId' \
+            --output text)
+
+          for i in {1..30}; do
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id "${{ secrets.EC2_INSTANCE_ID }}" \
+              --query 'Status' \
+              --output text 2>/dev/null || echo "Pending")
+
+            if [ "$STATUS" = "Success" ]; then
+              echo "PR environment deployed!"
+              exit 0
+            elif [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ]; then
+              echo "PR deploy failed!"
+              aws ssm get-command-invocation \
+                --command-id "$COMMAND_ID" \
+                --instance-id "${{ secrets.EC2_INSTANCE_ID }}" \
+                --query 'StandardErrorContent' \
+                --output text
+              exit 1
+            fi
+            echo "Waiting for PR deployment... ($STATUS)"
+            sleep 10
+          done
+          echo "PR deployment timed out"
+          exit 1
+
+      - name: Notify Slack of UAT deployment
+        if: steps.target.outputs.is_pr == 'true'
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_BODY=$(gh pr view ${{ github.event.pull_request.number }} \
+            --json body -q .body \
+            --repo "${{ github.repository }}")
+
+          CHANNEL=$(echo "$PR_BODY" | sed -n 's/.*commanddeck:slack_channel=\([^ <]*\).*/\1/p')
+          THREAD=$(echo "$PR_BODY" | sed -n 's/.*commanddeck:slack_thread_ts=\([^ <]*\).*/\1/p')
+
+          if [ -n "$CHANNEL" ] && [ -n "$THREAD" ]; then
+            UAT_URL="${{ steps.target.outputs.uat_url }}"
+            PR_URL="https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}"
+
+            curl -s -X POST https://slack.com/api/chat.postMessage \
+              -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+              -H "Content-type: application/json" \
+              -d "{
+                \"channel\": \"${CHANNEL}\",
+                \"thread_ts\": \"${THREAD}\",
+                \"text\": \"UAT deployed and ready for review:\\n${UAT_URL}\\n\\nPR: ${PR_URL}\"
+              }"
+          else
+            echo "No Slack metadata found in PR body — skipping notification"
+          fi
+
+  cleanup-pr:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Remove PR environment
+        run: |
+          APP_NAME="furevercare-pr-${{ github.event.pull_request.number }}"
+
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "commands=[
+              \"cd /srv/${APP_NAME} && docker compose down --remove-orphans 2>/dev/null || true\",
+              \"rm -rf /srv/${APP_NAME}\",
+              \"sed -i '/${APP_NAME}\\.gulatilabs\\.me/,/}/d' /srv/proxy/Caddyfile 2>/dev/null || true\",
+              \"docker exec proxy-caddy-1 caddy reload --config /etc/caddy/Caddyfile 2>/dev/null || docker exec caddy caddy reload --config /etc/caddy/Caddyfile 2>/dev/null || true\"
+            ]" \
+            --query 'Command.CommandId' \
+            --output text)
+
+          for i in {1..15}; do
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id "${{ secrets.EC2_INSTANCE_ID }}" \
+              --query 'Status' \
+              --output text 2>/dev/null || echo "Pending")
+
+            if [ "$STATUS" = "Success" ]; then
+              echo "PR environment cleaned up!"
+              exit 0
+            elif [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ]; then
+              echo "Cleanup failed (non-critical)"
+              exit 0
+            fi
+            echo "Waiting for cleanup... ($STATUS)"
+            sleep 5
+          done
+
+      - name: Notify Slack of cleanup
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_BODY=$(gh pr view ${{ github.event.pull_request.number }} \
+            --json body -q .body \
+            --repo "${{ github.repository }}" 2>/dev/null || true)
+
+          CHANNEL=$(echo "$PR_BODY" | sed -n 's/.*commanddeck:slack_channel=\([^ <]*\).*/\1/p')
+          THREAD=$(echo "$PR_BODY" | sed -n 's/.*commanddeck:slack_thread_ts=\([^ <]*\).*/\1/p')
+
+          MERGED="${{ github.event.pull_request.merged }}"
+          if [ "$MERGED" = "true" ]; then
+            MSG="PR merged and deployed to production. UAT environment cleaned up."
+          else
+            MSG="PR closed. UAT environment cleaned up."
+          fi
+
+          if [ -n "$CHANNEL" ] && [ -n "$THREAD" ]; then
+            curl -s -X POST https://slack.com/api/chat.postMessage \
+              -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+              -H "Content-type: application/json" \
+              -d "{
+                \"channel\": \"${CHANNEL}\",
+                \"thread_ts\": \"${THREAD}\",
+                \"text\": \"${MSG}\"
+              }"
+          fi
