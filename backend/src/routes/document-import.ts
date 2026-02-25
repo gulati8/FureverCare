@@ -21,8 +21,9 @@ import {
   processDocumentUpload,
   approveDocumentExtractionItems,
   rejectDocumentExtractionItems,
+  approveMergeDocumentExtractionItems,
 } from '../services/document-processor.js';
-import { findPetMedicationByName } from '../models/health-records.js';
+import { findPetMedicationByName, PetMedication } from '../models/health-records.js';
 import { generateExtractedItemsSummary } from '../services/document-classifier.js';
 import { extractRequestMetadata } from '../services/audit-logger.js';
 import { claudeRateLimit, pdfUploadRateLimit } from '../middleware/rate-limit-claude.js';
@@ -291,8 +292,25 @@ router.post('/:petId/documents/uploads/:id/extraction/check-duplicates', authent
       return;
     }
 
-    // Check each medication item for duplicates
-    const duplicates: Record<number, { existingId: number; existingName: string }> = {};
+    // Check each medication item for duplicates, including field-level diffs
+    const MEDICATION_DIFF_FIELDS = ['dosage', 'frequency', 'start_date', 'end_date', 'prescribing_vet', 'notes', 'is_active'] as const;
+    const FIELD_LABELS: Record<string, string> = {
+      dosage: 'Dosage',
+      frequency: 'Frequency',
+      start_date: 'Start date',
+      end_date: 'End date',
+      prescribing_vet: 'Prescribing vet',
+      notes: 'Notes',
+      is_active: 'Active status',
+    };
+
+    const duplicates: Record<number, {
+      existingId: number;
+      existingName: string;
+      existingData: Partial<PetMedication>;
+      fieldDiffs: Array<{ field: string; label: string; existingValue: any; importedValue: any }>;
+    }> = {};
+
     for (const item of extraction.items) {
       if (item.record_type !== 'medication') continue;
       const data = item.user_modified_data || item.extracted_data;
@@ -300,7 +318,45 @@ router.post('/:petId/documents/uploads/:id/extraction/check-duplicates', authent
 
       const existing = await findPetMedicationByName(petId, data.name);
       if (existing) {
-        duplicates[item.id] = { existingId: existing.id, existingName: existing.name };
+        const fieldDiffs: Array<{ field: string; label: string; existingValue: any; importedValue: any }> = [];
+
+        for (const field of MEDICATION_DIFF_FIELDS) {
+          const importedValue = data[field];
+          const existingValue = existing[field];
+
+          // Only include fields where the imported value is non-null and differs from existing
+          if (importedValue !== undefined && importedValue !== null) {
+            const existingNorm = existingValue === undefined ? null : existingValue;
+            const importedNorm = importedValue === undefined ? null : importedValue;
+            // Normalize dates for comparison
+            const existingStr = existingNorm instanceof Date ? existingNorm.toISOString().split('T')[0] : String(existingNorm ?? '');
+            const importedStr = String(importedNorm ?? '');
+            if (existingStr !== importedStr) {
+              fieldDiffs.push({
+                field,
+                label: FIELD_LABELS[field] || field,
+                existingValue: existingNorm instanceof Date ? existingNorm.toISOString().split('T')[0] : existingNorm,
+                importedValue: importedNorm,
+              });
+            }
+          }
+        }
+
+        duplicates[item.id] = {
+          existingId: existing.id,
+          existingName: existing.name,
+          existingData: {
+            name: existing.name,
+            dosage: existing.dosage,
+            frequency: existing.frequency,
+            start_date: existing.start_date,
+            end_date: existing.end_date,
+            prescribing_vet: existing.prescribing_vet,
+            notes: existing.notes,
+            is_active: existing.is_active,
+          },
+          fieldDiffs,
+        };
       }
     }
 
@@ -343,6 +399,49 @@ router.post('/:petId/documents/uploads/:id/extraction/approve', authenticate, as
   } catch (error: any) {
     console.error('Error approving extraction items:', error);
     res.status(500).json({ error: error.message || 'Approval failed' });
+  }
+});
+
+// POST /api/pets/:petId/documents/uploads/:id/extraction/approve-merge - Approve with per-item merge strategies
+router.post('/:petId/documents/uploads/:id/extraction/approve-merge', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const petId = parseInt(req.params.petId);
+    const uploadId = parseInt(req.params.id);
+    const { items } = req.body;
+
+    if (!await verifyPetEditAccess(petId, req.userId!, res)) {
+      return;
+    }
+
+    if (!Array.isArray(items) || items.length === 0) {
+      res.status(400).json({ error: 'items array is required' });
+      return;
+    }
+
+    // Validate each item has required fields
+    for (const item of items) {
+      if (!item.itemId || !['smart_merge', 'skip', 'create_new'].includes(item.action)) {
+        res.status(400).json({ error: 'Each item must have itemId and action (smart_merge | skip | create_new)' });
+        return;
+      }
+    }
+
+    const upload = await getDocumentUploadById(uploadId);
+    if (!upload || upload.pet_id !== petId) {
+      res.status(404).json({ error: 'Upload not found' });
+      return;
+    }
+
+    const metadata = extractRequestMetadata(req);
+    const result = await approveMergeDocumentExtractionItems(uploadId, petId, items, req.userId!, {
+      ipAddress: metadata.ipAddress || undefined,
+      userAgent: metadata.userAgent || undefined,
+    });
+
+    res.json(result);
+  } catch (error: any) {
+    console.error('Error processing merge approval:', error);
+    res.status(500).json({ error: error.message || 'Merge approval failed' });
   }
 });
 
