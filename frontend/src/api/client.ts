@@ -753,6 +753,10 @@ export const documentsApi = {
   // Edit an extraction item
   editItem: (petId: number, itemId: number, modifiedData: Record<string, any>, token: string) =>
     api.patch<DocumentExtractionItem>(`/api/pets/${petId}/documents/extraction-items/${itemId}`, { modifiedData }, token),
+
+  // Rename a document upload
+  renameUpload: (petId: number, uploadId: number, newFilename: string, token: string) =>
+    api.patch<DocumentUpload>(`/api/pets/${petId}/documents/uploads/${uploadId}/rename`, { filename: newFilename }, token),
 };
 
 // Audit API

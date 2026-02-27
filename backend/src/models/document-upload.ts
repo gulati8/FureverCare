@@ -140,6 +140,17 @@ export async function deleteDocumentUpload(id: number, petId: number): Promise<b
   return result.length > 0;
 }
 
+export async function updateDocumentUploadFilename(
+  id: number,
+  petId: number,
+  newFilename: string
+): Promise<DocumentUpload | null> {
+  return queryOne<DocumentUpload>(
+    'UPDATE document_uploads SET original_filename = $1 WHERE id = $2 AND pet_id = $3 RETURNING *',
+    [newFilename, id, petId]
+  );
+}
+
 export function getMediaTypeFromMime(mimeType: string): MediaType {
   if (mimeType === 'application/pdf') {
     return 'pdf';
