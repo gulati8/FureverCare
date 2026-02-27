@@ -19,7 +19,7 @@ import {
   getUserPetRole,
 } from '../models/pet-owners.js';
 import {
-  getPetVets, createPetVet, deletePetVet,
+  getPetVets, createPetVet, deletePetVet, setPrimaryVet,
   getPetConditions, createPetCondition, deletePetCondition,
   getPetAllergies, createPetAllergy, deletePetAllergy,
   getPetMedications, createPetMedication, updatePetMedication, deletePetMedication,
@@ -196,6 +196,36 @@ router.delete('/:id/vets/:vetId', authenticate, async (req: AuthRequest, res: Re
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete veterinarian' });
+  }
+});
+
+router.patch('/:id/vets/:vetId/primary', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const petId = parseInt(req.params.id);
+    const vetId = parseInt(req.params.vetId);
+
+    if (!await verifyPetAccess(petId, req.userId!)) {
+      res.status(404).json({ error: 'Pet not found' });
+      return;
+    }
+
+    const audit = {
+      userId: req.userId!,
+      source: 'manual' as const,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    };
+
+    await setPrimaryVet(petId, vetId, audit);
+    const vets = await getPetVets(petId);
+    res.json(vets);
+  } catch (error) {
+    console.error('Error setting primary vet:', error);
+    if (error instanceof Error && error.message === 'Vet not found') {
+      res.status(404).json({ error: 'Veterinarian not found' });
+      return;
+    }
+    res.status(500).json({ error: 'Failed to set primary veterinarian' });
   }
 });
 
