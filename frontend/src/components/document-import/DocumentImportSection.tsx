@@ -292,6 +292,13 @@ function DocumentUploadItem({
   onDelete: () => void;
   onProcess: () => void;
 }) {
+  const { token } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+  const [newFilename, setNewFilename] = useState(upload.original_filename);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameError, setRenameError] = useState<string | null>(null);
+  const [currentFilename, setCurrentFilename] = useState(upload.original_filename);
+
   const statusColors: Record<string, string> = {
     pending: 'bg-gray-100 text-gray-700',
     classifying: 'bg-blue-100 text-blue-700',
@@ -313,57 +320,155 @@ function DocumentUploadItem({
   const canReview = upload.status === 'completed';
   const canProcess = upload.status === 'pending' || upload.status === 'classified';
 
+  const handleStartEdit = () => {
+    setIsEditing(true);
+    setNewFilename(currentFilename);
+    setRenameError(null);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setNewFilename(currentFilename);
+    setRenameError(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!token) return;
+
+    const trimmedFilename = newFilename.trim();
+    if (!trimmedFilename) {
+      setRenameError('Filename cannot be empty');
+      return;
+    }
+
+    if (trimmedFilename.length > 255) {
+      setRenameError('Filename must be 255 characters or less');
+      return;
+    }
+
+    setIsRenaming(true);
+    setRenameError(null);
+
+    try {
+      await documentsApi.renameUpload(upload.pet_id, upload.id, trimmedFilename, token);
+      setCurrentFilename(trimmedFilename);
+      setIsEditing(false);
+    } catch (err: any) {
+      setRenameError(err.message || 'Failed to rename');
+    } finally {
+      setIsRenaming(false);
+    }
+  };
+
   return (
-    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-      <div className="flex items-center gap-3 flex-1 min-w-0">
-        <div className="flex-shrink-0 w-8 h-8 bg-gray-200 rounded flex items-center justify-center">
-          {upload.file_type === 'pdf' ? (
-            <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-            </svg>
-          ) : (
-            <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          )}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-900 truncate">{upload.original_filename}</p>
-          <p className="text-xs text-gray-500">
-            {new Date(upload.created_at).toLocaleDateString()}
-            {upload.detected_document_type && (
-              <> &middot; {upload.detected_document_type.replace(/_/g, ' ')}</>
+    <div className="bg-gray-50 rounded-lg border border-gray-200">
+      <div className="flex items-center justify-between p-3">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="flex-shrink-0 w-8 h-8 bg-gray-200 rounded flex items-center justify-center">
+            {upload.file_type === 'pdf' ? (
+              <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+            ) : (
+              <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
             )}
-          </p>
+          </div>
+          <div className="flex-1 min-w-0">
+            {isEditing ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={newFilename}
+                  onChange={(e) => setNewFilename(e.target.value)}
+                  className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={isRenaming}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSaveEdit();
+                    } else if (e.key === 'Escape') {
+                      handleCancelEdit();
+                    }
+                  }}
+                  autoFocus
+                />
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={isRenaming}
+                  className="p-1 text-green-600 hover:text-green-700 disabled:opacity-50"
+                  title="Save"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </button>
+                <button
+                  onClick={handleCancelEdit}
+                  disabled={isRenaming}
+                  className="p-1 text-gray-600 hover:text-gray-700 disabled:opacity-50"
+                  title="Cancel"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-gray-900 truncate">{currentFilename}</p>
+                <button
+                  onClick={handleStartEdit}
+                  className="p-1 text-gray-400 hover:text-gray-600"
+                  title="Rename"
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
+              </div>
+            )}
+            <p className="text-xs text-gray-500">
+              {new Date(upload.created_at).toLocaleDateString()}
+              {upload.detected_document_type && (
+                <> &middot; {upload.detected_document_type.replace(/_/g, ' ')}</>
+              )}
+            </p>
+          </div>
+          <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[upload.status] || 'bg-gray-100 text-gray-700'}`}>
+            {statusLabels[upload.status] || upload.status}
+          </span>
         </div>
-        <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[upload.status] || 'bg-gray-100 text-gray-700'}`}>
-          {statusLabels[upload.status] || upload.status}
-        </span>
-      </div>
-      <div className="flex items-center gap-2 ml-3">
-        {canReview && (
+        <div className="flex items-center gap-2 ml-3">
+          {canReview && (
+            <button
+              onClick={onSelect}
+              className="text-sm text-blue-600 hover:text-blue-700"
+            >
+              Review
+            </button>
+          )}
+          {canProcess && (
+            <button
+              onClick={onProcess}
+              className="text-sm text-blue-600 hover:text-blue-700"
+            >
+              Process
+            </button>
+          )}
           <button
-            onClick={onSelect}
-            className="text-sm text-blue-600 hover:text-blue-700"
+            onClick={onDelete}
+            className="text-sm text-red-600 hover:text-red-700"
           >
-            Review
+            Delete
           </button>
-        )}
-        {canProcess && (
-          <button
-            onClick={onProcess}
-            className="text-sm text-blue-600 hover:text-blue-700"
-          >
-            Process
-          </button>
-        )}
-        <button
-          onClick={onDelete}
-          className="text-sm text-red-600 hover:text-red-700"
-        >
-          Delete
-        </button>
+        </div>
       </div>
+      {renameError && (
+        <div className="px-3 pb-3">
+          <p className="text-xs text-red-600">{renameError}</p>
+        </div>
+      )}
     </div>
   );
 }

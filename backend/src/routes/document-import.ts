@@ -10,6 +10,7 @@ import {
   getDocumentUploadById,
   getDocumentUploadsByPetId,
   deleteDocumentUpload,
+  updateDocumentUploadFilename,
   getMediaTypeFromMime,
   DocumentUpload,
 } from '../models/document-upload.js';
@@ -507,6 +508,46 @@ router.patch('/:petId/documents/extraction-items/:itemId', authenticate, async (
   } catch (error: any) {
     console.error('Error updating extraction item:', error);
     res.status(500).json({ error: error.message || 'Update failed' });
+  }
+});
+
+// PATCH /api/pets/:petId/documents/uploads/:id/rename - Rename a document upload
+router.patch('/:petId/documents/uploads/:id/rename', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const petId = parseInt(req.params.petId);
+    const uploadId = parseInt(req.params.id);
+    const { filename } = req.body;
+
+    if (!await verifyPetEditAccess(petId, req.userId!, res)) {
+      return;
+    }
+
+    if (!filename || typeof filename !== 'string' || filename.trim().length === 0) {
+      res.status(400).json({ error: 'filename is required and must be non-empty' });
+      return;
+    }
+
+    if (filename.length > 255) {
+      res.status(400).json({ error: 'filename must be 255 characters or less' });
+      return;
+    }
+
+    const upload = await getDocumentUploadById(uploadId);
+    if (!upload || upload.pet_id !== petId) {
+      res.status(404).json({ error: 'Upload not found' });
+      return;
+    }
+
+    const updatedUpload = await updateDocumentUploadFilename(uploadId, petId, filename.trim());
+    if (!updatedUpload) {
+      res.status(404).json({ error: 'Failed to update filename' });
+      return;
+    }
+
+    res.json(updatedUpload);
+  } catch (error: any) {
+    console.error('Error renaming document upload:', error);
+    res.status(500).json({ error: error.message || 'Rename failed' });
   }
 });
 
