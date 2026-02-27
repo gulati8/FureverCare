@@ -23,6 +23,8 @@ import {
 import {
   createPetVaccination,
   createPetMedication,
+  updatePetMedication,
+  findPetMedicationByName,
   createPetCondition,
   createPetAllergy,
   createPetVet,
@@ -128,6 +130,7 @@ export interface ApprovalResult {
     itemId: number;
     recordType: string;
     createdRecordId: number;
+    action: 'created' | 'updated';
   }[];
   rejected: number[];
   errors: { itemId: number; error: string }[];
@@ -165,6 +168,7 @@ export async function approveDocumentExtractionItems(
       // Create the health record based on type
       let createdRecord: any;
       let recordType: string;
+      let action: 'created' | 'updated' = 'created';
 
       switch (item.record_type) {
         case 'vaccination':
@@ -172,10 +176,35 @@ export async function approveDocumentExtractionItems(
           recordType = 'pet_vaccinations';
           break;
 
-        case 'medication':
-          createdRecord = await createPetMedication(petId, dataToSave as any);
+        case 'medication': {
+          // Check for existing medication by name (case-insensitive)
+          const existingMed = dataToSave.name
+            ? await findPetMedicationByName(petId, dataToSave.name)
+            : null;
+
+          if (existingMed) {
+            // Merge: update existing record with new non-null fields
+            const updates: Record<string, any> = {};
+            const fields = ['dosage', 'frequency', 'start_date', 'end_date', 'prescribing_vet', 'notes', 'is_active'] as const;
+            for (const field of fields) {
+              if (dataToSave[field] !== undefined && dataToSave[field] !== null) {
+                updates[field] = dataToSave[field];
+              }
+            }
+            const updated = await updatePetMedication(existingMed.id, petId, updates, {
+              userId,
+              source: 'document_import' as any,
+              ipAddress: options?.ipAddress,
+              userAgent: options?.userAgent,
+            });
+            createdRecord = updated ?? existingMed;
+            action = 'updated';
+          } else {
+            createdRecord = await createPetMedication(petId, dataToSave as any);
+          }
           recordType = 'pet_medications';
           break;
+        }
 
         case 'condition':
           createdRecord = await createPetCondition(petId, dataToSave as any);
@@ -205,17 +234,20 @@ export async function approveDocumentExtractionItems(
       await updateDocumentExtractionItemStatus(item.id, 'approved', createdRecord.id, recordType);
 
       // Log audit entry
-      await logCreate(recordType, createdRecord.id, dataToSave, userId, {
-        source: 'document_import',
-        sourceDocumentUploadId: documentUploadId,
-        ipAddress: options?.ipAddress,
-        userAgent: options?.userAgent,
-      });
+      if (action === 'created') {
+        await logCreate(recordType, createdRecord.id, dataToSave, userId, {
+          source: 'document_import',
+          sourceDocumentUploadId: documentUploadId,
+          ipAddress: options?.ipAddress,
+          userAgent: options?.userAgent,
+        });
+      }
 
       result.approved.push({
         itemId: item.id,
         recordType,
         createdRecordId: createdRecord.id,
+        action,
       });
     } catch (error: any) {
       result.errors.push({
@@ -229,6 +261,204 @@ export async function approveDocumentExtractionItems(
   const allItems = extractionData.items;
   const approvedCount = allItems.filter(
     (i) => i.status === 'approved' || result.approved.some((a) => a.itemId === i.id)
+  ).length;
+  const totalCount = allItems.length;
+
+  let extractionStatus: 'approved' | 'partially_approved' | 'pending_review';
+  if (approvedCount === totalCount) {
+    extractionStatus = 'approved';
+  } else if (approvedCount > 0) {
+    extractionStatus = 'partially_approved';
+  } else {
+    extractionStatus = 'pending_review';
+  }
+
+  await updateDocumentExtractionStatus(extractionData.extraction.id, extractionStatus, userId);
+
+  return result;
+}
+
+export interface MergeItem {
+  itemId: number;
+  action: 'smart_merge' | 'skip' | 'create_new';
+  fieldOverrides?: Record<string, 'existing' | 'imported'>;
+}
+
+export interface MergeApprovalResult {
+  processed: {
+    itemId: number;
+    action: 'smart_merge' | 'skip' | 'create_new';
+    recordType: string;
+    recordId?: number;
+    result: 'updated' | 'created' | 'skipped';
+  }[];
+  errors: { itemId: number; error: string }[];
+}
+
+export async function approveMergeDocumentExtractionItems(
+  documentUploadId: number,
+  petId: number,
+  mergeItems: MergeItem[],
+  userId: number,
+  options?: {
+    ipAddress?: string;
+    userAgent?: string;
+  }
+): Promise<MergeApprovalResult> {
+  const result: MergeApprovalResult = {
+    processed: [],
+    errors: [],
+  };
+
+  const extractionData = await getDocumentExtractionWithItems(documentUploadId);
+  if (!extractionData) {
+    throw new Error('Extraction not found');
+  }
+
+  for (const mergeItem of mergeItems) {
+    const item = extractionData.items.find((i) => i.id === mergeItem.itemId);
+    if (!item) {
+      result.errors.push({ itemId: mergeItem.itemId, error: 'Item not found' });
+      continue;
+    }
+
+    try {
+      const dataToSave = item.user_modified_data || item.extracted_data;
+
+      if (mergeItem.action === 'skip') {
+        await updateDocumentExtractionItemStatus(item.id, 'rejected');
+        result.processed.push({
+          itemId: item.id,
+          action: 'skip',
+          recordType: item.record_type,
+          result: 'skipped',
+        });
+        continue;
+      }
+
+      if (mergeItem.action === 'create_new') {
+        // Force-create a new record even if a duplicate exists
+        let createdRecord: any;
+        let recordType: string;
+
+        switch (item.record_type) {
+          case 'medication':
+            createdRecord = await createPetMedication(petId, dataToSave as any);
+            recordType = 'pet_medications';
+            break;
+          case 'vaccination':
+            createdRecord = await createPetVaccination(petId, dataToSave as any);
+            recordType = 'pet_vaccinations';
+            break;
+          case 'condition':
+            createdRecord = await createPetCondition(petId, dataToSave as any);
+            recordType = 'pet_conditions';
+            break;
+          case 'allergy':
+            createdRecord = await createPetAllergy(petId, dataToSave as any);
+            recordType = 'pet_allergies';
+            break;
+          case 'vet':
+            createdRecord = await createPetVet(petId, dataToSave as any);
+            recordType = 'pet_vets';
+            break;
+          case 'emergency_contact':
+            createdRecord = await createPetEmergencyContact(petId, dataToSave as any);
+            recordType = 'pet_emergency_contacts';
+            break;
+          default:
+            throw new Error(`Unknown record type: ${item.record_type}`);
+        }
+
+        await updateDocumentExtractionItemStatus(item.id, 'approved', createdRecord.id, recordType);
+        await logCreate(recordType, createdRecord.id, dataToSave, userId, {
+          source: 'document_import',
+          sourceDocumentUploadId: documentUploadId,
+          ipAddress: options?.ipAddress,
+          userAgent: options?.userAgent,
+        });
+
+        result.processed.push({
+          itemId: item.id,
+          action: 'create_new',
+          recordType,
+          recordId: createdRecord.id,
+          result: 'created',
+        });
+        continue;
+      }
+
+      // smart_merge: Update existing record with imported fields, respecting fieldOverrides
+      if (item.record_type === 'medication' && dataToSave.name) {
+        const existingMed = await findPetMedicationByName(petId, dataToSave.name);
+        if (existingMed) {
+          const updates: Record<string, any> = {};
+          const fields = ['dosage', 'frequency', 'start_date', 'end_date', 'prescribing_vet', 'notes', 'is_active'] as const;
+
+          for (const field of fields) {
+            if (mergeItem.fieldOverrides && mergeItem.fieldOverrides[field]) {
+              // Phase 4: user explicitly chose which value to keep
+              if (mergeItem.fieldOverrides[field] === 'imported' && dataToSave[field] !== undefined && dataToSave[field] !== null) {
+                updates[field] = dataToSave[field];
+              }
+              // If 'existing', we simply don't update that field
+            } else {
+              // Default smart merge: use imported if non-null
+              if (dataToSave[field] !== undefined && dataToSave[field] !== null) {
+                updates[field] = dataToSave[field];
+              }
+            }
+          }
+
+          if (Object.keys(updates).length > 0) {
+            await updatePetMedication(existingMed.id, petId, updates, {
+              userId,
+              source: 'document_import' as any,
+              ipAddress: options?.ipAddress,
+              userAgent: options?.userAgent,
+            });
+          }
+
+          await updateDocumentExtractionItemStatus(item.id, 'approved', existingMed.id, 'pet_medications');
+          result.processed.push({
+            itemId: item.id,
+            action: 'smart_merge',
+            recordType: 'pet_medications',
+            recordId: existingMed.id,
+            result: 'updated',
+          });
+        } else {
+          // No existing record found — create new
+          const createdRecord = await createPetMedication(petId, dataToSave as any);
+          await updateDocumentExtractionItemStatus(item.id, 'approved', createdRecord.id, 'pet_medications');
+          await logCreate('pet_medications', createdRecord.id, dataToSave, userId, {
+            source: 'document_import',
+            sourceDocumentUploadId: documentUploadId,
+            ipAddress: options?.ipAddress,
+            userAgent: options?.userAgent,
+          });
+          result.processed.push({
+            itemId: item.id,
+            action: 'smart_merge',
+            recordType: 'pet_medications',
+            recordId: createdRecord.id,
+            result: 'created',
+          });
+        }
+      } else {
+        // Non-medication smart_merge falls through to normal create
+        throw new Error('Smart merge is only supported for medications');
+      }
+    } catch (error: any) {
+      result.errors.push({ itemId: mergeItem.itemId, error: error.message });
+    }
+  }
+
+  // Update extraction status
+  const allItems = extractionData.items;
+  const processedIds = new Set(result.processed.map((p) => p.itemId));
+  const approvedCount = allItems.filter(
+    (i) => i.status === 'approved' || (processedIds.has(i.id) && result.processed.find((p) => p.itemId === i.id)?.result !== 'skipped')
   ).length;
   const totalCount = allItems.length;
 

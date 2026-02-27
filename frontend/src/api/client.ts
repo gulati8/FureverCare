@@ -377,8 +377,46 @@ export interface ApprovalResult {
     itemId: number;
     recordType: string;
     createdRecordId: number;
+    action?: 'created' | 'updated';
   }>;
   rejected: number[];
+  errors: Array<{ itemId: number; error: string }>;
+}
+
+export interface FieldDiff {
+  field: string;
+  label: string;
+  existingValue: any;
+  importedValue: any;
+}
+
+export interface DuplicateInfo {
+  existingId: number;
+  existingName: string;
+  existingData: Record<string, any>;
+  fieldDiffs: FieldDiff[];
+}
+
+export interface DuplicateCheckResult {
+  duplicates: Record<number, DuplicateInfo>;
+}
+
+export type MergeAction = 'smart_merge' | 'skip' | 'create_new';
+
+export interface MergeItem {
+  itemId: number;
+  action: MergeAction;
+  fieldOverrides?: Record<string, 'existing' | 'imported'>;
+}
+
+export interface MergeApprovalResult {
+  processed: Array<{
+    itemId: number;
+    action: MergeAction;
+    recordType: string;
+    recordId?: number;
+    result: 'updated' | 'created' | 'skipped';
+  }>;
   errors: Array<{ itemId: number; error: string }>;
 }
 
@@ -742,9 +780,17 @@ export const documentsApi = {
   getExtraction: (petId: number, uploadId: number, token: string) =>
     api.get<DocumentExtractionWithItems>(`/api/pets/${petId}/documents/uploads/${uploadId}/extraction`, token),
 
-  // Approve extraction items
+  // Check for duplicate medications in extraction
+  checkDuplicates: (petId: number, uploadId: number, token: string) =>
+    api.post<DuplicateCheckResult>(`/api/pets/${petId}/documents/uploads/${uploadId}/extraction/check-duplicates`, {}, token),
+
+  // Approve extraction items (simple flow for non-duplicates)
   approveItems: (petId: number, uploadId: number, itemIds: number[], token: string) =>
     api.post<ApprovalResult>(`/api/pets/${petId}/documents/uploads/${uploadId}/extraction/approve`, { itemIds }, token),
+
+  // Approve with per-item merge strategies (for duplicates)
+  approveMerge: (petId: number, uploadId: number, items: MergeItem[], token: string) =>
+    api.post<MergeApprovalResult>(`/api/pets/${petId}/documents/uploads/${uploadId}/extraction/approve-merge`, { items }, token),
 
   // Reject extraction items
   rejectItems: (petId: number, uploadId: number, itemIds: number[], token: string) =>
