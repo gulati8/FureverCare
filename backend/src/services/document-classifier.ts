@@ -137,7 +137,6 @@ Field formats:
 - severity should be: "mild", "moderate", or "severe" for conditions
 - severity for allergies: "mild", "moderate", "severe", or "life-threatening"
 - is_active for medications should be true for current prescriptions
-- is_primary for vets should be true if this appears to be the primary vet
 
 Only extract information that is actually present in the document.
 Do not make up or assume information.
@@ -427,7 +426,7 @@ export function mapExtractionToHealthRecord(recordType: RecordType, data: Record
         phone: data.phone || null,
         email: data.email || null,
         address: data.address || null,
-        is_primary: data.is_primary || false,
+        is_primary: false, // Always false - user will choose primary vet
       };
 
     case 'emergency_contact':

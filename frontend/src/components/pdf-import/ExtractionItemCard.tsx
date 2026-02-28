@@ -154,7 +154,6 @@ export function ExtractionItemCard({
             <FieldEditor label="Phone" value={currentData.phone} fieldKey="phone" onChange={handleFieldChange} isModified={isFieldModified('phone')} />
             <FieldEditor label="Email" value={currentData.email} fieldKey="email" onChange={handleFieldChange} isModified={isFieldModified('email')} />
             <FieldEditor label="Address" value={currentData.address} fieldKey="address" onChange={handleFieldChange} isModified={isFieldModified('address')} />
-            <FieldEditor label="Primary Vet" value={currentData.is_primary} fieldKey="is_primary" type="boolean" onChange={handleFieldChange} isModified={isFieldModified('is_primary')} />
           </>
         );
 

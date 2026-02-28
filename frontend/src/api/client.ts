@@ -106,6 +106,8 @@ export const petsApi = {
     api.post<PetVet>(`/api/pets/${petId}/vets`, data, token),
   deleteVet: (petId: number, vetId: number, token: string) =>
     api.delete(`/api/pets/${petId}/vets/${vetId}`, token),
+  setPrimaryVet: (petId: number, vetId: number, token: string) =>
+    api.patch<PetVet[]>(`/api/pets/${petId}/vets/${vetId}/primary`, {}, token),
 
   getConditions: (petId: number, token: string) =>
     api.get<PetCondition[]>(`/api/pets/${petId}/conditions`, token),

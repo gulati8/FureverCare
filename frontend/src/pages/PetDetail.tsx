@@ -802,6 +802,12 @@ function VetsTab({ petId, token, vets, setVets }: {
     setVets(vets.filter(v => v.id !== id));
   };
 
+  const handleSetPrimary = async (vetId: number) => {
+    await petsApi.setPrimaryVet(petId, vetId, token);
+    // Update local state: unset all as primary, then set the selected one
+    setVets(vets.map(v => ({ ...v, is_primary: v.id === vetId })));
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
@@ -832,7 +838,17 @@ function VetsTab({ petId, token, vets, setVets }: {
                 {v.vet_name && <p className="text-sm text-gray-600">Dr. {v.vet_name}</p>}
                 {v.phone && <p className="text-sm text-gray-500">{v.phone}</p>}
               </div>
-              <button onClick={() => handleDelete(v.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
+              <div className="flex gap-2">
+                {!v.is_primary && (
+                  <button
+                    onClick={() => handleSetPrimary(v.id)}
+                    className="text-primary-600 hover:text-primary-800 text-sm"
+                  >
+                    Set as Primary
+                  </button>
+                )}
+                <button onClick={() => handleDelete(v.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
+              </div>
             </li>
           ))}
         </ul>

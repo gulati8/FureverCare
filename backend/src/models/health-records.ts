@@ -1,4 +1,4 @@
-import { query, queryOne } from '../db/pool.js';
+import { query, queryOne, transaction } from '../db/pool.js';
 import { cacheDelete } from '../db/redis.js';
 import { logCreate, logUpdate, logDelete } from '../services/audit-logger.js';
 
@@ -25,10 +25,17 @@ export interface PetVet {
 }
 
 export async function createPetVet(petId: number, data: Omit<PetVet, 'id' | 'pet_id' | 'created_at'>, audit?: AuditContext): Promise<PetVet> {
+  // If is_primary is not explicitly set, default based on whether there are existing vets
+  let isPrimary = data.is_primary;
+  if (isPrimary === undefined) {
+    const existingVets = await query<PetVet>('SELECT id FROM pet_vets WHERE pet_id = $1 LIMIT 1', [petId]);
+    isPrimary = existingVets.length === 0; // true if no existing vets, false otherwise
+  }
+
   const result = await queryOne<PetVet>(
     `INSERT INTO pet_vets (pet_id, clinic_name, vet_name, phone, email, address, is_primary)
      VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-    [petId, data.clinic_name, data.vet_name, data.phone, data.email, data.address, data.is_primary ?? true]
+    [petId, data.clinic_name, data.vet_name, data.phone, data.email, data.address, isPrimary]
   );
 
   if (audit && result) {
@@ -62,6 +69,57 @@ export async function deletePetVet(id: number, petId: number, audit?: AuditConte
   }
 
   return true;
+}
+
+export async function setPrimaryVet(petId: number, vetId: number, audit?: AuditContext): Promise<PetVet> {
+  return transaction(async (client) => {
+    // Get the vet we're setting as primary (to verify it exists)
+    const targetVet = await client.query('SELECT * FROM pet_vets WHERE id = $1 AND pet_id = $2', [vetId, petId]);
+    if (!targetVet.rows || targetVet.rows.length === 0) {
+      throw new Error('Vet not found');
+    }
+
+    // Get all vets for audit logging
+    const allVetsResult = await client.query('SELECT * FROM pet_vets WHERE pet_id = $1', [petId]);
+    const oldVets = allVetsResult.rows;
+
+    // Set all vets to is_primary = false
+    await client.query('UPDATE pet_vets SET is_primary = false WHERE pet_id = $1', [petId]);
+
+    // Set the target vet to is_primary = true
+    const result = await client.query(
+      'UPDATE pet_vets SET is_primary = true WHERE id = $1 AND pet_id = $2 RETURNING *',
+      [vetId, petId]
+    );
+
+    const updatedVet = result.rows[0];
+
+    // Audit logging - log the primary vet change
+    if (audit && updatedVet) {
+      const oldVet = oldVets.find((v: PetVet) => v.id === vetId);
+      if (oldVet) {
+        await logUpdate('pet_vets', vetId, oldVet, updatedVet, audit.userId, {
+          source: audit.source || 'manual',
+          ipAddress: audit.ipAddress,
+          userAgent: audit.userAgent,
+        });
+      }
+
+      // Also log updates for any previously primary vets that were demoted
+      for (const oldVet of oldVets) {
+        if (oldVet.id !== vetId && oldVet.is_primary) {
+          const demotedVet = { ...oldVet, is_primary: false };
+          await logUpdate('pet_vets', oldVet.id, oldVet, demotedVet, audit.userId, {
+            source: audit.source || 'manual',
+            ipAddress: audit.ipAddress,
+            userAgent: audit.userAgent,
+          });
+        }
+      }
+    }
+
+    return updatedVet;
+  });
 }
 
 // Medical Conditions
