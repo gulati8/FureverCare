@@ -317,8 +317,9 @@ router.post('/:petId/documents/uploads/:id/extraction/check-duplicates', authent
       const data = item.user_modified_data || item.extracted_data;
       if (!data.name) continue;
 
-      const existing = await findPetMedicationByName(petId, data.name);
-      if (existing) {
+      const match = await findPetMedicationByName(petId, data.name);
+      if (match) {
+        const existing = match.medication;
         const fieldDiffs: Array<{ field: string; label: string; existingValue: any; importedValue: any }> = [];
 
         for (const field of MEDICATION_DIFF_FIELDS) {

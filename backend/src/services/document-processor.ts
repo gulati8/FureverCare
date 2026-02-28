@@ -178,11 +178,12 @@ export async function approveDocumentExtractionItems(
 
         case 'medication': {
           // Check for existing medication by name (case-insensitive)
-          const existingMed = dataToSave.name
+          const match = dataToSave.name
             ? await findPetMedicationByName(petId, dataToSave.name)
             : null;
 
-          if (existingMed) {
+          if (match) {
+            const existingMed = match.medication;
             // Merge: update existing record with new non-null fields
             const updates: Record<string, any> = {};
             const fields = ['dosage', 'frequency', 'start_date', 'end_date', 'prescribing_vet', 'notes', 'is_active'] as const;
@@ -390,8 +391,9 @@ export async function approveMergeDocumentExtractionItems(
 
       // smart_merge: Update existing record with imported fields, respecting fieldOverrides
       if (item.record_type === 'medication' && dataToSave.name) {
-        const existingMed = await findPetMedicationByName(petId, dataToSave.name);
-        if (existingMed) {
+        const match = await findPetMedicationByName(petId, dataToSave.name);
+        if (match) {
+          const existingMed = match.medication;
           const updates: Record<string, any> = {};
           const fields = ['dosage', 'frequency', 'start_date', 'end_date', 'prescribing_vet', 'notes', 'is_active'] as const;
 

@@ -1,6 +1,7 @@
 import { query, queryOne, transaction } from '../db/pool.js';
 import { cacheDelete } from '../db/redis.js';
 import { logCreate, logUpdate, logDelete } from '../services/audit-logger.js';
+import { computeMatchScore, computeMultiFieldMatchScore, DEFAULT_MATCH_THRESHOLD } from '../services/match-scoring.js';
 
 // Audit context for tracking changes
 export interface AuditContext {
@@ -52,6 +53,75 @@ export async function createPetVet(petId: number, data: Omit<PetVet, 'id' | 'pet
 
 export async function getPetVets(petId: number): Promise<PetVet[]> {
   return query<PetVet>('SELECT * FROM pet_vets WHERE pet_id = $1 ORDER BY is_primary DESC, created_at', [petId]);
+}
+
+export async function updatePetVet(id: number, petId: number, updates: Partial<Omit<PetVet, 'id' | 'pet_id' | 'created_at'>>, audit?: AuditContext): Promise<PetVet | null> {
+  // Get existing record for audit
+  const existing = await queryOne<PetVet>('SELECT * FROM pet_vets WHERE id = $1 AND pet_id = $2', [id, petId]);
+
+  const fields: string[] = [];
+  const values: any[] = [];
+  let paramCount = 1;
+
+  const allowedFields = ['clinic_name', 'vet_name', 'phone', 'email', 'address', 'is_primary'];
+
+  for (const field of allowedFields) {
+    if ((updates as any)[field] !== undefined) {
+      fields.push(`${field} = $${paramCount++}`);
+      values.push((updates as any)[field]);
+    }
+  }
+
+  if (fields.length === 0) return null;
+
+  values.push(id, petId);
+
+  const result = await queryOne<PetVet>(
+    `UPDATE pet_vets SET ${fields.join(', ')} WHERE id = $${paramCount} AND pet_id = $${paramCount + 1} RETURNING *`,
+    values
+  );
+
+  if (audit && existing && result) {
+    await logUpdate('pet_vets', id, existing, result, audit.userId, {
+      source: audit.source,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    });
+  }
+
+  return result;
+}
+
+export async function findDuplicateVets(
+  petId: number,
+  clinicName: string,
+  vetName?: string,
+  threshold: number = DEFAULT_MATCH_THRESHOLD
+): Promise<{ vet: PetVet, score: number }[]> {
+  const allVets = await getPetVets(petId);
+
+  const matches: { vet: PetVet, score: number }[] = [];
+
+  for (const vet of allVets) {
+    // Multi-field scoring: clinic_name (70%) + vet_name (30%)
+    const fields: { a: string, b: string, weight: number }[] = [
+      { a: clinicName, b: vet.clinic_name, weight: 0.7 }
+    ];
+
+    // Include vet_name in scoring if provided and vet has a vet_name
+    if (vetName && vet.vet_name) {
+      fields.push({ a: vetName, b: vet.vet_name, weight: 0.3 });
+    }
+
+    const score = computeMultiFieldMatchScore(fields);
+
+    if (score >= threshold) {
+      matches.push({ vet, score });
+    }
+  }
+
+  // Sort by score descending
+  return matches.sort((a, b) => b.score - a.score);
 }
 
 export async function deletePetVet(id: number, petId: number, audit?: AuditContext): Promise<boolean> {
@@ -154,6 +224,64 @@ export async function createPetCondition(petId: number, data: Omit<PetCondition,
 
 export async function getPetConditions(petId: number): Promise<PetCondition[]> {
   return query<PetCondition>('SELECT * FROM pet_conditions WHERE pet_id = $1 ORDER BY created_at DESC', [petId]);
+}
+
+export async function updatePetCondition(id: number, petId: number, updates: Partial<Omit<PetCondition, 'id' | 'pet_id' | 'created_at'>>, audit?: AuditContext): Promise<PetCondition | null> {
+  // Get existing record for audit
+  const existing = await queryOne<PetCondition>('SELECT * FROM pet_conditions WHERE id = $1 AND pet_id = $2', [id, petId]);
+
+  const fields: string[] = [];
+  const values: any[] = [];
+  let paramCount = 1;
+
+  const allowedFields = ['name', 'diagnosed_date', 'notes', 'severity'];
+
+  for (const field of allowedFields) {
+    if ((updates as any)[field] !== undefined) {
+      fields.push(`${field} = $${paramCount++}`);
+      values.push((updates as any)[field]);
+    }
+  }
+
+  if (fields.length === 0) return null;
+
+  values.push(id, petId);
+
+  const result = await queryOne<PetCondition>(
+    `UPDATE pet_conditions SET ${fields.join(', ')} WHERE id = $${paramCount} AND pet_id = $${paramCount + 1} RETURNING *`,
+    values
+  );
+
+  if (audit && existing && result) {
+    await logUpdate('pet_conditions', id, existing, result, audit.userId, {
+      source: audit.source,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    });
+  }
+
+  return result;
+}
+
+export async function findDuplicateConditions(
+  petId: number,
+  name: string,
+  threshold: number = DEFAULT_MATCH_THRESHOLD
+): Promise<{ condition: PetCondition, score: number }[]> {
+  const allConditions = await getPetConditions(petId);
+
+  const matches: { condition: PetCondition, score: number }[] = [];
+
+  for (const condition of allConditions) {
+    const score = computeMatchScore(name, condition.name);
+
+    if (score >= threshold) {
+      matches.push({ condition, score });
+    }
+  }
+
+  // Sort by score descending
+  return matches.sort((a, b) => b.score - a.score);
 }
 
 export async function deletePetCondition(id: number, petId: number, audit?: AuditContext): Promise<boolean> {
@@ -259,11 +387,47 @@ export async function getPetMedications(petId: number): Promise<PetMedication[]>
   return query<PetMedication>('SELECT * FROM pet_medications WHERE pet_id = $1 ORDER BY is_active DESC, created_at DESC', [petId]);
 }
 
-export async function findPetMedicationByName(petId: number, name: string): Promise<PetMedication | null> {
-  return queryOne<PetMedication>(
-    'SELECT * FROM pet_medications WHERE pet_id = $1 AND LOWER(TRIM(name)) = LOWER(TRIM($2))',
-    [petId, name]
-  ) ?? null;
+export async function findPetMedicationByName(
+  petId: number,
+  name: string,
+  threshold: number = 0.9
+): Promise<{ medication: PetMedication, score: number } | null> {
+  const allMedications = await getPetMedications(petId);
+
+  let bestMatch: { medication: PetMedication, score: number } | null = null;
+
+  for (const medication of allMedications) {
+    const score = computeMatchScore(name, medication.name);
+
+    if (score >= threshold) {
+      if (!bestMatch || score > bestMatch.score) {
+        bestMatch = { medication, score };
+      }
+    }
+  }
+
+  return bestMatch;
+}
+
+export async function findDuplicateMedications(
+  petId: number,
+  name: string,
+  threshold: number = DEFAULT_MATCH_THRESHOLD
+): Promise<{ medication: PetMedication, score: number }[]> {
+  const allMedications = await getPetMedications(petId);
+
+  const matches: { medication: PetMedication, score: number }[] = [];
+
+  for (const medication of allMedications) {
+    const score = computeMatchScore(name, medication.name);
+
+    if (score >= threshold) {
+      matches.push({ medication, score });
+    }
+  }
+
+  // Sort by score descending
+  return matches.sort((a, b) => b.score - a.score);
 }
 
 export async function updatePetMedication(id: number, petId: number, updates: Partial<Omit<PetMedication, 'id' | 'pet_id' | 'created_at'>>, audit?: AuditContext): Promise<PetMedication | null> {
