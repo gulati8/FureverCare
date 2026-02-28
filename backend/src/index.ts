@@ -24,6 +24,9 @@ import stripeWebhookRoutes from './routes/stripe-webhook.js';
 
 const app = express();
 
+// Trust proxy (Caddy reverse proxy sets X-Forwarded-For)
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 app.use(cors({
