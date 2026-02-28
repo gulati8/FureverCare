@@ -206,19 +206,79 @@ export function ExtractionItemCard({
   const isDisabled = item.status === 'approved' || item.status === 'rejected';
   const cardColor = getConfidenceColor(item.confidence_score, isDuplicate && !isDisabled);
 
+  /** Get display name for duplicate - for vets, show clinic + vet name */
+  const getDuplicateDisplayName = (): string => {
+    if (!duplicateInfo) return duplicateOf || 'Unknown';
+
+    if (item.record_type === 'vet') {
+      const clinicName = duplicateInfo.existingData.clinic_name || duplicateInfo.existingName;
+      const vetName = duplicateInfo.existingData.vet_name;
+      return vetName ? `${clinicName} (${vetName})` : clinicName;
+    }
+
+    return duplicateInfo.existingName;
+  };
+
+  /** Get record type label for duplicate banner */
+  const getRecordTypeLabel = (): string => {
+    return config.label.toLowerCase();
+  };
+
+  /** Format match score as percentage */
+  const formatMatchScore = (score: number): string => {
+    return `${Math.round(score * 100)}%`;
+  };
+
+  /** Get match quality text based on score */
+  const getMatchQualityText = (score: number): string => {
+    if (score >= 0.95) return 'Duplicate found';
+    return `Possible duplicate (${formatMatchScore(score)} match)`;
+  };
+
+  /** Get match score badge color */
+  const getMatchScoreBadgeColor = (score: number): string => {
+    if (score > 0.9) return 'bg-green-100 text-green-800';
+    if (score >= 0.7) return 'bg-yellow-100 text-yellow-800';
+    return 'bg-orange-100 text-orange-800';
+  };
+
+  /** Get field definitions for comparison based on record type */
+  const getComparisonFields = (): Array<{ field: string; label: string }> => {
+    switch (item.record_type) {
+      case 'medication':
+        return [
+          { field: 'dosage', label: 'Dosage' },
+          { field: 'frequency', label: 'Frequency' },
+          { field: 'start_date', label: 'Start Date' },
+          { field: 'end_date', label: 'End Date' },
+          { field: 'prescribing_vet', label: 'Prescribing Vet' },
+          { field: 'notes', label: 'Notes' },
+          { field: 'is_active', label: 'Active' },
+        ];
+      case 'condition':
+        return [
+          { field: 'diagnosed_date', label: 'Diagnosed date' },
+          { field: 'notes', label: 'Notes' },
+          { field: 'severity', label: 'Severity' },
+        ];
+      case 'vet':
+        return [
+          { field: 'vet_name', label: 'Veterinarian' },
+          { field: 'phone', label: 'Phone' },
+          { field: 'email', label: 'Email' },
+          { field: 'address', label: 'Address' },
+          { field: 'is_primary', label: 'Primary vet' },
+        ];
+      default:
+        return [];
+    }
+  };
+
   /** Phase 3: Render side-by-side comparison table */
   const renderComparison = () => {
     if (!duplicateInfo) return null;
 
-    const allFields = [
-      { field: 'dosage', label: 'Dosage' },
-      { field: 'frequency', label: 'Frequency' },
-      { field: 'start_date', label: 'Start Date' },
-      { field: 'end_date', label: 'End Date' },
-      { field: 'prescribing_vet', label: 'Prescribing Vet' },
-      { field: 'notes', label: 'Notes' },
-      { field: 'is_active', label: 'Active' },
-    ];
+    const allFields = getComparisonFields();
 
     return (
       <div className="mx-3 mb-3">
@@ -360,9 +420,18 @@ export function ExtractionItemCard({
             <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
-            <span>
-              Existing medication found: <strong>{duplicateInfo?.existingName || duplicateOf}</strong>
-            </span>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span>
+                  {duplicateInfo ? getMatchQualityText(duplicateInfo.matchScore) : 'Duplicate found'}: <strong>{getDuplicateDisplayName()}</strong>
+                </span>
+                {duplicateInfo && duplicateInfo.matchScore < 0.95 && (
+                  <span className={`text-xs px-2 py-0.5 rounded font-medium ${getMatchScoreBadgeColor(duplicateInfo.matchScore)}`}>
+                    {formatMatchScore(duplicateInfo.matchScore)} match
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
           {/* Phase 1: Change summary */}
           {duplicateInfo && duplicateInfo.fieldDiffs.length > 0 && (
