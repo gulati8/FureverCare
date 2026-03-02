@@ -237,7 +237,7 @@ jobs:
               \"echo '${COMPOSE_B64}' | base64 -d > /srv/${APP_NAME}/docker-compose.yml\",
               \"echo '${{ secrets.GHCR_PAT }}' | docker login ghcr.io -u gulati8 --password-stdin\",
               \"cd /srv/${APP_NAME} && docker compose pull && docker compose up -d --remove-orphans\",
-              \"grep -q '${APP_NAME}.gulatilabs.me' /srv/proxy/Caddyfile 2>/dev/null || printf '\\\\n${APP_NAME}.gulatilabs.me {\\\\n  reverse_proxy ${APP_NAME}-web:80\\\\n}\\\\n' >> /srv/proxy/Caddyfile\",
+              \"grep -q '${APP_NAME}.gulatilabs.me' /srv/proxy/Caddyfile 2>/dev/null || printf '\\\\n${APP_NAME}.gulatilabs.me {\\\\n  handle /api/* {\\\\n    reverse_proxy ${APP_NAME}-api:3001\\\\n  }\\\\n  handle /uploads/* {\\\\n    reverse_proxy ${APP_NAME}-api:3001\\\\n  }\\\\n  handle {\\\\n    reverse_proxy ${APP_NAME}-web:80\\\\n  }\\\\n}\\\\n' >> /srv/proxy/Caddyfile\",
               \"cd /srv/proxy && docker compose restart caddy\"
             ]" \
             --query 'Command.CommandId' \
