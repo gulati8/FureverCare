@@ -32,7 +32,8 @@ export function DocumentImportSection({ petId, onImportComplete }: DocumentImpor
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [exifDateTaken, setExifDateTaken] = useState<string | null>(null);
-  const [filter, setFilter] = useState<FilterType>('all');
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [historyFilter, setHistoryFilter] = useState<FilterType>('all');
   const [historyExpanded, setHistoryExpanded] = useState(false);
 
   useEffect(() => {
@@ -267,32 +268,37 @@ export function DocumentImportSection({ petId, onImportComplete }: DocumentImpor
       {uploads.length > 0 && (() => {
         const activeStatuses = ['pending', 'classifying', 'classified', 'processing', 'pending_review'];
         const historyStatuses = ['completed', 'failed'];
-        const filtered = uploads.filter((u) => filter === 'all' || u.file_type === filter);
-        const activeUploads = filtered.filter((u) => activeStatuses.includes(u.status));
-        const historyUploads = filtered.filter((u) => historyStatuses.includes(u.status));
+        const allActive = uploads.filter((u) => activeStatuses.includes(u.status));
+        const allHistory = uploads.filter((u) => historyStatuses.includes(u.status));
+        const activeUploads = allActive.filter((u) => activeFilter === 'all' || u.file_type === activeFilter);
+        const historyUploads = allHistory.filter((u) => historyFilter === 'all' || u.file_type === historyFilter);
+
+        const filterBar = (current: FilterType, onChange: (f: FilterType) => void) => (
+          <div className="flex gap-1">
+            {(['all', 'pdf', 'image'] as FilterType[]).map((f) => (
+              <button
+                key={f}
+                onClick={() => onChange(f)}
+                className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+                  current === f
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {f === 'all' ? 'All' : f === 'pdf' ? 'Documents' : 'Images'}
+              </button>
+            ))}
+          </div>
+        );
 
         return (
           <div>
-            {/* Filter bar */}
-            <div className="flex gap-1 mb-4">
-              {(['all', 'pdf', 'image'] as FilterType[]).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
-                    filter === f
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {f === 'all' ? 'All' : f === 'pdf' ? 'Documents' : 'Images'}
-                </button>
-              ))}
-            </div>
-
             {/* Active uploads */}
             <div className="mb-4">
-              <h4 className="text-sm font-medium text-gray-900 mb-2">Active Uploads</h4>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm font-medium text-gray-900">Active Uploads</h4>
+                {allActive.length > 0 && filterBar(activeFilter, setActiveFilter)}
+              </div>
               {activeUploads.length > 0 ? (
                 <div className="space-y-2">
                   {activeUploads.map((upload) => (
@@ -309,22 +315,25 @@ export function DocumentImportSection({ petId, onImportComplete }: DocumentImpor
             </div>
 
             {/* History section — collapsible */}
-            {historyUploads.length > 0 && (
+            {allHistory.length > 0 && (
               <div>
-                <button
-                  onClick={() => setHistoryExpanded(!historyExpanded)}
-                  className="flex items-center gap-2 text-sm font-medium text-gray-900 mb-2 hover:text-gray-700"
-                >
-                  <svg
-                    className={`h-4 w-4 transition-transform ${historyExpanded ? 'rotate-90' : ''}`}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
+                <div className="flex items-center justify-between mb-2">
+                  <button
+                    onClick={() => setHistoryExpanded(!historyExpanded)}
+                    className="flex items-center gap-2 text-sm font-medium text-gray-900 hover:text-gray-700"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                  History ({historyUploads.length})
-                </button>
+                    <svg
+                      className={`h-4 w-4 transition-transform ${historyExpanded ? 'rotate-90' : ''}`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                    History ({historyUploads.length})
+                  </button>
+                  {historyExpanded && filterBar(historyFilter, setHistoryFilter)}
+                </div>
                 {historyExpanded && (
                   <div className="space-y-2">
                     {historyUploads.map((upload) => (
