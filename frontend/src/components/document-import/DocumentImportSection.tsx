@@ -33,6 +33,7 @@ export function DocumentImportSection({ petId, onImportComplete }: DocumentImpor
   const [error, setError] = useState<string | null>(null);
   const [exifDateTaken, setExifDateTaken] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterType>('all');
+  const [historyExpanded, setHistoryExpanded] = useState(false);
 
   useEffect(() => {
     loadUploads();
@@ -137,41 +138,9 @@ export function DocumentImportSection({ petId, onImportComplete }: DocumentImpor
       setCurrentUpload({ upload });
       setExifDateTaken(null);
       setViewState('image_review');
-    } else if (upload.status === 'completed') {
+    } else if (upload.status === 'completed' || upload.status === 'pending_review') {
       setCurrentUpload({ upload });
       setViewState('review');
-    }
-  };
-
-  const handleUploadDeleted = async (uploadId: number) => {
-    if (!token) return;
-
-    try {
-      await documentsApi.deleteUpload(petId, uploadId, token);
-      setUploads((prev) => prev.filter((u) => u.id !== uploadId));
-    } catch (err: any) {
-      alert(`Failed to delete: ${err.message}`);
-    }
-  };
-
-  const handleProcessUpload = async (upload: DocumentUpload) => {
-    if (!token) return;
-
-    setCurrentUpload({ upload });
-    setViewState('classifying');
-
-    try {
-      const result = await documentsApi.classifyUpload(petId, upload.id, token);
-      setCurrentUpload({
-        upload: result.upload,
-        classification: result.classification,
-      });
-      setViewState('confirm');
-    } catch (err: any) {
-      setError(err.message || 'Failed to classify document');
-      setViewState('upload');
-      setCurrentUpload(null);
-      loadUploads();
     }
   };
 
@@ -294,12 +263,18 @@ export function DocumentImportSection({ petId, onImportComplete }: DocumentImpor
       {/* Upload zone */}
       <DocumentUploadZone petId={petId} onUploadComplete={handleUploadComplete} />
 
-      {/* Previous uploads */}
-      {uploads.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-medium text-gray-900">Previous Uploads</h4>
-            <div className="flex gap-1">
+      {/* Uploads */}
+      {uploads.length > 0 && (() => {
+        const activeStatuses = ['pending', 'classifying', 'classified', 'processing', 'pending_review'];
+        const historyStatuses = ['completed', 'failed'];
+        const filtered = uploads.filter((u) => filter === 'all' || u.file_type === filter);
+        const activeUploads = filtered.filter((u) => activeStatuses.includes(u.status));
+        const historyUploads = filtered.filter((u) => historyStatuses.includes(u.status));
+
+        return (
+          <div>
+            {/* Filter bar */}
+            <div className="flex gap-1 mb-4">
               {(['all', 'pdf', 'image'] as FilterType[]).map((f) => (
                 <button
                   key={f}
@@ -314,22 +289,58 @@ export function DocumentImportSection({ petId, onImportComplete }: DocumentImpor
                 </button>
               ))}
             </div>
+
+            {/* Active uploads */}
+            <div className="mb-4">
+              <h4 className="text-sm font-medium text-gray-900 mb-2">Active Uploads</h4>
+              {activeUploads.length > 0 ? (
+                <div className="space-y-2">
+                  {activeUploads.map((upload) => (
+                    <DocumentUploadItem
+                      key={upload.id}
+                      upload={upload}
+                      onSelect={() => handleUploadSelect(upload)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 py-3">No active uploads</p>
+              )}
+            </div>
+
+            {/* History section — collapsible */}
+            {historyUploads.length > 0 && (
+              <div>
+                <button
+                  onClick={() => setHistoryExpanded(!historyExpanded)}
+                  className="flex items-center gap-2 text-sm font-medium text-gray-900 mb-2 hover:text-gray-700"
+                >
+                  <svg
+                    className={`h-4 w-4 transition-transform ${historyExpanded ? 'rotate-90' : ''}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  History ({historyUploads.length})
+                </button>
+                {historyExpanded && (
+                  <div className="space-y-2">
+                    {historyUploads.map((upload) => (
+                      <DocumentUploadItem
+                        key={upload.id}
+                        upload={upload}
+                        onSelect={() => handleUploadSelect(upload)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-          <div className="space-y-2">
-            {uploads
-              .filter((u) => filter === 'all' || u.file_type === filter)
-              .map((upload) => (
-                <DocumentUploadItem
-                  key={upload.id}
-                  upload={upload}
-                  onSelect={() => handleUploadSelect(upload)}
-                  onDelete={() => handleUploadDeleted(upload.id)}
-                  onProcess={() => handleProcessUpload(upload)}
-                />
-              ))}
-          </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
@@ -338,13 +349,9 @@ export function DocumentImportSection({ petId, onImportComplete }: DocumentImpor
 function DocumentUploadItem({
   upload,
   onSelect,
-  onDelete,
-  onProcess,
 }: {
   upload: DocumentUpload;
   onSelect: () => void;
-  onDelete: () => void;
-  onProcess: () => void;
 }) {
   const { token } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
@@ -359,9 +366,9 @@ function DocumentUploadItem({
   };
 
   const statusColors: Record<string, string> = {
-    pending: 'bg-gray-100 text-gray-700',
+    pending: 'bg-blue-100 text-blue-700',
     classifying: 'bg-blue-100 text-blue-700',
-    classified: 'bg-yellow-100 text-yellow-700',
+    classified: 'bg-blue-100 text-blue-700',
     processing: 'bg-blue-100 text-blue-700',
     pending_review: 'bg-purple-100 text-purple-700',
     completed: 'bg-green-100 text-green-700',
@@ -369,17 +376,18 @@ function DocumentUploadItem({
   };
 
   const statusLabels: Record<string, string> = {
-    pending: 'Pending',
-    classifying: 'Analyzing...',
-    classified: 'Ready to import',
+    pending: 'Processing...',
+    classifying: 'Processing...',
+    classified: 'Processing...',
     processing: 'Processing...',
-    pending_review: 'Needs Review',
-    completed: 'Completed',
+    pending_review: 'Pending review',
+    completed: 'Done',
     failed: 'Failed',
   };
 
-  const canReview = upload.status === 'completed' || upload.status === 'pending_review';
-  const canProcess = upload.status === 'pending' || upload.status === 'classified';
+  const isProcessing = ['pending', 'classifying', 'classified', 'processing'].includes(upload.status);
+  const canReview = upload.status === 'pending_review';
+  const canView = upload.status === 'completed';
 
   const handleStartEdit = () => {
     setIsEditing(true);
@@ -517,7 +525,7 @@ function DocumentUploadItem({
               )}
             </p>
           </div>
-          <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[upload.status] || 'bg-gray-100 text-gray-700'}`}>
+          <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[upload.status] || 'bg-gray-100 text-gray-700'} ${isProcessing ? 'animate-pulse' : ''}`}>
             {statusLabels[upload.status] || upload.status}
           </span>
         </div>
@@ -530,20 +538,14 @@ function DocumentUploadItem({
               Review
             </button>
           )}
-          {canProcess && (
+          {canView && (
             <button
-              onClick={onProcess}
+              onClick={onSelect}
               className="text-sm text-blue-600 hover:text-blue-700"
             >
-              Process
+              View
             </button>
           )}
-          <button
-            onClick={onDelete}
-            className="text-sm text-red-600 hover:text-red-700"
-          >
-            Delete
-          </button>
         </div>
       </div>
       {renameError && (
