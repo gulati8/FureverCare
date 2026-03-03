@@ -24,16 +24,24 @@ export default function PhotoUpload({ petId, currentPhotoUrl, onPhotoUpdated }: 
     const file = e.target.files?.[0];
     if (!file || !token) return;
 
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-      setError('Please select a valid image file (JPEG, PNG, GIF, or WebP)');
+    // Validate file type (check MIME type with extension fallback for HEIC)
+    const allowedTypes = [
+      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+      'image/heic', 'image/heif', 'image/tiff', 'image/bmp', 'image/x-ms-bmp',
+    ];
+    const allowedExtensions = [
+      '.jpg', '.jpeg', '.png', '.gif', '.webp',
+      '.heic', '.heif', '.tiff', '.tif', '.bmp',
+    ];
+    const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(ext)) {
+      setError('Please select a valid image file (JPEG, PNG, GIF, WebP, HEIC, TIFF, or BMP)');
       return;
     }
 
-    // Validate file size (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setError('File size must be less than 5MB');
+    // Validate file size (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File size must be less than 10MB');
       return;
     }
 
@@ -124,7 +132,7 @@ export default function PhotoUpload({ petId, currentPhotoUrl, onPhotoUpdated }: 
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/gif,image/webp"
+            accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,image/tiff,image/bmp,.heic,.heif,.tiff,.tif,.bmp"
             onChange={handleFileSelect}
             className="hidden"
             disabled={isUploading}
@@ -141,6 +149,8 @@ export default function PhotoUpload({ petId, currentPhotoUrl, onPhotoUpdated }: 
           </button>
         )}
       </div>
+
+      <p className="text-xs text-gray-400 mt-1">JPEG, PNG, WebP, GIF, HEIC, TIFF, BMP up to 10MB</p>
 
       {error && <p className="error-text mt-2">{error}</p>}
     </div>

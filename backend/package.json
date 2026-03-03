@@ -7,7 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "test": "node --import tsx --test src/__tests__/*.test.ts",
+    "test": "node --test src/**/*.test.js",
     "db:migrate": "node dist/db/migrate.js",
     "db:migrate:owners": "node dist/db/migrate-owners.js",
     "db:migrate:pdf-import": "node dist/db/migrate-pdf-import.js",
@@ -36,7 +36,6 @@
     "db:seed:cms:dev": "tsx src/db/seed-cms.ts",
     "db:migrate:subscriptions": "node dist/db/migrate-subscriptions.js",
     "db:migrate:subscriptions:dev": "tsx src/db/migrate-subscriptions.ts",
-    "test": "node --test src/**/*.test.js",
     "test:backend": "tsx --test src/models/health-records.test.ts"
   },
   "dependencies": {
@@ -55,6 +54,7 @@
     "nanoid": "^5.0.4",
     "nodemailer": "^8.0.0",
     "pg": "^8.11.3",
+    "sharp": "^0.33.5",
     "stripe": "^20.3.0",
     "zod": "^3.22.4"
   },

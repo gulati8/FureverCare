@@ -62,7 +62,17 @@ export const config = {
   imageUpload: {
     maxSizeMB: parseInt(process.env.IMAGE_MAX_SIZE_MB || '10', 10),
     uploadDir: process.env.IMAGE_UPLOAD_DIR || 'uploads/images',
-    allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+    allowedMimeTypes: [
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'image/gif',
+      'image/heic',
+      'image/heif',
+      'image/tiff',
+      'image/bmp',
+      'image/x-ms-bmp',
+    ],
   },
 
   documentUpload: {
@@ -74,6 +84,11 @@ export const config = {
       'image/png',
       'image/webp',
       'image/gif',
+      'image/heic',
+      'image/heif',
+      'image/tiff',
+      'image/bmp',
+      'image/x-ms-bmp',
     ],
   },
 

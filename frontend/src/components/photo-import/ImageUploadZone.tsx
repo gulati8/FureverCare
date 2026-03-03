@@ -7,7 +7,14 @@ interface ImageUploadZoneProps {
   onUploadComplete: (upload: ImageUpload) => void;
 }
 
-const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const ACCEPTED_TYPES = [
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+  'image/heic', 'image/heif', 'image/tiff', 'image/bmp', 'image/x-ms-bmp',
+];
+const ACCEPTED_EXTENSIONS = [
+  '.jpg', '.jpeg', '.png', '.gif', '.webp',
+  '.heic', '.heif', '.tiff', '.tif', '.bmp',
+];
 
 export function ImageUploadZone({ petId, onUploadComplete }: ImageUploadZoneProps) {
   const { token } = useAuth();
@@ -32,10 +39,13 @@ export function ImageUploadZone({ petId, onUploadComplete }: ImageUploadZoneProp
     setIsDragOver(false);
 
     const files = Array.from(e.dataTransfer.files);
-    const imageFile = files.find(f => ACCEPTED_TYPES.includes(f.type));
+    const imageFile = files.find(f => {
+      const ext = '.' + f.name.split('.').pop()?.toLowerCase();
+      return ACCEPTED_TYPES.includes(f.type) || ACCEPTED_EXTENSIONS.includes(ext);
+    });
 
     if (!imageFile) {
-      setError('Please drop an image file (JPEG, PNG, WebP, or GIF)');
+      setError('Please drop an image file (JPEG, PNG, WebP, GIF, HEIC, TIFF, or BMP)');
       return;
     }
 
@@ -46,8 +56,9 @@ export function ImageUploadZone({ petId, onUploadComplete }: ImageUploadZoneProp
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!ACCEPTED_TYPES.includes(file.type)) {
-      setError('Please select an image file (JPEG, PNG, WebP, or GIF)');
+    const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+    if (!ACCEPTED_TYPES.includes(file.type) && !ACCEPTED_EXTENSIONS.includes(ext)) {
+      setError('Please select an image file (JPEG, PNG, WebP, GIF, HEIC, TIFF, or BMP)');
       return;
     }
 
@@ -58,12 +69,15 @@ export function ImageUploadZone({ petId, onUploadComplete }: ImageUploadZoneProp
   const uploadFile = async (file: File) => {
     if (!token) return;
 
-    // Show preview
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setPreviewUrl(e.target?.result as string);
-    };
-    reader.readAsDataURL(file);
+    // Show preview (skip for HEIC/TIFF/BMP which browsers can't display)
+    const nonPreviewable = ['image/heic', 'image/heif', 'image/tiff', 'image/bmp', 'image/x-ms-bmp'];
+    if (!nonPreviewable.includes(file.type)) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPreviewUrl(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
 
     setIsUploading(true);
     setError(null);
@@ -142,7 +156,7 @@ export function ImageUploadZone({ petId, onUploadComplete }: ImageUploadZoneProp
                 <span>Take a photo or upload an image</span>
                 <input
                   type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,image/tiff,image/bmp,.heic,.heif,.tiff,.tif,.bmp"
                   capture="environment"
                   onChange={handleFileSelect}
                   className="sr-only"
@@ -151,7 +165,7 @@ export function ImageUploadZone({ petId, onUploadComplete }: ImageUploadZoneProp
               </label>
               {' '}or drag and drop
             </p>
-            <p className="mt-1 text-xs text-gray-500">JPEG, PNG, WebP, or GIF up to 10MB</p>
+            <p className="mt-1 text-xs text-gray-500">JPEG, PNG, WebP, GIF, HEIC, TIFF, or BMP up to 10MB</p>
           </>
         )}
       </div>
