@@ -19,12 +19,12 @@ import {
   getUserPetRole,
 } from '../models/pet-owners.js';
 import {
-  getPetVets, createPetVet, deletePetVet, setPrimaryVet,
-  getPetConditions, createPetCondition, deletePetCondition,
-  getPetAllergies, createPetAllergy, deletePetAllergy,
+  getPetVets, createPetVet, updatePetVet, deletePetVet, setPrimaryVet,
+  getPetConditions, createPetCondition, updatePetCondition, deletePetCondition,
+  getPetAllergies, createPetAllergy, updatePetAllergy, deletePetAllergy,
   getPetMedications, createPetMedication, updatePetMedication, deletePetMedication,
-  getPetVaccinations, createPetVaccination, deletePetVaccination,
-  getPetEmergencyContacts, createPetEmergencyContact, deletePetEmergencyContact,
+  getPetVaccinations, createPetVaccination, updatePetVaccination, deletePetVaccination,
+  getPetEmergencyContacts, createPetEmergencyContact, updatePetEmergencyContact, deletePetEmergencyContact,
 } from '../models/health-records.js';
 
 const router = Router();
@@ -199,6 +199,24 @@ router.delete('/:id/vets/:vetId', authenticate, async (req: AuthRequest, res: Re
   }
 });
 
+router.patch('/:id/vets/:vetId', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
+      res.status(404).json({ error: 'Pet not found' });
+      return;
+    }
+    const audit = { userId: req.userId!, source: 'manual' as const, ipAddress: req.ip, userAgent: req.headers['user-agent'] };
+    const vet = await updatePetVet(parseInt(req.params.vetId), parseInt(req.params.id), req.body, audit);
+    if (!vet) {
+      res.status(404).json({ error: 'Veterinarian not found' });
+      return;
+    }
+    res.json(vet);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update veterinarian' });
+  }
+});
+
 router.patch('/:id/vets/:vetId/primary', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const petId = parseInt(req.params.id);
@@ -256,6 +274,24 @@ router.post('/:id/conditions', authenticate, async (req: AuthRequest, res: Respo
   }
 });
 
+router.patch('/:id/conditions/:conditionId', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
+      res.status(404).json({ error: 'Pet not found' });
+      return;
+    }
+    const audit = { userId: req.userId!, source: 'manual' as const, ipAddress: req.ip, userAgent: req.headers['user-agent'] };
+    const condition = await updatePetCondition(parseInt(req.params.conditionId), parseInt(req.params.id), req.body, audit);
+    if (!condition) {
+      res.status(404).json({ error: 'Condition not found' });
+      return;
+    }
+    res.json(condition);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update condition' });
+  }
+});
+
 router.delete('/:id/conditions/:conditionId', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
@@ -293,6 +329,24 @@ router.post('/:id/allergies', authenticate, async (req: AuthRequest, res: Respon
     res.status(201).json(allergy);
   } catch (error) {
     res.status(500).json({ error: 'Failed to add allergy' });
+  }
+});
+
+router.patch('/:id/allergies/:allergyId', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
+      res.status(404).json({ error: 'Pet not found' });
+      return;
+    }
+    const audit = { userId: req.userId!, source: 'manual' as const, ipAddress: req.ip, userAgent: req.headers['user-agent'] };
+    const allergy = await updatePetAllergy(parseInt(req.params.allergyId), parseInt(req.params.id), req.body, audit);
+    if (!allergy) {
+      res.status(404).json({ error: 'Allergy not found' });
+      return;
+    }
+    res.json(allergy);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update allergy' });
   }
 });
 
@@ -393,6 +447,24 @@ router.post('/:id/vaccinations', authenticate, async (req: AuthRequest, res: Res
   }
 });
 
+router.patch('/:id/vaccinations/:vacId', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
+      res.status(404).json({ error: 'Pet not found' });
+      return;
+    }
+    const audit = { userId: req.userId!, source: 'manual' as const, ipAddress: req.ip, userAgent: req.headers['user-agent'] };
+    const vaccination = await updatePetVaccination(parseInt(req.params.vacId), parseInt(req.params.id), req.body, audit);
+    if (!vaccination) {
+      res.status(404).json({ error: 'Vaccination not found' });
+      return;
+    }
+    res.json(vaccination);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update vaccination' });
+  }
+});
+
 router.delete('/:id/vaccinations/:vacId', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
@@ -430,6 +502,24 @@ router.post('/:id/emergency-contacts', authenticate, async (req: AuthRequest, re
     res.status(201).json(contact);
   } catch (error) {
     res.status(500).json({ error: 'Failed to add emergency contact' });
+  }
+});
+
+router.patch('/:id/emergency-contacts/:contactId', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
+      res.status(404).json({ error: 'Pet not found' });
+      return;
+    }
+    const audit = { userId: req.userId!, source: 'manual' as const, ipAddress: req.ip, userAgent: req.headers['user-agent'] };
+    const contact = await updatePetEmergencyContact(parseInt(req.params.contactId), parseInt(req.params.id), req.body, audit);
+    if (!contact) {
+      res.status(404).json({ error: 'Emergency contact not found' });
+      return;
+    }
+    res.json(contact);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update emergency contact' });
   }
 });
 

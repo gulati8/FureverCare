@@ -333,6 +333,42 @@ export async function getPetAllergies(petId: number): Promise<PetAllergy[]> {
   return query<PetAllergy>('SELECT * FROM pet_allergies WHERE pet_id = $1 ORDER BY created_at DESC', [petId]);
 }
 
+export async function updatePetAllergy(id: number, petId: number, updates: Partial<Omit<PetAllergy, 'id' | 'pet_id' | 'created_at'>>, audit?: AuditContext): Promise<PetAllergy | null> {
+  const existing = await queryOne<PetAllergy>('SELECT * FROM pet_allergies WHERE id = $1 AND pet_id = $2', [id, petId]);
+
+  const fields: string[] = [];
+  const values: any[] = [];
+  let paramCount = 1;
+
+  const allowedFields = ['allergen', 'reaction', 'severity'];
+
+  for (const field of allowedFields) {
+    if ((updates as any)[field] !== undefined) {
+      fields.push(`${field} = $${paramCount++}`);
+      values.push((updates as any)[field]);
+    }
+  }
+
+  if (fields.length === 0) return null;
+
+  values.push(id, petId);
+
+  const result = await queryOne<PetAllergy>(
+    `UPDATE pet_allergies SET ${fields.join(', ')} WHERE id = $${paramCount} AND pet_id = $${paramCount + 1} RETURNING *`,
+    values
+  );
+
+  if (audit && existing && result) {
+    await logUpdate('pet_allergies', id, existing, result, audit.userId, {
+      source: audit.source,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    });
+  }
+
+  return result;
+}
+
 export async function deletePetAllergy(id: number, petId: number, audit?: AuditContext): Promise<boolean> {
   const existing = await queryOne<PetAllergy>('SELECT * FROM pet_allergies WHERE id = $1 AND pet_id = $2', [id, petId]);
 
@@ -518,6 +554,42 @@ export async function getPetVaccinations(petId: number): Promise<PetVaccination[
   return query<PetVaccination>('SELECT * FROM pet_vaccinations WHERE pet_id = $1 ORDER BY administered_date DESC', [petId]);
 }
 
+export async function updatePetVaccination(id: number, petId: number, updates: Partial<Omit<PetVaccination, 'id' | 'pet_id' | 'created_at'>>, audit?: AuditContext): Promise<PetVaccination | null> {
+  const existing = await queryOne<PetVaccination>('SELECT * FROM pet_vaccinations WHERE id = $1 AND pet_id = $2', [id, petId]);
+
+  const fields: string[] = [];
+  const values: any[] = [];
+  let paramCount = 1;
+
+  const allowedFields = ['name', 'administered_date', 'expiration_date', 'administered_by', 'lot_number'];
+
+  for (const field of allowedFields) {
+    if ((updates as any)[field] !== undefined) {
+      fields.push(`${field} = $${paramCount++}`);
+      values.push((updates as any)[field]);
+    }
+  }
+
+  if (fields.length === 0) return null;
+
+  values.push(id, petId);
+
+  const result = await queryOne<PetVaccination>(
+    `UPDATE pet_vaccinations SET ${fields.join(', ')} WHERE id = $${paramCount} AND pet_id = $${paramCount + 1} RETURNING *`,
+    values
+  );
+
+  if (audit && existing && result) {
+    await logUpdate('pet_vaccinations', id, existing, result, audit.userId, {
+      source: audit.source,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    });
+  }
+
+  return result;
+}
+
 export async function deletePetVaccination(id: number, petId: number, audit?: AuditContext): Promise<boolean> {
   const existing = await queryOne<PetVaccination>('SELECT * FROM pet_vaccinations WHERE id = $1 AND pet_id = $2', [id, petId]);
 
@@ -567,6 +639,42 @@ export async function createPetEmergencyContact(petId: number, data: Omit<PetEme
 
 export async function getPetEmergencyContacts(petId: number): Promise<PetEmergencyContact[]> {
   return query<PetEmergencyContact>('SELECT * FROM pet_emergency_contacts WHERE pet_id = $1 ORDER BY is_primary DESC, created_at', [petId]);
+}
+
+export async function updatePetEmergencyContact(id: number, petId: number, updates: Partial<Omit<PetEmergencyContact, 'id' | 'pet_id' | 'created_at'>>, audit?: AuditContext): Promise<PetEmergencyContact | null> {
+  const existing = await queryOne<PetEmergencyContact>('SELECT * FROM pet_emergency_contacts WHERE id = $1 AND pet_id = $2', [id, petId]);
+
+  const fields: string[] = [];
+  const values: any[] = [];
+  let paramCount = 1;
+
+  const allowedFields = ['name', 'relationship', 'phone', 'email', 'is_primary'];
+
+  for (const field of allowedFields) {
+    if ((updates as any)[field] !== undefined) {
+      fields.push(`${field} = $${paramCount++}`);
+      values.push((updates as any)[field]);
+    }
+  }
+
+  if (fields.length === 0) return null;
+
+  values.push(id, petId);
+
+  const result = await queryOne<PetEmergencyContact>(
+    `UPDATE pet_emergency_contacts SET ${fields.join(', ')} WHERE id = $${paramCount} AND pet_id = $${paramCount + 1} RETURNING *`,
+    values
+  );
+
+  if (audit && existing && result) {
+    await logUpdate('pet_emergency_contacts', id, existing, result, audit.userId, {
+      source: audit.source,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    });
+  }
+
+  return result;
 }
 
 export async function deletePetEmergencyContact(id: number, petId: number, audit?: AuditContext): Promise<boolean> {
