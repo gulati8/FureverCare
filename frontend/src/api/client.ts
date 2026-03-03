@@ -657,7 +657,7 @@ export const photoImportApi = {
 };
 
 // Consolidated Document Import Types
-export type DocumentUploadStatus = 'pending' | 'classifying' | 'classified' | 'processing' | 'completed' | 'failed';
+export type DocumentUploadStatus = 'pending' | 'classifying' | 'classified' | 'processing' | 'pending_review' | 'completed' | 'failed';
 export type DetectedDocumentType = 'vaccination_record' | 'visit_summary' | 'lab_results' | 'prescription' | 'medication_label' | 'pet_id_tag' | 'other';
 
 export interface DocumentUpload {
@@ -677,6 +677,10 @@ export interface DocumentUpload {
   processing_started_at: string | null;
   processing_completed_at: string | null;
   error_message: string | null;
+  user_tag: string | null;
+  user_description: string | null;
+  date_taken: string | null;
+  body_area: string | null;
   created_at: string;
 }
 
@@ -735,7 +739,7 @@ export interface DocumentProcessingResult {
 // Consolidated Document Import API
 export const documentsApi = {
   // Upload a document (PDF or image)
-  upload: async (petId: number, file: File, token: string): Promise<DocumentUpload> => {
+  upload: async (petId: number, file: File, token: string): Promise<any> => {
     const formData = new FormData();
     formData.append('document', file);
 
@@ -806,6 +810,15 @@ export const documentsApi = {
   // Rename a document upload
   renameUpload: (petId: number, uploadId: number, newFilename: string, token: string) =>
     api.patch<DocumentUpload>(`/api/pets/${petId}/documents/uploads/${uploadId}/rename`, { filename: newFilename }, token),
+
+  // Save image metadata (tag, description, date, body area)
+  saveImageMetadata: (
+    petId: number,
+    uploadId: number,
+    data: { userTag: string; userDescription?: string; dateTaken?: string; bodyArea?: string },
+    token: string
+  ) =>
+    api.patch<DocumentUpload>(`/api/pets/${petId}/documents/uploads/${uploadId}/image-metadata`, data, token),
 };
 
 // Audit API

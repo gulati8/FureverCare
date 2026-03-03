@@ -1,10 +1,10 @@
 import { useState, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { documentsApi, DocumentUpload } from '../../api/client';
+import { documentsApi } from '../../api/client';
 
 interface DocumentUploadZoneProps {
   petId: number;
-  onUploadComplete: (upload: DocumentUpload) => void;
+  onUploadComplete: (result: any) => void;
   disabled?: boolean;
 }
 
@@ -102,11 +102,11 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
     }, 200);
 
     try {
-      const upload = await documentsApi.upload(petId, file, token);
+      const result = await documentsApi.upload(petId, file, token);
       clearInterval(progressInterval);
       setUploadProgress(100);
       setPreviewUrl(null);
-      onUploadComplete(upload);
+      onUploadComplete(result);
     } catch (err: any) {
       setError(err.message || 'Upload failed');
       setPreviewUrl(null);

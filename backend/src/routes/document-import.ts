@@ -5,13 +5,15 @@ import { requireFeature } from '../middleware/subscription.js';
 import { storage } from '../services/storage.js';
 import { userHasPetAccess, userCanEditPet } from '../models/pet-owners.js';
 import { findPetById } from '../models/pet.js';
-import { optimizeImage, replaceExtension, isOptimizableImage } from '../services/image-optimizer.js';
+import { optimizeImage, replaceExtension, isOptimizableImage, extractImageMetadata } from '../services/image-optimizer.js';
 import {
   createDocumentUpload,
   getDocumentUploadById,
   getDocumentUploadsByPetId,
   deleteDocumentUpload,
   updateDocumentUploadFilename,
+  updateDocumentUploadStatus,
+  updateDocumentImageMetadata,
   getMediaTypeFromMime,
   DocumentUpload,
 } from '../models/document-upload.js';
@@ -107,72 +109,89 @@ router.post('/:petId/documents/upload', authenticate, requireFeature('upload'), 
       mediaType: getMediaTypeFromMime(fileMimeType),
     });
 
-    // Process the document (classify and extract)
-    const result = await processDocumentUpload(documentUpload.id);
+    const mediaType = getMediaTypeFromMime(fileMimeType);
 
-    if (result.error) {
-      // Return error but include partial results
-      res.status(500).json({
-        error: result.error,
-        upload: result.upload,
-        detected_type: result.classification?.detectedType || null,
-        confidence: result.classification?.confidence || 0,
-        explanation: result.classification?.explanation || result.error,
+    if (mediaType === 'image') {
+      // Images: extract EXIF metadata, set status to pending_review, skip AI
+      const imageMeta = await extractImageMetadata(fileBuffer);
+      await updateDocumentUploadStatus(documentUpload.id, 'pending_review');
+      const updatedUpload = await getDocumentUploadById(documentUpload.id);
+
+      res.status(201).json({
+        upload: updatedUpload,
+        media_type: 'image',
+        exif_date_taken: imageMeta.dateTaken,
+        image_width: imageMeta.width,
+        image_height: imageMeta.height,
       });
-      return;
-    }
+    } else {
+      // PDFs: existing processDocumentUpload flow
+      const result = await processDocumentUpload(documentUpload.id);
 
-    // Build response
-    const extractedItems = result.items?.map((item) => ({
-      id: item.id,
-      record_type: item.record_type,
-      data: item.extracted_data,
-      confidence: item.confidence_score,
-      status: item.status,
-    })) || [];
-
-    // Build category summary
-    const byCategory: Record<string, number> = {
-      medications: 0,
-      vaccinations: 0,
-      conditions: 0,
-      allergies: 0,
-      vets: 0,
-      emergency_contacts: 0,
-    };
-
-    for (const item of extractedItems) {
-      switch (item.record_type) {
-        case 'medication':
-          byCategory.medications++;
-          break;
-        case 'vaccination':
-          byCategory.vaccinations++;
-          break;
-        case 'condition':
-          byCategory.conditions++;
-          break;
-        case 'allergy':
-          byCategory.allergies++;
-          break;
-        case 'vet':
-          byCategory.vets++;
-          break;
-        case 'emergency_contact':
-          byCategory.emergency_contacts++;
-          break;
+      if (result.error) {
+        res.status(500).json({
+          error: result.error,
+          upload: result.upload,
+          media_type: 'pdf',
+          detected_type: result.classification?.detectedType || null,
+          confidence: result.classification?.confidence || 0,
+          explanation: result.classification?.explanation || result.error,
+        });
+        return;
       }
-    }
 
-    res.status(201).json({
-      upload_id: result.upload.id,
-      detected_type: result.classification?.detectedType || 'other',
-      confidence: result.classification?.confidence || 0,
-      explanation: result.classification?.explanation || '',
-      extracted_items: extractedItems,
-      summary: generateExtractedItemsSummary(byCategory),
-      extraction_id: result.extraction?.id,
-    });
+      const extractedItems = result.items?.map((item) => ({
+        id: item.id,
+        record_type: item.record_type,
+        data: item.extracted_data,
+        confidence: item.confidence_score,
+        status: item.status,
+      })) || [];
+
+      const byCategory: Record<string, number> = {
+        medications: 0,
+        vaccinations: 0,
+        conditions: 0,
+        allergies: 0,
+        vets: 0,
+        emergency_contacts: 0,
+      };
+
+      for (const item of extractedItems) {
+        switch (item.record_type) {
+          case 'medication':
+            byCategory.medications++;
+            break;
+          case 'vaccination':
+            byCategory.vaccinations++;
+            break;
+          case 'condition':
+            byCategory.conditions++;
+            break;
+          case 'allergy':
+            byCategory.allergies++;
+            break;
+          case 'vet':
+            byCategory.vets++;
+            break;
+          case 'emergency_contact':
+            byCategory.emergency_contacts++;
+            break;
+        }
+      }
+
+      res.status(201).json({
+        upload: result.upload,
+        media_type: 'pdf',
+        upload_id: result.upload.id,
+        detected_type: result.classification?.detectedType || 'other',
+        confidence: result.classification?.confidence || 0,
+        explanation: result.classification?.explanation || '',
+        extracted_items: extractedItems,
+        summary: generateExtractedItemsSummary(byCategory),
+        extraction_id: result.extraction?.id,
+      });
+    }
   } catch (error: any) {
     console.error('Document upload error:', error);
     res.status(500).json({ error: error.message || 'Upload failed' });
@@ -703,6 +722,57 @@ router.patch('/:petId/documents/uploads/:id/rename', authenticate, async (req: A
   } catch (error: any) {
     console.error('Error renaming document upload:', error);
     res.status(500).json({ error: error.message || 'Rename failed' });
+  }
+});
+
+// PATCH /api/pets/:petId/documents/uploads/:id/image-metadata - Save image metadata
+router.patch('/:petId/documents/uploads/:id/image-metadata', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const petId = parseInt(req.params.petId);
+    const uploadId = parseInt(req.params.id);
+    const { userTag, userDescription, dateTaken, bodyArea } = req.body;
+
+    if (!await verifyPetEditAccess(petId, req.userId!, res)) {
+      return;
+    }
+
+    if (!userTag || typeof userTag !== 'string' || userTag.trim().length === 0) {
+      res.status(400).json({ error: 'userTag is required' });
+      return;
+    }
+
+    if (userTag.length > 100) {
+      res.status(400).json({ error: 'userTag must be 100 characters or less' });
+      return;
+    }
+
+    const upload = await getDocumentUploadById(uploadId);
+    if (!upload || upload.pet_id !== petId) {
+      res.status(404).json({ error: 'Upload not found' });
+      return;
+    }
+
+    if (upload.media_type !== 'image') {
+      res.status(400).json({ error: 'This endpoint is only for image uploads' });
+      return;
+    }
+
+    const updatedUpload = await updateDocumentImageMetadata(uploadId, {
+      userTag: userTag.trim(),
+      userDescription: userDescription || null,
+      dateTaken: dateTaken || null,
+      bodyArea: bodyArea || null,
+    });
+
+    if (!updatedUpload) {
+      res.status(404).json({ error: 'Failed to update image metadata' });
+      return;
+    }
+
+    res.json(updatedUpload);
+  } catch (error: any) {
+    console.error('Error updating image metadata:', error);
+    res.status(500).json({ error: error.message || 'Failed to update image metadata' });
   }
 });
 
