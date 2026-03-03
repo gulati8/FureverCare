@@ -397,6 +397,7 @@ export interface DuplicateInfo {
   existingName: string;
   existingData: Record<string, any>;
   fieldDiffs: FieldDiff[];
+  matchScore: number;
 }
 
 export interface DuplicateCheckResult {

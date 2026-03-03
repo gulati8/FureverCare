@@ -26,8 +26,12 @@ import {
   updatePetMedication,
   findPetMedicationByName,
   createPetCondition,
+  updatePetCondition,
+  findDuplicateConditions,
   createPetAllergy,
   createPetVet,
+  updatePetVet,
+  findDuplicateVets,
   createPetEmergencyContact,
 } from '../models/health-records.js';
 import { config } from '../config/index.js';
@@ -178,11 +182,12 @@ export async function approveDocumentExtractionItems(
 
         case 'medication': {
           // Check for existing medication by name (case-insensitive)
-          const existingMed = dataToSave.name
+          const match = dataToSave.name
             ? await findPetMedicationByName(petId, dataToSave.name)
             : null;
 
-          if (existingMed) {
+          if (match) {
+            const existingMed = match.medication;
             // Merge: update existing record with new non-null fields
             const updates: Record<string, any> = {};
             const fields = ['dosage', 'frequency', 'start_date', 'end_date', 'prescribing_vet', 'notes', 'is_active'] as const;
@@ -206,20 +211,72 @@ export async function approveDocumentExtractionItems(
           break;
         }
 
-        case 'condition':
-          createdRecord = await createPetCondition(petId, dataToSave as any);
+        case 'condition': {
+          // Auto-dedup: check for existing condition by name
+          const matches = dataToSave.name
+            ? await findDuplicateConditions(petId, dataToSave.name)
+            : [];
+
+          if (matches.length > 0) {
+            const existingCondition = matches[0].condition;
+            // Merge: update existing record with new non-null fields
+            const updates: Record<string, any> = {};
+            const fields = ['diagnosed_date', 'notes', 'severity'] as const;
+            for (const field of fields) {
+              if (dataToSave[field] !== undefined && dataToSave[field] !== null) {
+                updates[field] = dataToSave[field];
+              }
+            }
+            const updated = await updatePetCondition(existingCondition.id, petId, updates, {
+              userId,
+              source: 'document_import' as any,
+              ipAddress: options?.ipAddress,
+              userAgent: options?.userAgent,
+            });
+            createdRecord = updated ?? existingCondition;
+            action = 'updated';
+          } else {
+            createdRecord = await createPetCondition(petId, dataToSave as any);
+          }
           recordType = 'pet_conditions';
           break;
+        }
 
         case 'allergy':
           createdRecord = await createPetAllergy(petId, dataToSave as any);
           recordType = 'pet_allergies';
           break;
 
-        case 'vet':
-          createdRecord = await createPetVet(petId, dataToSave as any);
+        case 'vet': {
+          // Auto-dedup: check for existing vet by clinic_name + vet_name
+          const matches = dataToSave.clinic_name
+            ? await findDuplicateVets(petId, dataToSave.clinic_name, dataToSave.vet_name)
+            : [];
+
+          if (matches.length > 0) {
+            const existingVet = matches[0].vet;
+            // Merge: update existing record with new non-null fields
+            const updates: Record<string, any> = {};
+            const fields = ['vet_name', 'phone', 'email', 'address', 'is_primary'] as const;
+            for (const field of fields) {
+              if (dataToSave[field] !== undefined && dataToSave[field] !== null) {
+                updates[field] = dataToSave[field];
+              }
+            }
+            const updated = await updatePetVet(existingVet.id, petId, updates, {
+              userId,
+              source: 'document_import' as any,
+              ipAddress: options?.ipAddress,
+              userAgent: options?.userAgent,
+            });
+            createdRecord = updated ?? existingVet;
+            action = 'updated';
+          } else {
+            createdRecord = await createPetVet(petId, dataToSave as any);
+          }
           recordType = 'pet_vets';
           break;
+        }
 
         case 'emergency_contact':
           createdRecord = await createPetEmergencyContact(petId, dataToSave as any);
@@ -390,8 +447,9 @@ export async function approveMergeDocumentExtractionItems(
 
       // smart_merge: Update existing record with imported fields, respecting fieldOverrides
       if (item.record_type === 'medication' && dataToSave.name) {
-        const existingMed = await findPetMedicationByName(petId, dataToSave.name);
-        if (existingMed) {
+        const match = await findPetMedicationByName(petId, dataToSave.name);
+        if (match) {
+          const existingMed = match.medication;
           const updates: Record<string, any> = {};
           const fields = ['dosage', 'frequency', 'start_date', 'end_date', 'prescribing_vet', 'notes', 'is_active'] as const;
 
@@ -445,9 +503,117 @@ export async function approveMergeDocumentExtractionItems(
             result: 'created',
           });
         }
+      } else if (item.record_type === 'condition' && dataToSave.name) {
+        const matches = await findDuplicateConditions(petId, dataToSave.name);
+        if (matches.length > 0) {
+          const existingCondition = matches[0].condition;
+          const updates: Record<string, any> = {};
+          const fields = ['diagnosed_date', 'notes', 'severity'] as const;
+
+          for (const field of fields) {
+            if (mergeItem.fieldOverrides && mergeItem.fieldOverrides[field]) {
+              if (mergeItem.fieldOverrides[field] === 'imported' && dataToSave[field] !== undefined && dataToSave[field] !== null) {
+                updates[field] = dataToSave[field];
+              }
+            } else {
+              if (dataToSave[field] !== undefined && dataToSave[field] !== null) {
+                updates[field] = dataToSave[field];
+              }
+            }
+          }
+
+          if (Object.keys(updates).length > 0) {
+            await updatePetCondition(existingCondition.id, petId, updates, {
+              userId,
+              source: 'document_import' as any,
+              ipAddress: options?.ipAddress,
+              userAgent: options?.userAgent,
+            });
+          }
+
+          await updateDocumentExtractionItemStatus(item.id, 'approved', existingCondition.id, 'pet_conditions');
+          result.processed.push({
+            itemId: item.id,
+            action: 'smart_merge',
+            recordType: 'pet_conditions',
+            recordId: existingCondition.id,
+            result: 'updated',
+          });
+        } else {
+          // No existing record found — create new
+          const createdRecord = await createPetCondition(petId, dataToSave as any);
+          await updateDocumentExtractionItemStatus(item.id, 'approved', createdRecord.id, 'pet_conditions');
+          await logCreate('pet_conditions', createdRecord.id, dataToSave, userId, {
+            source: 'document_import',
+            sourceDocumentUploadId: documentUploadId,
+            ipAddress: options?.ipAddress,
+            userAgent: options?.userAgent,
+          });
+          result.processed.push({
+            itemId: item.id,
+            action: 'smart_merge',
+            recordType: 'pet_conditions',
+            recordId: createdRecord.id,
+            result: 'created',
+          });
+        }
+      } else if (item.record_type === 'vet' && dataToSave.clinic_name) {
+        const matches = await findDuplicateVets(petId, dataToSave.clinic_name, dataToSave.vet_name);
+        if (matches.length > 0) {
+          const existingVet = matches[0].vet;
+          const updates: Record<string, any> = {};
+          const fields = ['vet_name', 'phone', 'email', 'address', 'is_primary'] as const;
+
+          for (const field of fields) {
+            if (mergeItem.fieldOverrides && mergeItem.fieldOverrides[field]) {
+              if (mergeItem.fieldOverrides[field] === 'imported' && dataToSave[field] !== undefined && dataToSave[field] !== null) {
+                updates[field] = dataToSave[field];
+              }
+            } else {
+              if (dataToSave[field] !== undefined && dataToSave[field] !== null) {
+                updates[field] = dataToSave[field];
+              }
+            }
+          }
+
+          if (Object.keys(updates).length > 0) {
+            await updatePetVet(existingVet.id, petId, updates, {
+              userId,
+              source: 'document_import' as any,
+              ipAddress: options?.ipAddress,
+              userAgent: options?.userAgent,
+            });
+          }
+
+          await updateDocumentExtractionItemStatus(item.id, 'approved', existingVet.id, 'pet_vets');
+          result.processed.push({
+            itemId: item.id,
+            action: 'smart_merge',
+            recordType: 'pet_vets',
+            recordId: existingVet.id,
+            result: 'updated',
+          });
+        } else {
+          // No existing record found — create new
+          const createdRecord = await createPetVet(petId, dataToSave as any);
+          await updateDocumentExtractionItemStatus(item.id, 'approved', createdRecord.id, 'pet_vets');
+          await logCreate('pet_vets', createdRecord.id, dataToSave, userId, {
+            source: 'document_import',
+            sourceDocumentUploadId: documentUploadId,
+            ipAddress: options?.ipAddress,
+            userAgent: options?.userAgent,
+          });
+          result.processed.push({
+            itemId: item.id,
+            action: 'smart_merge',
+            recordType: 'pet_vets',
+            recordId: createdRecord.id,
+            result: 'created',
+          });
+        }
       } else {
-        // Non-medication smart_merge falls through to normal create
-        throw new Error('Smart merge is only supported for medications');
+        // Smart merge is only supported for medications, conditions, and vets
+        throw new Error(`Smart merge is not supported for ${item.record_type}`);
       }
     } catch (error: any) {
       result.errors.push({ itemId: mergeItem.itemId, error: error.message });

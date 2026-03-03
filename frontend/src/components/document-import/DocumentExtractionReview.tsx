@@ -52,7 +52,7 @@ export function DocumentExtractionReview({
       const data = await documentsApi.getExtraction(petId, upload.id, token);
       setExtraction(data);
 
-      // Check for duplicate medications
+      // Check for duplicates (medications, conditions, vets)
       let dupResult: Record<number, DuplicateInfo> = {};
       try {
         const result = await documentsApi.checkDuplicates(petId, upload.id, token);

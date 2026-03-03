@@ -24,7 +24,14 @@ import {
   rejectDocumentExtractionItems,
   approveMergeDocumentExtractionItems,
 } from '../services/document-processor.js';
-import { findPetMedicationByName, PetMedication } from '../models/health-records.js';
+import {
+  findPetMedicationByName,
+  findDuplicateConditions,
+  findDuplicateVets,
+  PetMedication,
+  PetCondition,
+  PetVet,
+} from '../models/health-records.js';
 import { generateExtractedItemsSummary } from '../services/document-classifier.js';
 import { extractRequestMetadata } from '../services/audit-logger.js';
 import { claudeRateLimit, pdfUploadRateLimit } from '../middleware/rate-limit-claude.js';
@@ -293,9 +300,13 @@ router.post('/:petId/documents/uploads/:id/extraction/check-duplicates', authent
       return;
     }
 
-    // Check each medication item for duplicates, including field-level diffs
+    // Field diff configurations for each record type
     const MEDICATION_DIFF_FIELDS = ['dosage', 'frequency', 'start_date', 'end_date', 'prescribing_vet', 'notes', 'is_active'] as const;
+    const CONDITION_DIFF_FIELDS = ['diagnosed_date', 'notes', 'severity'] as const;
+    const VET_DIFF_FIELDS = ['vet_name', 'phone', 'email', 'address', 'is_primary'] as const;
+
     const FIELD_LABELS: Record<string, string> = {
+      // Medication fields
       dosage: 'Dosage',
       frequency: 'Frequency',
       start_date: 'Start date',
@@ -303,61 +314,164 @@ router.post('/:petId/documents/uploads/:id/extraction/check-duplicates', authent
       prescribing_vet: 'Prescribing vet',
       notes: 'Notes',
       is_active: 'Active status',
+      // Condition fields
+      diagnosed_date: 'Diagnosed date',
+      severity: 'Severity',
+      // Vet fields
+      vet_name: 'Veterinarian',
+      phone: 'Phone',
+      email: 'Email',
+      address: 'Address',
+      is_primary: 'Primary vet',
     };
 
     const duplicates: Record<number, {
       existingId: number;
       existingName: string;
-      existingData: Partial<PetMedication>;
+      existingData: Partial<PetMedication | PetCondition | PetVet>;
       fieldDiffs: Array<{ field: string; label: string; existingValue: any; importedValue: any }>;
+      matchScore: number;
     }> = {};
 
     for (const item of extraction.items) {
-      if (item.record_type !== 'medication') continue;
       const data = item.user_modified_data || item.extracted_data;
-      if (!data.name) continue;
 
-      const existing = await findPetMedicationByName(petId, data.name);
-      if (existing) {
-        const fieldDiffs: Array<{ field: string; label: string; existingValue: any; importedValue: any }> = [];
+      // Check medications
+      if (item.record_type === 'medication' && data.name) {
+        const match = await findPetMedicationByName(petId, data.name);
+        if (match) {
+          const existing = match.medication;
+          const fieldDiffs: Array<{ field: string; label: string; existingValue: any; importedValue: any }> = [];
 
-        for (const field of MEDICATION_DIFF_FIELDS) {
-          const importedValue = data[field];
-          const existingValue = existing[field];
+          for (const field of MEDICATION_DIFF_FIELDS) {
+            const importedValue = data[field];
+            const existingValue = existing[field];
 
-          // Only include fields where the imported value is non-null and differs from existing
-          if (importedValue !== undefined && importedValue !== null) {
-            const existingNorm = existingValue === undefined ? null : existingValue;
-            const importedNorm = importedValue === undefined ? null : importedValue;
-            // Normalize dates for comparison
-            const existingStr = existingNorm instanceof Date ? existingNorm.toISOString().split('T')[0] : String(existingNorm ?? '');
-            const importedStr = String(importedNorm ?? '');
-            if (existingStr !== importedStr) {
-              fieldDiffs.push({
-                field,
-                label: FIELD_LABELS[field] || field,
-                existingValue: existingNorm instanceof Date ? existingNorm.toISOString().split('T')[0] : existingNorm,
-                importedValue: importedNorm,
-              });
+            // Only include fields where the imported value is non-null and differs from existing
+            if (importedValue !== undefined && importedValue !== null) {
+              const existingNorm = existingValue === undefined ? null : existingValue;
+              const importedNorm = importedValue === undefined ? null : importedValue;
+              // Normalize dates for comparison
+              const existingStr = existingNorm instanceof Date ? existingNorm.toISOString().split('T')[0] : String(existingNorm ?? '');
+              const importedStr = String(importedNorm ?? '');
+              if (existingStr !== importedStr) {
+                fieldDiffs.push({
+                  field,
+                  label: FIELD_LABELS[field] || field,
+                  existingValue: existingNorm instanceof Date ? existingNorm.toISOString().split('T')[0] : existingNorm,
+                  importedValue: importedNorm,
+                });
+              }
             }
           }
-        }
 
-        duplicates[item.id] = {
-          existingId: existing.id,
-          existingName: existing.name,
-          existingData: {
-            name: existing.name,
-            dosage: existing.dosage,
-            frequency: existing.frequency,
-            start_date: existing.start_date,
-            end_date: existing.end_date,
-            prescribing_vet: existing.prescribing_vet,
-            notes: existing.notes,
-            is_active: existing.is_active,
-          },
-          fieldDiffs,
-        };
+          duplicates[item.id] = {
+            existingId: existing.id,
+            existingName: existing.name,
+            existingData: {
+              name: existing.name,
+              dosage: existing.dosage,
+              frequency: existing.frequency,
+              start_date: existing.start_date,
+              end_date: existing.end_date,
+              prescribing_vet: existing.prescribing_vet,
+              notes: existing.notes,
+              is_active: existing.is_active,
+            },
+            fieldDiffs,
+            matchScore: match.score,
+          };
+        }
+      }
+
+      // Check conditions
+      if (item.record_type === 'condition' && data.name) {
+        const matches = await findDuplicateConditions(petId, data.name);
+        if (matches.length > 0) {
+          // Take the best match (highest score)
+          const bestMatch = matches[0];
+          const existing = bestMatch.condition;
+          const fieldDiffs: Array<{ field: string; label: string; existingValue: any; importedValue: any }> = [];
+
+          for (const field of CONDITION_DIFF_FIELDS) {
+            const importedValue = data[field];
+            const existingValue = existing[field];
+
+            if (importedValue !== undefined && importedValue !== null) {
+              const existingNorm = existingValue === undefined ? null : existingValue;
+              const importedNorm = importedValue === undefined ? null : importedValue;
+              const existingStr = existingNorm instanceof Date ? existingNorm.toISOString().split('T')[0] : String(existingNorm ?? '');
+              const importedStr = String(importedNorm ?? '');
+              if (existingStr !== importedStr) {
+                fieldDiffs.push({
+                  field,
+                  label: FIELD_LABELS[field] || field,
+                  existingValue: existingNorm instanceof Date ? existingNorm.toISOString().split('T')[0] : existingNorm,
+                  importedValue: importedNorm,
+                });
+              }
+            }
+          }
+
+          duplicates[item.id] = {
+            existingId: existing.id,
+            existingName: existing.name,
+            existingData: {
+              name: existing.name,
+              diagnosed_date: existing.diagnosed_date,
+              notes: existing.notes,
+              severity: existing.severity,
+            },
+            fieldDiffs,
+            matchScore: bestMatch.score,
+          };
+        }
+      }
+
+      // Check vets
+      if (item.record_type === 'vet' && data.clinic_name) {
+        const matches = await findDuplicateVets(petId, data.clinic_name, data.vet_name);
+        if (matches.length > 0) {
+          // Take the best match (highest score)
+          const bestMatch = matches[0];
+          const existing = bestMatch.vet;
+          const fieldDiffs: Array<{ field: string; label: string; existingValue: any; importedValue: any }> = [];
+
+          for (const field of VET_DIFF_FIELDS) {
+            const importedValue = data[field];
+            const existingValue = existing[field];
+
+            if (importedValue !== undefined && importedValue !== null) {
+              const existingNorm = existingValue === undefined ? null : existingValue;
+              const importedNorm = importedValue === undefined ? null : importedValue;
+              const existingStr = String(existingNorm ?? '');
+              const importedStr = String(importedNorm ?? '');
+              if (existingStr !== importedStr) {
+                fieldDiffs.push({
+                  field,
+                  label: FIELD_LABELS[field] || field,
+                  existingValue: existingNorm,
+                  importedValue: importedNorm,
+                });
+              }
+            }
+          }
+
+          duplicates[item.id] = {
+            existingId: existing.id,
+            existingName: existing.clinic_name,
+            existingData: {
+              clinic_name: existing.clinic_name,
+              vet_name: existing.vet_name,
+              phone: existing.phone,
+              email: existing.email,
+              address: existing.address,
+              is_primary: existing.is_primary,
+            },
+            fieldDiffs,
+            matchScore: bestMatch.score,
+          };
+        }
       }
     }
 
