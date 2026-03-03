@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 interface FieldEditorProps {
   label: string;
@@ -19,118 +19,89 @@ export function FieldEditor({
   onChange,
   isModified,
 }: FieldEditorProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(String(value ?? ''));
+  const propValue = String(value ?? '');
+  const [localValue, setLocalValue] = useState(propValue);
+  const lastPropValue = useRef(propValue);
 
-  const displayValue = value === null || value === undefined ? '-' : String(value);
+  // Sync local state when prop value changes externally
+  if (propValue !== lastPropValue.current) {
+    lastPropValue.current = propValue;
+    setLocalValue(propValue);
+  }
 
-  const handleSave = () => {
-    let newValue: any = editValue;
+  const save = (val: string) => {
+    if (val === propValue) return; // No change, skip API call
 
+    let newValue: any = val;
     if (type === 'boolean') {
-      newValue = editValue === 'true';
-    } else if (editValue === '') {
+      newValue = val === 'true';
+    } else if (val === '') {
       newValue = null;
     }
 
     onChange(fieldKey, newValue);
-    setIsEditing(false);
   };
 
-  const handleCancel = () => {
-    setEditValue(String(value ?? ''));
-    setIsEditing(false);
+  const handleBlur = () => {
+    save(localValue);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
-      handleSave();
-    } else if (e.key === 'Escape') {
-      handleCancel();
+      e.currentTarget.blur();
     }
   };
 
+  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    setLocalValue(val);
+    save(val);
+  };
+
   return (
-    <div className="flex items-start justify-between py-2 border-b border-gray-100 last:border-0">
-      <div className="flex-1">
+    <div className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
+      <div className="flex items-center gap-1.5 w-36 flex-shrink-0">
         <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
           {label}
         </span>
-        {isEditing ? (
-          <div className="mt-1 flex items-center gap-2">
-            {type === 'boolean' ? (
-              <select
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                className="block w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="true">Yes</option>
-                <option value="false">No</option>
-              </select>
-            ) : type === 'select' && options ? (
-              <select
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                className="block w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">-</option>
-                {options.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                type={type === 'date' ? 'date' : 'text'}
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="block w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
-                autoFocus
-              />
-            )}
-            <button
-              onClick={handleSave}
-              className="p-1 text-green-600 hover:text-green-700"
-              title="Save"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </button>
-            <button
-              onClick={handleCancel}
-              className="p-1 text-gray-400 hover:text-gray-600"
-              title="Cancel"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        ) : (
-          <div className="mt-1 flex items-center gap-2">
-            <span className={`text-sm ${isModified ? 'text-blue-600 font-medium' : 'text-gray-900'}`}>
-              {type === 'boolean' ? (value ? 'Yes' : 'No') : displayValue}
-            </span>
-            {isModified && (
-              <span className="text-[10px] text-blue-600 uppercase">Modified</span>
-            )}
-          </div>
+        {isModified && (
+          <span className="text-[10px] text-blue-600 font-medium uppercase">Modified</span>
         )}
       </div>
-      {!isEditing && (
-        <button
-          onClick={() => setIsEditing(true)}
-          className="p-1 text-gray-400 hover:text-blue-600"
-          title="Edit"
-        >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-          </svg>
-        </button>
-      )}
+      <div className="flex-1">
+        {type === 'boolean' ? (
+          <select
+            value={localValue}
+            onChange={handleSelectChange}
+            className="block w-full px-2 py-1 text-sm border border-gray-200 rounded bg-white focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        ) : type === 'select' && options ? (
+          <select
+            value={localValue}
+            onChange={handleSelectChange}
+            className="block w-full px-2 py-1 text-sm border border-gray-200 rounded bg-white focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">-</option>
+            {options.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            type={type === 'date' ? 'date' : 'text'}
+            value={localValue}
+            onChange={(e) => setLocalValue(e.target.value)}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+            className="block w-full px-2 py-1 text-sm border border-gray-200 rounded bg-white focus:ring-blue-500 focus:border-blue-500"
+          />
+        )}
+      </div>
     </div>
   );
 }
