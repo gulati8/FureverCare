@@ -104,6 +104,8 @@ export const petsApi = {
     api.get<PetVet[]>(`/api/pets/${petId}/vets`, token),
   addVet: (petId: number, data: Omit<PetVet, 'id' | 'pet_id' | 'created_at'>, token: string) =>
     api.post<PetVet>(`/api/pets/${petId}/vets`, data, token),
+  updateVet: (petId: number, vetId: number, data: Partial<PetVet>, token: string) =>
+    api.patch<PetVet>(`/api/pets/${petId}/vets/${vetId}`, data, token),
   deleteVet: (petId: number, vetId: number, token: string) =>
     api.delete(`/api/pets/${petId}/vets/${vetId}`, token),
   setPrimaryVet: (petId: number, vetId: number, token: string) =>
@@ -113,6 +115,8 @@ export const petsApi = {
     api.get<PetCondition[]>(`/api/pets/${petId}/conditions`, token),
   addCondition: (petId: number, data: Omit<PetCondition, 'id' | 'pet_id' | 'created_at'>, token: string) =>
     api.post<PetCondition>(`/api/pets/${petId}/conditions`, data, token),
+  updateCondition: (petId: number, conditionId: number, data: Partial<PetCondition>, token: string) =>
+    api.patch<PetCondition>(`/api/pets/${petId}/conditions/${conditionId}`, data, token),
   deleteCondition: (petId: number, conditionId: number, token: string) =>
     api.delete(`/api/pets/${petId}/conditions/${conditionId}`, token),
 
@@ -120,6 +124,8 @@ export const petsApi = {
     api.get<PetAllergy[]>(`/api/pets/${petId}/allergies`, token),
   addAllergy: (petId: number, data: Omit<PetAllergy, 'id' | 'pet_id' | 'created_at'>, token: string) =>
     api.post<PetAllergy>(`/api/pets/${petId}/allergies`, data, token),
+  updateAllergy: (petId: number, allergyId: number, data: Partial<PetAllergy>, token: string) =>
+    api.patch<PetAllergy>(`/api/pets/${petId}/allergies/${allergyId}`, data, token),
   deleteAllergy: (petId: number, allergyId: number, token: string) =>
     api.delete(`/api/pets/${petId}/allergies/${allergyId}`, token),
 
@@ -136,6 +142,8 @@ export const petsApi = {
     api.get<PetVaccination[]>(`/api/pets/${petId}/vaccinations`, token),
   addVaccination: (petId: number, data: Omit<PetVaccination, 'id' | 'pet_id' | 'created_at'>, token: string) =>
     api.post<PetVaccination>(`/api/pets/${petId}/vaccinations`, data, token),
+  updateVaccination: (petId: number, vacId: number, data: Partial<PetVaccination>, token: string) =>
+    api.patch<PetVaccination>(`/api/pets/${petId}/vaccinations/${vacId}`, data, token),
   deleteVaccination: (petId: number, vacId: number, token: string) =>
     api.delete(`/api/pets/${petId}/vaccinations/${vacId}`, token),
 
@@ -143,6 +151,8 @@ export const petsApi = {
     api.get<PetEmergencyContact[]>(`/api/pets/${petId}/emergency-contacts`, token),
   addEmergencyContact: (petId: number, data: Omit<PetEmergencyContact, 'id' | 'pet_id' | 'created_at'>, token: string) =>
     api.post<PetEmergencyContact>(`/api/pets/${petId}/emergency-contacts`, data, token),
+  updateEmergencyContact: (petId: number, contactId: number, data: Partial<PetEmergencyContact>, token: string) =>
+    api.patch<PetEmergencyContact>(`/api/pets/${petId}/emergency-contacts/${contactId}`, data, token),
   deleteEmergencyContact: (petId: number, contactId: number, token: string) =>
     api.delete(`/api/pets/${petId}/emergency-contacts/${contactId}`, token),
 };

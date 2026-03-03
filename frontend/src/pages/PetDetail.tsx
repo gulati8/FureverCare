@@ -456,6 +456,11 @@ function ConditionsTab({ petId, token, conditions, setConditions }: {
   const [name, setName] = useState('');
   const [severity, setSeverity] = useState('');
   const [notes, setNotes] = useState('');
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editSeverity, setEditSeverity] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const handleAdd = async () => {
     if (!name.trim()) return;
@@ -465,9 +470,24 @@ function ConditionsTab({ petId, token, conditions, setConditions }: {
     setName(''); setSeverity(''); setNotes('');
   };
 
+  const startEdit = (c: PetCondition) => {
+    setEditingId(c.id);
+    setEditName(c.name);
+    setEditSeverity(c.severity || '');
+    setEditNotes(c.notes || '');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingId || !editName.trim()) return;
+    const updated = await petsApi.updateCondition(petId, editingId, { name: editName, severity: editSeverity || null, notes: editNotes || null }, token);
+    setConditions(conditions.map(c => c.id === editingId ? updated : c));
+    setEditingId(null);
+  };
+
   const handleDelete = async (id: number) => {
     await petsApi.deleteCondition(petId, id, token);
     setConditions(conditions.filter(c => c.id !== id));
+    setDeletingId(null);
   };
 
   return (
@@ -499,13 +519,43 @@ function ConditionsTab({ petId, token, conditions, setConditions }: {
       ) : (
         <ul className="divide-y">
           {conditions.map(c => (
-            <li key={c.id} className="py-3 flex justify-between items-start">
-              <div>
-                <p className="font-medium">{c.name}</p>
-                {c.severity && <span className="text-sm text-gray-500 capitalize">{c.severity}</span>}
-                {c.notes && <p className="text-sm text-gray-600 mt-1">{c.notes}</p>}
-              </div>
-              <button onClick={() => handleDelete(c.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
+            <li key={c.id} className="py-3">
+              {editingId === c.id ? (
+                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                  <input type="text" placeholder="Condition name *" value={editName} onChange={e => setEditName(e.target.value)} className="input" />
+                  <select value={editSeverity} onChange={e => setEditSeverity(e.target.value)} className="input">
+                    <option value="">Severity (optional)</option>
+                    <option value="mild">Mild</option>
+                    <option value="moderate">Moderate</option>
+                    <option value="severe">Severe</option>
+                  </select>
+                  <textarea placeholder="Notes (optional)" value={editNotes} onChange={e => setEditNotes(e.target.value)} className="input" rows={2} />
+                  <div className="flex gap-2">
+                    <button onClick={handleSaveEdit} className="btn-primary text-sm">Save</button>
+                    <button onClick={() => setEditingId(null)} className="btn-secondary text-sm">Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-medium">{c.name}</p>
+                    {c.severity && <span className="text-sm text-gray-500 capitalize">{c.severity}</span>}
+                    {c.notes && <p className="text-sm text-gray-600 mt-1">{c.notes}</p>}
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => startEdit(c)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
+                    {deletingId === c.id ? (
+                      <>
+                        <span className="text-sm text-gray-500">Sure?</span>
+                        <button onClick={() => handleDelete(c.id)} className="text-red-600 hover:text-red-800 text-sm font-semibold">Yes</button>
+                        <button onClick={() => setDeletingId(null)} className="text-gray-600 hover:text-gray-800 text-sm">No</button>
+                      </>
+                    ) : (
+                      <button onClick={() => setDeletingId(c.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                    )}
+                  </div>
+                </div>
+              )}
             </li>
           ))}
         </ul>
@@ -525,6 +575,11 @@ function AllergiesTab({ petId, token, allergies, setAllergies }: {
   const [allergen, setAllergen] = useState('');
   const [reaction, setReaction] = useState('');
   const [severity, setSeverity] = useState('');
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editAllergen, setEditAllergen] = useState('');
+  const [editReaction, setEditReaction] = useState('');
+  const [editSeverity, setEditSeverity] = useState('');
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const handleAdd = async () => {
     if (!allergen.trim()) return;
@@ -534,9 +589,24 @@ function AllergiesTab({ petId, token, allergies, setAllergies }: {
     setAllergen(''); setReaction(''); setSeverity('');
   };
 
+  const startEdit = (a: PetAllergy) => {
+    setEditingId(a.id);
+    setEditAllergen(a.allergen);
+    setEditReaction(a.reaction || '');
+    setEditSeverity(a.severity || '');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingId || !editAllergen.trim()) return;
+    const updated = await petsApi.updateAllergy(petId, editingId, { allergen: editAllergen, reaction: editReaction || null, severity: editSeverity || null }, token);
+    setAllergies(allergies.map(a => a.id === editingId ? updated : a));
+    setEditingId(null);
+  };
+
   const handleDelete = async (id: number) => {
     await petsApi.deleteAllergy(petId, id, token);
     setAllergies(allergies.filter(a => a.id !== id));
+    setDeletingId(null);
   };
 
   return (
@@ -569,13 +639,44 @@ function AllergiesTab({ petId, token, allergies, setAllergies }: {
       ) : (
         <ul className="divide-y">
           {allergies.map(a => (
-            <li key={a.id} className="py-3 flex justify-between items-start">
-              <div>
-                <p className="font-medium">{a.allergen}</p>
-                {a.severity && <span className={`text-sm capitalize ${a.severity === 'life-threatening' ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>{a.severity}</span>}
-                {a.reaction && <p className="text-sm text-gray-600 mt-1">Reaction: {a.reaction}</p>}
-              </div>
-              <button onClick={() => handleDelete(a.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
+            <li key={a.id} className="py-3">
+              {editingId === a.id ? (
+                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                  <input type="text" placeholder="Allergen *" value={editAllergen} onChange={e => setEditAllergen(e.target.value)} className="input" />
+                  <input type="text" placeholder="Reaction (optional)" value={editReaction} onChange={e => setEditReaction(e.target.value)} className="input" />
+                  <select value={editSeverity} onChange={e => setEditSeverity(e.target.value)} className="input">
+                    <option value="">Severity (optional)</option>
+                    <option value="mild">Mild</option>
+                    <option value="moderate">Moderate</option>
+                    <option value="severe">Severe</option>
+                    <option value="life-threatening">Life-threatening</option>
+                  </select>
+                  <div className="flex gap-2">
+                    <button onClick={handleSaveEdit} className="btn-primary text-sm">Save</button>
+                    <button onClick={() => setEditingId(null)} className="btn-secondary text-sm">Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-medium">{a.allergen}</p>
+                    {a.severity && <span className={`text-sm capitalize ${a.severity === 'life-threatening' ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>{a.severity}</span>}
+                    {a.reaction && <p className="text-sm text-gray-600 mt-1">Reaction: {a.reaction}</p>}
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => startEdit(a)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
+                    {deletingId === a.id ? (
+                      <>
+                        <span className="text-sm text-gray-500">Sure?</span>
+                        <button onClick={() => handleDelete(a.id)} className="text-red-600 hover:text-red-800 text-sm font-semibold">Yes</button>
+                        <button onClick={() => setDeletingId(null)} className="text-gray-600 hover:text-gray-800 text-sm">No</button>
+                      </>
+                    ) : (
+                      <button onClick={() => setDeletingId(a.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                    )}
+                  </div>
+                </div>
+              )}
             </li>
           ))}
         </ul>
@@ -595,6 +696,11 @@ function MedicationsTab({ petId, token, medications, setMedications }: {
   const [name, setName] = useState('');
   const [dosage, setDosage] = useState('');
   const [frequency, setFrequency] = useState('');
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editDosage, setEditDosage] = useState('');
+  const [editFrequency, setEditFrequency] = useState('');
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const handleAdd = async () => {
     if (!name.trim()) return;
@@ -607,6 +713,20 @@ function MedicationsTab({ petId, token, medications, setMedications }: {
     setName(''); setDosage(''); setFrequency('');
   };
 
+  const startEdit = (m: PetMedication) => {
+    setEditingId(m.id);
+    setEditName(m.name);
+    setEditDosage(m.dosage || '');
+    setEditFrequency(m.frequency || '');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingId || !editName.trim()) return;
+    const updated = await petsApi.updateMedication(petId, editingId, { name: editName, dosage: editDosage || null, frequency: editFrequency || null }, token);
+    setMedications(medications.map(m => m.id === editingId ? updated : m));
+    setEditingId(null);
+  };
+
   const handleToggleActive = async (med: PetMedication) => {
     const updated = await petsApi.updateMedication(petId, med.id, { is_active: !med.is_active }, token);
     setMedications(medications.map(m => m.id === med.id ? updated : m));
@@ -615,10 +735,50 @@ function MedicationsTab({ petId, token, medications, setMedications }: {
   const handleDelete = async (id: number) => {
     await petsApi.deleteMedication(petId, id, token);
     setMedications(medications.filter(m => m.id !== id));
+    setDeletingId(null);
   };
 
   const active = medications.filter(m => m.is_active);
   const inactive = medications.filter(m => !m.is_active);
+
+  const renderMedRow = (m: PetMedication, isInactive?: boolean) => (
+    <li key={m.id} className="p-3">
+      {editingId === m.id ? (
+        <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+          <input type="text" placeholder="Medication name *" value={editName} onChange={e => setEditName(e.target.value)} className="input" />
+          <input type="text" placeholder="Dosage (e.g., 10mg)" value={editDosage} onChange={e => setEditDosage(e.target.value)} className="input" />
+          <input type="text" placeholder="Frequency (e.g., twice daily)" value={editFrequency} onChange={e => setEditFrequency(e.target.value)} className="input" />
+          <div className="flex gap-2">
+            <button onClick={handleSaveEdit} className="btn-primary text-sm">Save</button>
+            <button onClick={() => setEditingId(null)} className="btn-secondary text-sm">Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex justify-between items-start">
+          <div>
+            <p className={`font-medium ${isInactive ? 'line-through' : ''}`}>{m.name}</p>
+            {m.dosage && <span className="text-sm text-gray-500">{m.dosage}</span>}
+            {m.frequency && <span className="text-sm text-gray-500"> - {m.frequency}</span>}
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => startEdit(m)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
+            <button onClick={() => handleToggleActive(m)} className={`text-sm ${isInactive ? 'text-primary-600 hover:text-primary-800' : 'text-gray-600 hover:text-gray-800'}`}>
+              {isInactive ? 'Reactivate' : 'Discontinue'}
+            </button>
+            {deletingId === m.id ? (
+              <>
+                <span className="text-sm text-gray-500">Sure?</span>
+                <button onClick={() => handleDelete(m.id)} className="text-red-600 hover:text-red-800 text-sm font-semibold">Yes</button>
+                <button onClick={() => setDeletingId(null)} className="text-gray-600 hover:text-gray-800 text-sm">No</button>
+              </>
+            ) : (
+              <button onClick={() => setDeletingId(m.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
+            )}
+          </div>
+        </div>
+      )}
+    </li>
+  );
 
   return (
     <div>
@@ -643,19 +803,7 @@ function MedicationsTab({ petId, token, medications, setMedications }: {
         <div className="mb-6">
           <h4 className="text-sm font-medium text-gray-500 mb-2">Active Medications</h4>
           <ul className="divide-y border rounded-lg">
-            {active.map(m => (
-              <li key={m.id} className="p-3 flex justify-between items-start">
-                <div>
-                  <p className="font-medium">{m.name}</p>
-                  {m.dosage && <span className="text-sm text-gray-500">{m.dosage}</span>}
-                  {m.frequency && <span className="text-sm text-gray-500"> - {m.frequency}</span>}
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => handleToggleActive(m)} className="text-gray-600 hover:text-gray-800 text-sm">Discontinue</button>
-                  <button onClick={() => handleDelete(m.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
-                </div>
-              </li>
-            ))}
+            {active.map(m => renderMedRow(m))}
           </ul>
         </div>
       )}
@@ -664,18 +812,7 @@ function MedicationsTab({ petId, token, medications, setMedications }: {
         <div>
           <h4 className="text-sm font-medium text-gray-500 mb-2">Past Medications</h4>
           <ul className="divide-y border rounded-lg opacity-60">
-            {inactive.map(m => (
-              <li key={m.id} className="p-3 flex justify-between items-start">
-                <div>
-                  <p className="font-medium line-through">{m.name}</p>
-                  {m.dosage && <span className="text-sm text-gray-500">{m.dosage}</span>}
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => handleToggleActive(m)} className="text-primary-600 hover:text-primary-800 text-sm">Reactivate</button>
-                  <button onClick={() => handleDelete(m.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
-                </div>
-              </li>
-            ))}
+            {inactive.map(m => renderMedRow(m, true))}
           </ul>
         </div>
       )}
@@ -698,6 +835,11 @@ function VaccinationsTab({ petId, token, vaccinations, setVaccinations }: {
   const [name, setName] = useState('');
   const [adminDate, setAdminDate] = useState('');
   const [expDate, setExpDate] = useState('');
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editAdminDate, setEditAdminDate] = useState('');
+  const [editExpDate, setEditExpDate] = useState('');
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const handleAdd = async () => {
     if (!name.trim() || !adminDate) return;
@@ -711,9 +853,26 @@ function VaccinationsTab({ petId, token, vaccinations, setVaccinations }: {
     setName(''); setAdminDate(''); setExpDate('');
   };
 
+  const toDateInput = (d: string | null) => d ? d.split('T')[0] : '';
+
+  const startEdit = (v: PetVaccination) => {
+    setEditingId(v.id);
+    setEditName(v.name);
+    setEditAdminDate(toDateInput(v.administered_date));
+    setEditExpDate(toDateInput(v.expiration_date));
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingId || !editName.trim() || !editAdminDate) return;
+    const updated = await petsApi.updateVaccination(petId, editingId, { name: editName, administered_date: editAdminDate, expiration_date: editExpDate || null }, token);
+    setVaccinations(vaccinations.map(v => v.id === editingId ? updated : v));
+    setEditingId(null);
+  };
+
   const handleDelete = async (id: number) => {
     await petsApi.deleteVaccination(petId, id, token);
     setVaccinations(vaccinations.filter(v => v.id !== id));
+    setDeletingId(null);
   };
 
   const isExpired = (expDate: string | null) => {
@@ -753,19 +912,52 @@ function VaccinationsTab({ petId, token, vaccinations, setVaccinations }: {
       ) : (
         <ul className="divide-y">
           {vaccinations.map(v => (
-            <li key={v.id} className="py-3 flex justify-between items-start">
-              <div>
-                <p className="font-medium">{v.name}</p>
-                <p className="text-sm text-gray-500">
-                  Administered: {new Date(v.administered_date.split('T')[0] + 'T00:00:00').toLocaleDateString()}
-                </p>
-                {v.expiration_date && (
-                  <p className={`text-sm ${isExpired(v.expiration_date) ? 'text-red-600' : 'text-gray-500'}`}>
-                    {isExpired(v.expiration_date) ? 'Expired' : 'Expires'}: {new Date(v.expiration_date.split('T')[0] + 'T00:00:00').toLocaleDateString()}
-                  </p>
-                )}
-              </div>
-              <button onClick={() => handleDelete(v.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
+            <li key={v.id} className="py-3">
+              {editingId === v.id ? (
+                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                  <input type="text" placeholder="Vaccination name *" value={editName} onChange={e => setEditName(e.target.value)} className="input" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-sm text-gray-600">Date administered *</label>
+                      <input type="date" value={editAdminDate} onChange={e => setEditAdminDate(e.target.value)} className="input" />
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600">Expiration date</label>
+                      <input type="date" value={editExpDate} onChange={e => setEditExpDate(e.target.value)} className="input" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={handleSaveEdit} className="btn-primary text-sm">Save</button>
+                    <button onClick={() => setEditingId(null)} className="btn-secondary text-sm">Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-medium">{v.name}</p>
+                    <p className="text-sm text-gray-500">
+                      Administered: {new Date(v.administered_date.split('T')[0] + 'T00:00:00').toLocaleDateString()}
+                    </p>
+                    {v.expiration_date && (
+                      <p className={`text-sm ${isExpired(v.expiration_date) ? 'text-red-600' : 'text-gray-500'}`}>
+                        {isExpired(v.expiration_date) ? 'Expired' : 'Expires'}: {new Date(v.expiration_date.split('T')[0] + 'T00:00:00').toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => startEdit(v)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
+                    {deletingId === v.id ? (
+                      <>
+                        <span className="text-sm text-gray-500">Sure?</span>
+                        <button onClick={() => handleDelete(v.id)} className="text-red-600 hover:text-red-800 text-sm font-semibold">Yes</button>
+                        <button onClick={() => setDeletingId(null)} className="text-gray-600 hover:text-gray-800 text-sm">No</button>
+                      </>
+                    ) : (
+                      <button onClick={() => setDeletingId(v.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                    )}
+                  </div>
+                </div>
+              )}
             </li>
           ))}
         </ul>
@@ -785,6 +977,11 @@ function VetsTab({ petId, token, vets, setVets }: {
   const [clinicName, setClinicName] = useState('');
   const [vetName, setVetName] = useState('');
   const [phone, setPhone] = useState('');
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editClinicName, setEditClinicName] = useState('');
+  const [editVetName, setEditVetName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const handleAdd = async () => {
     if (!clinicName.trim()) return;
@@ -797,14 +994,28 @@ function VetsTab({ petId, token, vets, setVets }: {
     setClinicName(''); setVetName(''); setPhone('');
   };
 
+  const startEdit = (v: PetVet) => {
+    setEditingId(v.id);
+    setEditClinicName(v.clinic_name);
+    setEditVetName(v.vet_name || '');
+    setEditPhone(v.phone || '');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingId || !editClinicName.trim()) return;
+    const updated = await petsApi.updateVet(petId, editingId, { clinic_name: editClinicName, vet_name: editVetName || null, phone: editPhone || null }, token);
+    setVets(vets.map(v => v.id === editingId ? updated : v));
+    setEditingId(null);
+  };
+
   const handleDelete = async (id: number) => {
     await petsApi.deleteVet(petId, id, token);
     setVets(vets.filter(v => v.id !== id));
+    setDeletingId(null);
   };
 
   const handleSetPrimary = async (vetId: number) => {
     await petsApi.setPrimaryVet(petId, vetId, token);
-    // Update local state: unset all as primary, then set the selected one
     setVets(vets.map(v => ({ ...v, is_primary: v.id === vetId })));
   };
 
@@ -832,23 +1043,41 @@ function VetsTab({ petId, token, vets, setVets }: {
       ) : (
         <ul className="divide-y">
           {vets.map(v => (
-            <li key={v.id} className="py-3 flex justify-between items-start">
-              <div>
-                <p className="font-medium">{v.clinic_name} {v.is_primary && <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded">Primary</span>}</p>
-                {v.vet_name && <p className="text-sm text-gray-600">Dr. {v.vet_name}</p>}
-                {v.phone && <p className="text-sm text-gray-500">{v.phone}</p>}
-              </div>
-              <div className="flex gap-2">
-                {!v.is_primary && (
-                  <button
-                    onClick={() => handleSetPrimary(v.id)}
-                    className="text-primary-600 hover:text-primary-800 text-sm"
-                  >
-                    Set as Primary
-                  </button>
-                )}
-                <button onClick={() => handleDelete(v.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
-              </div>
+            <li key={v.id} className="py-3">
+              {editingId === v.id ? (
+                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                  <input type="text" placeholder="Clinic name *" value={editClinicName} onChange={e => setEditClinicName(e.target.value)} className="input" />
+                  <input type="text" placeholder="Vet name" value={editVetName} onChange={e => setEditVetName(e.target.value)} className="input" />
+                  <input type="tel" placeholder="Phone number" value={editPhone} onChange={e => setEditPhone(e.target.value)} className="input" />
+                  <div className="flex gap-2">
+                    <button onClick={handleSaveEdit} className="btn-primary text-sm">Save</button>
+                    <button onClick={() => setEditingId(null)} className="btn-secondary text-sm">Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-medium">{v.clinic_name} {v.is_primary && <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded">Primary</span>}</p>
+                    {v.vet_name && <p className="text-sm text-gray-600">Dr. {v.vet_name}</p>}
+                    {v.phone && <p className="text-sm text-gray-500">{v.phone}</p>}
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => startEdit(v)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
+                    {!v.is_primary && (
+                      <button onClick={() => handleSetPrimary(v.id)} className="text-primary-600 hover:text-primary-800 text-sm">Set as Primary</button>
+                    )}
+                    {deletingId === v.id ? (
+                      <>
+                        <span className="text-sm text-gray-500">Sure?</span>
+                        <button onClick={() => handleDelete(v.id)} className="text-red-600 hover:text-red-800 text-sm font-semibold">Yes</button>
+                        <button onClick={() => setDeletingId(null)} className="text-gray-600 hover:text-gray-800 text-sm">No</button>
+                      </>
+                    ) : (
+                      <button onClick={() => setDeletingId(v.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                    )}
+                  </div>
+                </div>
+              )}
             </li>
           ))}
         </ul>
@@ -868,6 +1097,11 @@ function ContactsTab({ petId, token, contacts, setContacts }: {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [relationship, setRelationship] = useState('');
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editRelationship, setEditRelationship] = useState('');
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const handleAdd = async () => {
     if (!name.trim() || !phone.trim()) return;
@@ -879,9 +1113,24 @@ function ContactsTab({ petId, token, contacts, setContacts }: {
     setName(''); setPhone(''); setRelationship('');
   };
 
+  const startEdit = (c: PetEmergencyContact) => {
+    setEditingId(c.id);
+    setEditName(c.name);
+    setEditPhone(c.phone);
+    setEditRelationship(c.relationship || '');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingId || !editName.trim() || !editPhone.trim()) return;
+    const updated = await petsApi.updateEmergencyContact(petId, editingId, { name: editName, phone: editPhone, relationship: editRelationship || null }, token);
+    setContacts(contacts.map(c => c.id === editingId ? updated : c));
+    setEditingId(null);
+  };
+
   const handleDelete = async (id: number) => {
     await petsApi.deleteEmergencyContact(petId, id, token);
     setContacts(contacts.filter(c => c.id !== id));
+    setDeletingId(null);
   };
 
   return (
@@ -908,13 +1157,38 @@ function ContactsTab({ petId, token, contacts, setContacts }: {
       ) : (
         <ul className="divide-y">
           {contacts.map(c => (
-            <li key={c.id} className="py-3 flex justify-between items-start">
-              <div>
-                <p className="font-medium">{c.name} {c.is_primary && <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded">Primary</span>}</p>
-                {c.relationship && <p className="text-sm text-gray-600">{c.relationship}</p>}
-                <p className="text-sm text-gray-500">{c.phone}</p>
-              </div>
-              <button onClick={() => handleDelete(c.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
+            <li key={c.id} className="py-3">
+              {editingId === c.id ? (
+                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                  <input type="text" placeholder="Name *" value={editName} onChange={e => setEditName(e.target.value)} className="input" />
+                  <input type="tel" placeholder="Phone *" value={editPhone} onChange={e => setEditPhone(e.target.value)} className="input" />
+                  <input type="text" placeholder="Relationship (e.g., spouse, neighbor)" value={editRelationship} onChange={e => setEditRelationship(e.target.value)} className="input" />
+                  <div className="flex gap-2">
+                    <button onClick={handleSaveEdit} className="btn-primary text-sm">Save</button>
+                    <button onClick={() => setEditingId(null)} className="btn-secondary text-sm">Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-medium">{c.name} {c.is_primary && <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded">Primary</span>}</p>
+                    {c.relationship && <p className="text-sm text-gray-600">{c.relationship}</p>}
+                    <p className="text-sm text-gray-500">{c.phone}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => startEdit(c)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
+                    {deletingId === c.id ? (
+                      <>
+                        <span className="text-sm text-gray-500">Sure?</span>
+                        <button onClick={() => handleDelete(c.id)} className="text-red-600 hover:text-red-800 text-sm font-semibold">Yes</button>
+                        <button onClick={() => setDeletingId(null)} className="text-gray-600 hover:text-gray-800 text-sm">No</button>
+                      </>
+                    ) : (
+                      <button onClick={() => setDeletingId(c.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                    )}
+                  </div>
+                </div>
+              )}
             </li>
           ))}
         </ul>
