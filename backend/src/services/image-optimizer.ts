@@ -1,5 +1,6 @@
 import sharp from 'sharp';
 import path from 'path';
+import exifReader from 'exif-reader';
 
 const MAX_DIMENSION = 1920;
 const JPEG_QUALITY = 80;
@@ -90,6 +91,48 @@ export async function optimizeImage(
   pipeline = pipeline.jpeg({ quality: JPEG_QUALITY });
   const outputBuffer = await pipeline.toBuffer();
   return { buffer: outputBuffer, mimeType: 'image/jpeg', extension: '.jpg' };
+}
+
+export interface ImageMetadata {
+  dateTaken: string | null;
+  width: number | null;
+  height: number | null;
+}
+
+/**
+ * Extract image metadata (EXIF date, dimensions) from an image buffer.
+ */
+export async function extractImageMetadata(buffer: Buffer): Promise<ImageMetadata> {
+  try {
+    const metadata = await sharp(buffer).metadata();
+    let dateTaken: string | null = null;
+
+    if (metadata.exif) {
+      try {
+        const exif = exifReader(metadata.exif);
+        const dateOriginal: unknown = exif?.Photo?.DateTimeOriginal ?? exif?.Image?.DateTime;
+        if (dateOriginal instanceof Date) {
+          dateTaken = dateOriginal.toISOString();
+        } else if (typeof dateOriginal === 'string') {
+          // Image.DateTime may be a string like "2024:01:15 10:30:00"
+          const parsed = new Date(dateOriginal.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3'));
+          if (!isNaN(parsed.getTime())) {
+            dateTaken = parsed.toISOString();
+          }
+        }
+      } catch {
+        // EXIF parsing failed — not all images have valid EXIF
+      }
+    }
+
+    return {
+      dateTaken,
+      width: metadata.width ?? null,
+      height: metadata.height ?? null,
+    };
+  } catch {
+    return { dateTaken: null, width: null, height: null };
+  }
 }
 
 /**

@@ -1,6 +1,6 @@
 import { query, queryOne } from '../db/pool.js';
 
-export type DocumentUploadStatus = 'pending' | 'classifying' | 'processing' | 'completed' | 'failed';
+export type DocumentUploadStatus = 'pending' | 'classifying' | 'processing' | 'pending_review' | 'completed' | 'failed';
 export type DocumentType =
   | 'medication_label'
   | 'vet_visit_summary'
@@ -32,6 +32,10 @@ export interface DocumentUpload {
   processing_started_at: Date | null;
   processing_completed_at: Date | null;
   error_message: string | null;
+  user_tag: string | null;
+  user_description: string | null;
+  date_taken: Date | null;
+  body_area: string | null;
   created_at: Date;
 }
 
@@ -74,7 +78,13 @@ export async function getDocumentUploadById(id: number): Promise<DocumentUpload 
   );
 }
 
-export async function getDocumentUploadsByPetId(petId: number): Promise<DocumentUpload[]> {
+export async function getDocumentUploadsByPetId(petId: number, mediaType?: MediaType): Promise<DocumentUpload[]> {
+  if (mediaType) {
+    return query<DocumentUpload>(
+      'SELECT * FROM document_uploads WHERE pet_id = $1 AND media_type = $2 ORDER BY created_at DESC',
+      [petId, mediaType]
+    );
+  }
   return query<DocumentUpload>(
     'SELECT * FROM document_uploads WHERE pet_id = $1 ORDER BY created_at DESC',
     [petId]
@@ -148,6 +158,28 @@ export async function updateDocumentUploadFilename(
   return queryOne<DocumentUpload>(
     'UPDATE document_uploads SET original_filename = $1 WHERE id = $2 AND pet_id = $3 RETURNING *',
     [newFilename, id, petId]
+  );
+}
+
+export async function updateDocumentImageMetadata(
+  id: number,
+  data: {
+    userTag: string;
+    userDescription?: string | null;
+    dateTaken?: string | null;
+    bodyArea?: string | null;
+  }
+): Promise<DocumentUpload | null> {
+  return queryOne<DocumentUpload>(
+    `UPDATE document_uploads SET
+      user_tag = $2,
+      user_description = $3,
+      date_taken = $4,
+      body_area = $5,
+      status = 'completed',
+      processing_completed_at = CURRENT_TIMESTAMP
+    WHERE id = $1 RETURNING *`,
+    [id, data.userTag, data.userDescription || null, data.dateTaken || null, data.bodyArea || null]
   );
 }
 

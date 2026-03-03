@@ -9,13 +9,15 @@ import {
 import { DocumentUploadZone } from './DocumentUploadZone';
 import { ClassificationConfirmation } from './ClassificationConfirmation';
 import { DocumentExtractionReview } from './DocumentExtractionReview';
+import { ImageReviewForm } from './ImageReviewForm';
 
 interface DocumentImportSectionProps {
   petId: number;
   onImportComplete?: () => void;
 }
 
-type ViewState = 'upload' | 'classifying' | 'confirm' | 'processing' | 'review';
+type ViewState = 'upload' | 'classifying' | 'confirm' | 'processing' | 'review' | 'image_review';
+type FilterType = 'all' | 'pdf' | 'image';
 
 interface UploadState {
   upload: DocumentUpload;
@@ -29,6 +31,8 @@ export function DocumentImportSection({ petId, onImportComplete }: DocumentImpor
   const [uploads, setUploads] = useState<DocumentUpload[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exifDateTaken, setExifDateTaken] = useState<string | null>(null);
+  const [filter, setFilter] = useState<FilterType>('all');
 
   useEffect(() => {
     loadUploads();
@@ -50,25 +54,33 @@ export function DocumentImportSection({ petId, onImportComplete }: DocumentImpor
     }
   };
 
-  const handleUploadComplete = async (upload: DocumentUpload) => {
-    setCurrentUpload({ upload });
-    setViewState('classifying');
+  const handleUploadComplete = async (result: any) => {
     setError(null);
 
-    try {
-      // Classify the document
-      const result = await documentsApi.classifyUpload(petId, upload.id, token!);
-      setCurrentUpload({
-        upload: result.upload,
-        classification: result.classification,
-      });
-      setViewState('confirm');
-    } catch (err: any) {
-      setError(err.message || 'Failed to classify document');
-      setViewState('upload');
-      setCurrentUpload(null);
-      // Refresh uploads list to show the failed upload
-      loadUploads();
+    if (result.media_type === 'image') {
+      // Image: skip AI, go to image review
+      setCurrentUpload({ upload: result.upload });
+      setExifDateTaken(result.exif_date_taken || null);
+      setViewState('image_review');
+    } else {
+      // PDF: use upload_id from response to get the upload object
+      const upload = result.upload || result;
+      setCurrentUpload({ upload });
+      setViewState('classifying');
+
+      try {
+        const classifyResult = await documentsApi.classifyUpload(petId, upload.id, token!);
+        setCurrentUpload({
+          upload: classifyResult.upload,
+          classification: classifyResult.classification,
+        });
+        setViewState('confirm');
+      } catch (err: any) {
+        setError(err.message || 'Failed to classify document');
+        setViewState('upload');
+        setCurrentUpload(null);
+        loadUploads();
+      }
     }
   };
 
@@ -121,7 +133,11 @@ export function DocumentImportSection({ petId, onImportComplete }: DocumentImpor
   };
 
   const handleUploadSelect = (upload: DocumentUpload) => {
-    if (upload.status === 'completed') {
+    if (upload.file_type === 'image' && (upload.status === 'pending_review' || upload.status === 'completed')) {
+      setCurrentUpload({ upload });
+      setExifDateTaken(null);
+      setViewState('image_review');
+    } else if (upload.status === 'completed') {
       setCurrentUpload({ upload });
       setViewState('review');
     }
@@ -167,6 +183,24 @@ export function DocumentImportSection({ petId, onImportComplete }: DocumentImpor
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
         </svg>
       </div>
+    );
+  }
+
+  // Image review state
+  if (viewState === 'image_review' && currentUpload) {
+    return (
+      <ImageReviewForm
+        petId={petId}
+        upload={currentUpload.upload}
+        exifDateTaken={exifDateTaken}
+        onSave={() => {
+          setCurrentUpload(null);
+          setViewState('upload');
+          loadUploads();
+          onImportComplete?.();
+        }}
+        onCancel={handleBackToUploads}
+      />
     );
   }
 
@@ -263,17 +297,36 @@ export function DocumentImportSection({ petId, onImportComplete }: DocumentImpor
       {/* Previous uploads */}
       {uploads.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium text-gray-900 mb-3">Previous Uploads</h4>
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-medium text-gray-900">Previous Uploads</h4>
+            <div className="flex gap-1">
+              {(['all', 'pdf', 'image'] as FilterType[]).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+                    filter === f
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {f === 'all' ? 'All' : f === 'pdf' ? 'Documents' : 'Images'}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="space-y-2">
-            {uploads.map((upload) => (
-              <DocumentUploadItem
-                key={upload.id}
-                upload={upload}
-                onSelect={() => handleUploadSelect(upload)}
-                onDelete={() => handleUploadDeleted(upload.id)}
-                onProcess={() => handleProcessUpload(upload)}
-              />
-            ))}
+            {uploads
+              .filter((u) => filter === 'all' || u.file_type === filter)
+              .map((upload) => (
+                <DocumentUploadItem
+                  key={upload.id}
+                  upload={upload}
+                  onSelect={() => handleUploadSelect(upload)}
+                  onDelete={() => handleUploadDeleted(upload.id)}
+                  onProcess={() => handleProcessUpload(upload)}
+                />
+              ))}
           </div>
         </div>
       )}
@@ -310,6 +363,7 @@ function DocumentUploadItem({
     classifying: 'bg-blue-100 text-blue-700',
     classified: 'bg-yellow-100 text-yellow-700',
     processing: 'bg-blue-100 text-blue-700',
+    pending_review: 'bg-purple-100 text-purple-700',
     completed: 'bg-green-100 text-green-700',
     failed: 'bg-red-100 text-red-700',
   };
@@ -319,11 +373,12 @@ function DocumentUploadItem({
     classifying: 'Analyzing...',
     classified: 'Ready to import',
     processing: 'Processing...',
+    pending_review: 'Needs Review',
     completed: 'Completed',
     failed: 'Failed',
   };
 
-  const canReview = upload.status === 'completed';
+  const canReview = upload.status === 'completed' || upload.status === 'pending_review';
   const canProcess = upload.status === 'pending' || upload.status === 'classified';
 
   const handleStartEdit = () => {
@@ -454,7 +509,10 @@ function DocumentUploadItem({
             )}
             <p className="text-xs text-gray-500">
               {new Date(upload.created_at).toLocaleDateString()}
-              {upload.detected_document_type && (
+              {upload.user_tag && (
+                <> &middot; {upload.user_tag}</>
+              )}
+              {!upload.user_tag && upload.detected_document_type && (
                 <> &middot; {upload.detected_document_type.replace(/_/g, ' ')}</>
               )}
             </p>
