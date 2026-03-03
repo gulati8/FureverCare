@@ -5,6 +5,7 @@ import { requireFeature } from '../middleware/subscription.js';
 import { storage } from '../services/storage.js';
 import { userHasPetAccess, userCanEditPet } from '../models/pet-owners.js';
 import { findPetById } from '../models/pet.js';
+import { optimizeImage, replaceExtension, isOptimizableImage } from '../services/image-optimizer.js';
 import {
   createDocumentUpload,
   getDocumentUploadById,
@@ -70,12 +71,28 @@ router.post('/:petId/documents/upload', authenticate, requireFeature('upload'), 
       return;
     }
 
+    // Optimize images before storage (skip PDFs)
+    let fileBuffer = req.file.buffer;
+    let fileMimeType = req.file.mimetype;
+    let fileName = req.file.originalname;
+    let fileSize = req.file.size;
+
+    if (isOptimizableImage(req.file.mimetype)) {
+      const optimized = await optimizeImage(req.file.buffer, req.file.mimetype);
+      fileBuffer = optimized.buffer;
+      fileSize = optimized.buffer.length;
+      if (optimized.mimeType !== req.file.mimetype) {
+        fileName = replaceExtension(req.file.originalname, optimized.extension);
+      }
+      fileMimeType = optimized.mimeType;
+    }
+
     // Upload to storage
-    const uploadResult = await storage.upload(req.file.buffer, {
+    const uploadResult = await storage.upload(fileBuffer, {
       type: 'documents',
       petId,
-      originalFilename: req.file.originalname,
-      mimeType: req.file.mimetype,
+      originalFilename: fileName,
+      mimeType: fileMimeType,
     });
 
     // Create document upload record
@@ -85,9 +102,9 @@ router.post('/:petId/documents/upload', authenticate, requireFeature('upload'), 
       filename: uploadResult.key,
       originalFilename: req.file.originalname,
       filePath: uploadResult.filePath,
-      fileSize: req.file.size,
-      mimeType: req.file.mimetype,
-      mediaType: getMediaTypeFromMime(req.file.mimetype),
+      fileSize,
+      mimeType: fileMimeType,
+      mediaType: getMediaTypeFromMime(fileMimeType),
     });
 
     // Process the document (classify and extract)

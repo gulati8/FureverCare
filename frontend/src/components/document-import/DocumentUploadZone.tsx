@@ -14,6 +14,15 @@ const ACCEPTED_TYPES = [
   'image/png',
   'image/webp',
   'image/gif',
+  'image/heic',
+  'image/heif',
+  'image/tiff',
+  'image/bmp',
+  'image/x-ms-bmp',
+];
+const ACCEPTED_EXTENSIONS = [
+  '.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp',
+  '.heic', '.heif', '.tiff', '.tif', '.bmp',
 ];
 
 export function DocumentUploadZone({ petId, onUploadComplete, disabled }: DocumentUploadZoneProps) {
@@ -43,10 +52,13 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
     if (disabled) return;
 
     const files = Array.from(e.dataTransfer.files);
-    const validFile = files.find(f => ACCEPTED_TYPES.includes(f.type));
+    const validFile = files.find(f => {
+      const ext = '.' + f.name.split('.').pop()?.toLowerCase();
+      return ACCEPTED_TYPES.includes(f.type) || ACCEPTED_EXTENSIONS.includes(ext);
+    });
 
     if (!validFile) {
-      setError('Please drop a PDF or image file (JPEG, PNG, WebP, GIF)');
+      setError('Please drop a PDF or image file (JPEG, PNG, WebP, GIF, HEIC, TIFF, or BMP)');
       return;
     }
 
@@ -57,8 +69,9 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!ACCEPTED_TYPES.includes(file.type)) {
-      setError('Please select a PDF or image file (JPEG, PNG, WebP, GIF)');
+    const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+    if (!ACCEPTED_TYPES.includes(file.type) && !ACCEPTED_EXTENSIONS.includes(ext)) {
+      setError('Please select a PDF or image file (JPEG, PNG, WebP, GIF, HEIC, TIFF, or BMP)');
       return;
     }
 
@@ -69,8 +82,9 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
   const uploadFile = async (file: File) => {
     if (!token) return;
 
-    // Show preview for images
-    if (file.type.startsWith('image/')) {
+    // Show preview for images (skip HEIC/TIFF/BMP which browsers can't display)
+    const nonPreviewable = ['image/heic', 'image/heif', 'image/tiff', 'image/bmp', 'image/x-ms-bmp'];
+    if (file.type.startsWith('image/') && !nonPreviewable.includes(file.type)) {
       const reader = new FileReader();
       reader.onload = (e) => {
         setPreviewUrl(e.target?.result as string);
@@ -154,7 +168,7 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
                 <span>Upload a document</span>
                 <input
                   type="file"
-                  accept=".pdf,image/jpeg,image/png,image/webp,image/gif"
+                  accept=".pdf,image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,image/tiff,image/bmp,.heic,.heif,.tiff,.tif,.bmp"
                   onChange={handleFileSelect}
                   className="sr-only"
                   disabled={isDisabled}
@@ -163,7 +177,7 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
               {' '}or drag and drop
             </p>
             <p className="mt-1 text-xs text-gray-500">
-              PDFs and images (JPEG, PNG, WebP, GIF) up to 20MB
+              PDFs and images (JPEG, PNG, WebP, GIF, HEIC, TIFF, BMP) up to 20MB
             </p>
             <p className="mt-2 text-xs text-gray-400">
               We'll automatically detect what type of document it is

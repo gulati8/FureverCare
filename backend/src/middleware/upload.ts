@@ -4,13 +4,14 @@ import { config } from '../config/index.js';
 // Use memory storage so we can pass buffer to storage adapter
 const memoryStorage = multer.memoryStorage();
 
-// File filter for images only
+// File filter for images only (uses config for allowed types)
 const imageFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-  if (allowedTypes.includes(file.mimetype)) {
+  if (config.imageUpload.allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.'));
+    cb(new Error(
+      'Invalid file type. Supported image formats: JPEG, PNG, GIF, WebP, HEIC, TIFF, and BMP.'
+    ));
   }
 };
 
@@ -23,28 +24,23 @@ const pdfFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCal
   }
 };
 
-// File filter for documents (PDFs + images)
+// File filter for documents (PDFs + images, uses config)
 const documentFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  const allowedTypes = [
-    'application/pdf',
-    'image/jpeg',
-    'image/png',
-    'image/webp',
-    'image/gif',
-  ];
-  if (allowedTypes.includes(file.mimetype)) {
+  if (config.documentUpload.allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only PDF, JPEG, PNG, WebP, and GIF files are allowed.'));
+    cb(new Error(
+      'Invalid file type. Supported formats: PDF, JPEG, PNG, WebP, GIF, HEIC, TIFF, and BMP.'
+    ));
   }
 };
 
-// Pet photo upload - 5MB, images only
+// Pet photo upload - 10MB, images only
 export const uploadPhoto = multer({
   storage: memoryStorage,
   fileFilter: imageFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB
+    fileSize: config.imageUpload.maxSizeMB * 1024 * 1024,
   },
 });
 

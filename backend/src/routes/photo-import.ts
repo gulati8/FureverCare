@@ -4,6 +4,7 @@ import { uploadImage } from '../middleware/upload.js';
 import { storage } from '../services/storage.js';
 import { userHasPetAccess, userCanEditPet } from '../models/pet-owners.js';
 import { findPetById } from '../models/pet.js';
+import { optimizeImage, replaceExtension, isOptimizableImage } from '../services/image-optimizer.js';
 import {
   createImageUpload,
   getImageUploadById,
@@ -57,12 +58,18 @@ router.post('/:petId/photo-import/upload', authenticate, pdfUploadRateLimit, upl
       return;
     }
 
+    // Optimize image before storage (resize, compress, convert HEIC/TIFF/BMP to JPEG)
+    const optimized = await optimizeImage(req.file.buffer, req.file.mimetype);
+    const filename = optimized.mimeType !== req.file.mimetype
+      ? replaceExtension(req.file.originalname, optimized.extension)
+      : req.file.originalname;
+
     // Upload to storage
-    const uploadResult = await storage.upload(req.file.buffer, {
+    const uploadResult = await storage.upload(optimized.buffer, {
       type: 'images',
       petId,
-      originalFilename: req.file.originalname,
-      mimeType: req.file.mimetype,
+      originalFilename: filename,
+      mimeType: optimized.mimeType,
     });
 
     // Create image upload record
@@ -72,8 +79,8 @@ router.post('/:petId/photo-import/upload', authenticate, pdfUploadRateLimit, upl
       filename: uploadResult.key,
       originalFilename: req.file.originalname,
       filePath: uploadResult.filePath,
-      fileSize: req.file.size,
-      mimeType: req.file.mimetype,
+      fileSize: optimized.buffer.length,
+      mimeType: optimized.mimeType,
       documentType: req.body.documentType,
     });
 

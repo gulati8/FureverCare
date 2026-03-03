@@ -3,6 +3,7 @@ import { authenticate, AuthRequest } from '../middleware/auth.js';
 import { uploadPhoto } from '../middleware/upload.js';
 import { storage } from '../services/storage.js';
 import { findPetById, updatePet } from '../models/pet.js';
+import { optimizeImage, replaceExtension, isOptimizableImage } from '../services/image-optimizer.js';
 
 const router = Router();
 
@@ -39,12 +40,18 @@ router.post('/pet/:petId/photo', authenticate, uploadPhoto.single('photo'), asyn
       }
     }
 
-    // Upload new photo using storage adapter
-    const result = await storage.upload(req.file.buffer, {
+    // Optimize image before storage (resize, compress, convert HEIC/TIFF/BMP to JPEG)
+    const optimized = await optimizeImage(req.file.buffer, req.file.mimetype);
+    const filename = optimized.mimeType !== req.file.mimetype
+      ? replaceExtension(req.file.originalname, optimized.extension)
+      : req.file.originalname;
+
+    // Upload optimized photo using storage adapter
+    const result = await storage.upload(optimized.buffer, {
       type: 'photos',
       petId,
-      originalFilename: req.file.originalname,
-      mimeType: req.file.mimetype,
+      originalFilename: filename,
+      mimeType: optimized.mimeType,
     });
 
     // Update pet with new photo URL
