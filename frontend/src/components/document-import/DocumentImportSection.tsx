@@ -372,11 +372,8 @@ function DocumentUploadItem({
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <div className="flex-shrink-0 w-10 h-10 rounded flex items-center justify-center overflow-hidden">
             {upload.file_type === 'pdf' ? (
-              <div className="w-10 h-10 bg-red-100 rounded flex flex-col items-center justify-center">
-                <svg className="h-5 w-5 text-red-500" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 2l5 5h-5V4zM6 20V4h5v7h7v9H6z" />
-                </svg>
-                <span className="text-[8px] font-bold text-red-600 leading-none -mt-0.5">PDF</span>
+              <div className="w-10 h-10 bg-red-600 rounded flex items-center justify-center">
+                <span className="text-[11px] font-bold text-white tracking-tight">PDF</span>
               </div>
             ) : !thumbnailError ? (
               <img
