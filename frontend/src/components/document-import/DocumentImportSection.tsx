@@ -302,8 +302,7 @@ function DocumentUploadItem({
   const [thumbnailError, setThumbnailError] = useState(false);
 
   const getDocumentUrl = (u: DocumentUpload) => {
-    if (u.file_path.startsWith('http')) return u.file_path;
-    return `${API_URL}/uploads/documents/${u.filename}`;
+    return `${API_URL}/api/pets/${u.pet_id}/documents/uploads/${u.id}/file`;
   };
 
   const statusColors: Record<string, string> = {

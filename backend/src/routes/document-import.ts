@@ -223,6 +223,32 @@ router.get('/:petId/documents/uploads/:id', authenticate, async (req: AuthReques
   }
 });
 
+// GET /api/pets/:petId/documents/uploads/:id/file - Redirect to the actual file
+router.get('/:petId/documents/uploads/:id/file', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const petId = parseInt(req.params.petId);
+    const uploadId = parseInt(req.params.id);
+
+    const hasAccess = await userHasPetAccess(petId, req.userId!);
+    if (!hasAccess) {
+      res.status(404).json({ error: 'Pet not found' });
+      return;
+    }
+
+    const upload = await getDocumentUploadById(uploadId);
+    if (!upload || upload.pet_id !== petId) {
+      res.status(404).json({ error: 'Upload not found' });
+      return;
+    }
+
+    const url = storage.getUrl(upload.filename, 'documents');
+    res.redirect(url);
+  } catch (error) {
+    console.error('Error serving document file:', error);
+    res.status(500).json({ error: 'Failed to serve file' });
+  }
+});
+
 // DELETE /api/pets/:petId/documents/uploads/:id - Delete a document upload
 router.delete('/:petId/documents/uploads/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
