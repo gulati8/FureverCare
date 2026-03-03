@@ -223,6 +223,30 @@ router.get('/:petId/documents/uploads/:id', authenticate, async (req: AuthReques
   }
 });
 
+// GET /api/pets/:petId/documents/uploads/:id/file - Serve the actual file
+// No auth required — files were already public via express.static, and
+// <img> tags / target="_blank" links cannot send Bearer tokens.
+router.get('/:petId/documents/uploads/:id/file', async (req, res) => {
+  try {
+    const petId = parseInt(req.params.petId);
+    const uploadId = parseInt(req.params.id);
+
+    const upload = await getDocumentUploadById(uploadId);
+    if (!upload || upload.pet_id !== petId) {
+      res.status(404).json({ error: 'Upload not found' });
+      return;
+    }
+
+    const buffer = await storage.download(upload.filename, 'documents');
+    res.set('Content-Type', upload.mime_type);
+    res.set('Content-Disposition', `inline; filename="${upload.original_filename}"`);
+    res.send(buffer);
+  } catch (error) {
+    console.error('Error serving document file:', error);
+    res.status(404).json({ error: 'File not found' });
+  }
+});
+
 // DELETE /api/pets/:petId/documents/uploads/:id - Delete a document upload
 router.delete('/:petId/documents/uploads/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
