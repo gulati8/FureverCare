@@ -182,33 +182,70 @@ jobs:
         run: |
           APP_NAME="${{ steps.target.outputs.app_name }}"
           IMAGE_TAG="${{ steps.target.outputs.image_tag }}"
+          PR_NUM="${{ github.event.pull_request.number }}"
+          PR_NETWORK="${APP_NAME}_internal"
 
-          # PR environments reuse production postgres/redis but run their own API + frontend
+          # PR environments get their own isolated postgres, redis, API, and frontend
           COMPOSE=$(cat <<'COMPOSEOF'
           services:
+            postgres:
+              image: postgres:15-alpine
+              container_name: APP_NAME_PLACEHOLDER-db
+              environment:
+                POSTGRES_USER: furevercare
+                POSTGRES_PASSWORD: furevercare_uat
+                POSTGRES_DB: furevercare
+              volumes:
+                - pgdata:/var/lib/postgresql/data
+              healthcheck:
+                test: ["CMD-SHELL", "pg_isready -U furevercare"]
+                interval: 5s
+                timeout: 5s
+                retries: 10
+              restart: unless-stopped
+              networks:
+                - internal
+
+            redis:
+              image: redis:7-alpine
+              container_name: APP_NAME_PLACEHOLDER-redis
+              volumes:
+                - redisdata:/data
+              healthcheck:
+                test: ["CMD", "redis-cli", "ping"]
+                interval: 5s
+                timeout: 5s
+                retries: 10
+              restart: unless-stopped
+              networks:
+                - internal
+
             backend:
               image: ghcr.io/gulati8/furevercare-api:IMAGE_TAG_PLACEHOLDER
               container_name: APP_NAME_PLACEHOLDER-api
+              depends_on:
+                postgres:
+                  condition: service_healthy
+                redis:
+                  condition: service_healthy
               environment:
                 NODE_ENV: production
                 PORT: 3001
-                DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@furevercare-db:5432/${POSTGRES_DB}
-                REDIS_URL: redis://furevercare-redis:6379
+                DATABASE_URL: postgresql://furevercare:furevercare_uat@APP_NAME_PLACEHOLDER-db:5432/furevercare
+                REDIS_URL: redis://APP_NAME_PLACEHOLDER-redis:6379
                 JWT_SECRET: ${JWT_SECRET}
                 FRONTEND_URL: https://APP_NAME_PLACEHOLDER.gulatilabs.me
                 CLAUDE_API_KEY: ${CLAUDE_API_KEY:-}
                 STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
                 STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
-                STORAGE_PROVIDER: ${STORAGE_PROVIDER:-local}
-                S3_BUCKET: ${S3_BUCKET:-}
-                AWS_REGION: ${AWS_REGION:-us-east-1}
-                AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
-                AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
-                EMAIL_PROVIDER: ${EMAIL_PROVIDER:-ses}
+                STORAGE_PROVIDER: local
+                EMAIL_PROVIDER: console
+              volumes:
+                - uploads:/app/uploads
               restart: unless-stopped
               networks:
                 - proxy
-                - furevercare_internal
+                - internal
 
             frontend:
               image: ghcr.io/gulati8/furevercare-web:IMAGE_TAG_PLACEHOLDER
@@ -219,11 +256,16 @@ jobs:
               networks:
                 - proxy
 
+          volumes:
+            pgdata:
+            redisdata:
+            uploads:
+
           networks:
             proxy:
               external: true
-            furevercare_internal:
-              external: true
+            internal:
+              driver: bridge
           COMPOSEOF
           )
 
@@ -233,12 +275,16 @@ jobs:
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
+            --timeout-seconds 300 \
             --parameters "commands=[
+              \"set -e\",
               \"mkdir -p /srv/${APP_NAME}\",
               \"cp /srv/furevercare/.env /srv/${APP_NAME}/.env 2>/dev/null || true\",
               \"echo '${COMPOSE_B64}' | base64 -d > /srv/${APP_NAME}/docker-compose.yml\",
               \"echo '${{ secrets.GHCR_PAT }}' | docker login ghcr.io -u gulati8 --password-stdin\",
-              \"cd /srv/${APP_NAME} && docker compose pull && docker compose up -d --remove-orphans\",
+              \"cd /srv/${APP_NAME} && docker compose pull && docker compose up -d postgres redis --wait\",
+              \"echo 'Copying production database to UAT...' && docker exec furevercare-db pg_dump -U furevercare furevercare | docker exec -i ${APP_NAME}-db psql -U furevercare furevercare\",
+              \"cd /srv/${APP_NAME} && docker compose up -d --remove-orphans\",
               \"cp /srv/proxy/Caddyfile /srv/proxy/Caddyfile.bak\",
               \"grep -q '${APP_NAME}.gulatilabs.me' /srv/proxy/Caddyfile 2>/dev/null || printf '\\\\n${APP_NAME}.gulatilabs.me {\\\\n  handle /api/* {\\\\n    reverse_proxy ${APP_NAME}-api:3001\\\\n  }\\\\n  handle /uploads/* {\\\\n    reverse_proxy ${APP_NAME}-api:3001\\\\n  }\\\\n  handle {\\\\n    reverse_proxy ${APP_NAME}-web:80\\\\n  }\\\\n}\\\\n' >> /srv/proxy/Caddyfile\",
               \"docker exec proxy-caddy-1 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile 2>&1 || { echo 'Caddyfile validation failed, restoring backup'; cp /srv/proxy/Caddyfile.bak /srv/proxy/Caddyfile; exit 1; }\",
@@ -247,7 +293,7 @@ jobs:
             --query 'Command.CommandId' \
             --output text)
 
-          for i in {1..30}; do
+          for i in {1..40}; do
             STATUS=$(aws ssm get-command-invocation \
               --command-id "$COMMAND_ID" \
               --instance-id "${{ secrets.EC2_INSTANCE_ID }}" \
@@ -323,7 +369,7 @@ jobs:
             --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
             --parameters "commands=[
-              \"cd /srv/${APP_NAME} && docker compose down --remove-orphans 2>/dev/null || true\",
+              \"cd /srv/${APP_NAME} && docker compose down --remove-orphans --volumes 2>/dev/null || true\",
               \"rm -rf /srv/${APP_NAME}\",
               \"cp /srv/proxy/Caddyfile /srv/proxy/Caddyfile.bak\",
               \"awk -v block='${APP_NAME}.gulatilabs.me' 'BEGIN{skip=0; depth=0} \\$0 ~ block {skip=1; depth=0} skip{depth+=gsub(/{/,\\\"{\\\"); depth-=gsub(/}/,\\\"}\\\"); if(depth<=0){skip=0; next}} !skip' /srv/proxy/Caddyfile.bak > /srv/proxy/Caddyfile\",
