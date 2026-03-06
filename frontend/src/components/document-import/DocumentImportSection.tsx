@@ -426,9 +426,11 @@ function DocumentUploadItem({
               )}
             </p>
           </div>
-          <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[upload.status] || 'bg-gray-100 text-gray-700'} ${isProcessing ? 'animate-pulse' : ''}`}>
-            {statusLabels[upload.status] || upload.status}
-          </span>
+          {upload.status !== 'completed' && (
+            <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[upload.status] || 'bg-gray-100 text-gray-700'} ${isProcessing ? 'animate-pulse' : ''}`}>
+              {statusLabels[upload.status] || upload.status}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2 ml-3">
           {canReview && (
