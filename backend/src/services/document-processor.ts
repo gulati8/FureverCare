@@ -103,8 +103,8 @@ export async function processDocumentUpload(uploadId: number): Promise<Processin
       items
     );
 
-    // Mark as completed
-    await updateDocumentUploadStatus(uploadId, 'completed');
+    // Mark as pending_review — user must review extracted items before completing
+    await updateDocumentUploadStatus(uploadId, 'pending_review');
 
     const summary = generateExtractedItemsSummary(result.extraction.summary.byCategory);
 

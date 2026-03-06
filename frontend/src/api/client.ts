@@ -667,7 +667,7 @@ export const photoImportApi = {
 };
 
 // Consolidated Document Import Types
-export type DocumentUploadStatus = 'pending' | 'classifying' | 'classified' | 'processing' | 'pending_review' | 'completed' | 'failed';
+export type DocumentUploadStatus = 'pending' | 'classifying' | 'processing' | 'pending_review' | 'completed' | 'failed';
 export type DetectedDocumentType = 'vaccination_record' | 'visit_summary' | 'lab_results' | 'prescription' | 'medication_label' | 'pet_id_tag' | 'other';
 
 export interface DocumentUpload {
@@ -738,14 +738,6 @@ export interface DocumentExtractionWithItems {
   items: DocumentExtractionItem[];
 }
 
-export interface DocumentProcessingResult {
-  upload: DocumentUpload;
-  classification?: DocumentClassification;
-  extraction?: DocumentExtraction;
-  items?: DocumentExtractionItem[];
-  error?: string;
-}
-
 // Consolidated Document Import API
 export const documentsApi = {
   // Upload a document (PDF or image)
@@ -780,18 +772,6 @@ export const documentsApi = {
   // Delete an upload
   deleteUpload: (petId: number, uploadId: number, token: string) =>
     api.delete(`/api/pets/${petId}/documents/uploads/${uploadId}`, token),
-
-  // Classify an uploaded document (detect type without full extraction)
-  classifyUpload: (petId: number, uploadId: number, token: string) =>
-    api.post<{ upload: DocumentUpload; classification: DocumentClassification }>(
-      `/api/pets/${petId}/documents/uploads/${uploadId}/classify`,
-      {},
-      token
-    ),
-
-  // Process an uploaded document (full extraction)
-  processUpload: (petId: number, uploadId: number, token: string) =>
-    api.post<DocumentProcessingResult>(`/api/pets/${petId}/documents/uploads/${uploadId}/process`, {}, token),
 
   // Get extraction results
   getExtraction: (petId: number, uploadId: number, token: string) =>

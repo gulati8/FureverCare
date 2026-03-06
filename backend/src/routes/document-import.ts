@@ -570,6 +570,9 @@ router.post('/:petId/documents/uploads/:id/extraction/approve', authenticate, as
       userAgent: metadata.userAgent || undefined,
     });
 
+    // Mark upload as completed now that user has reviewed
+    await updateDocumentUploadStatus(uploadId, 'completed');
+
     res.json(result);
   } catch (error: any) {
     console.error('Error approving extraction items:', error);
@@ -613,6 +616,9 @@ router.post('/:petId/documents/uploads/:id/extraction/approve-merge', authentica
       userAgent: metadata.userAgent || undefined,
     });
 
+    // Mark upload as completed now that user has reviewed
+    await updateDocumentUploadStatus(uploadId, 'completed');
+
     res.json(result);
   } catch (error: any) {
     console.error('Error processing merge approval:', error);
@@ -649,6 +655,10 @@ router.post('/:petId/documents/uploads/:id/extraction/reject', authenticate, asy
     }
 
     const rejected = await rejectDocumentExtractionItems(extraction.extraction.id, itemIds, req.userId!);
+
+    // Mark upload as completed now that user has reviewed
+    await updateDocumentUploadStatus(uploadId, 'completed');
+
     res.json({ rejected });
   } catch (error: any) {
     console.error('Error rejecting extraction items:', error);
