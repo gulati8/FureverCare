@@ -692,6 +692,9 @@ export interface DocumentUpload {
   date_taken: string | null;
   body_area: string | null;
   created_at: string;
+  pending_items?: number;
+  approved_items?: number;
+  rejected_items?: number;
 }
 
 export interface DocumentClassification {

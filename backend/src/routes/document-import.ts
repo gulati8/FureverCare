@@ -1,4 +1,5 @@
 import { Router, Response } from 'express';
+import { query } from '../db/pool.js';
 import { authenticate, AuthRequest } from '../middleware/auth.js';
 import { uploadDocument } from '../middleware/upload.js';
 import { requireFeature } from '../middleware/subscription.js';
@@ -210,7 +211,37 @@ router.get('/:petId/documents/uploads', authenticate, async (req: AuthRequest, r
     }
 
     const uploads = await getDocumentUploadsByPetId(petId);
-    res.json(uploads);
+
+    // Enrich with extraction item counts per upload
+    const countsResult = await query<{
+      document_upload_id: number;
+      pending_count: string;
+      approved_count: string;
+      rejected_count: string;
+    }>(
+      `SELECT de.document_upload_id,
+        COUNT(*) FILTER (WHERE dei.status = 'pending') AS pending_count,
+        COUNT(*) FILTER (WHERE dei.status = 'approved') AS approved_count,
+        COUNT(*) FILTER (WHERE dei.status = 'rejected') AS rejected_count
+      FROM document_extractions de
+      JOIN document_extraction_items dei ON dei.extraction_id = de.id
+      WHERE de.document_upload_id = ANY($1)
+      GROUP BY de.document_upload_id`,
+      [uploads.map(u => u.id)]
+    );
+
+    const countsMap = new Map(countsResult.map(r => [r.document_upload_id, {
+      pending_items: parseInt(r.pending_count),
+      approved_items: parseInt(r.approved_count),
+      rejected_items: parseInt(r.rejected_count),
+    }]));
+
+    const enriched = uploads.map(u => ({
+      ...u,
+      ...(countsMap.get(u.id) || {}),
+    }));
+
+    res.json(enriched);
   } catch (error) {
     console.error('Error fetching document uploads:', error);
     res.status(500).json({ error: 'Failed to fetch uploads' });

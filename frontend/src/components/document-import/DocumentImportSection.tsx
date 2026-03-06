@@ -426,7 +426,25 @@ function DocumentUploadItem({
               )}
             </p>
           </div>
-          {upload.status !== 'completed' && (
+          {upload.status === 'pending_review' && (upload.pending_items || upload.approved_items || upload.rejected_items) ? (
+            <div className="flex items-center gap-1.5">
+              {!!upload.pending_items && (
+                <span className="px-2 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-700">
+                  {upload.pending_items} pending
+                </span>
+              )}
+              {!!upload.approved_items && (
+                <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">
+                  {upload.approved_items} approved
+                </span>
+              )}
+              {!!upload.rejected_items && (
+                <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700">
+                  {upload.rejected_items} rejected
+                </span>
+              )}
+            </div>
+          ) : upload.status !== 'completed' && (
             <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[upload.status] || 'bg-gray-100 text-gray-700'} ${isProcessing ? 'animate-pulse' : ''}`}>
               {statusLabels[upload.status] || upload.status}
             </span>
