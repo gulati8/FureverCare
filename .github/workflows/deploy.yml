@@ -277,9 +277,9 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --timeout-seconds 300 \
             --parameters "commands=[
-              \"set -e\",
               \"mkdir -p /srv/${APP_NAME}\",
               \"cp /srv/furevercare/.env /srv/${APP_NAME}/.env 2>/dev/null || true\",
+              \"cd /srv/${APP_NAME} && docker compose down --remove-orphans 2>/dev/null || true\",
               \"echo '${COMPOSE_B64}' | base64 -d > /srv/${APP_NAME}/docker-compose.yml\",
               \"echo '${{ secrets.GHCR_PAT }}' | docker login ghcr.io -u gulati8 --password-stdin\",
               \"cd /srv/${APP_NAME} && docker compose pull && docker compose up -d postgres redis --wait\",
