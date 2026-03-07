@@ -10,12 +10,12 @@ import {
   PetMedication,
   PetVaccination,
   PetEmergencyContact,
-  API_URL,
 } from '../api/client';
-import EditPetModal from '../components/EditPetModal';
 import ManageAccessModal from '../components/ManageAccessModal';
+import PhotoUpload from '../components/PhotoUpload';
 import ShareModal from '../components/ShareModal';
 import ShareWallet from '../components/ShareWallet';
+import InlineEditForm, { EditField } from '../components/InlineEditForm';
 import { DocumentImportSection } from '../components/document-import/DocumentImportSection';
 import { AuditLogViewer } from '../components/audit/AuditLogViewer';
 import { MedicalTimeline } from '../components/MedicalTimeline';
@@ -47,7 +47,6 @@ export default function PetDetail() {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [showShareModal, setShowShareModal] = useState(false);
   const [showLinkWallet, setShowLinkWallet] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [showAccessModal, setShowAccessModal] = useState(false);
 
   // Health records state
@@ -106,12 +105,6 @@ export default function PetDetail() {
 
   const shareUrl = pet ? `${window.location.origin}/card/${pet.share_id}` : '';
 
-  const getFullPhotoUrl = (url: string | null) => {
-    if (!url) return null;
-    if (url.startsWith('http')) return url;
-    return `${API_URL}${url}`;
-  };
-
   const handlePetUpdated = (updatedPet: Pet) => {
     setPet(updatedPet);
   };
@@ -146,15 +139,13 @@ export default function PetDetail() {
       <div className="card mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center space-x-4">
-            <div className="w-20 h-20 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
-              {pet.photo_url ? (
-                <img src={getFullPhotoUrl(pet.photo_url)!} alt={pet.name} className="w-20 h-20 rounded-full object-cover" />
-              ) : (
-                <span className="text-4xl">
-                  {pet.species === 'dog' ? '🐕' : pet.species === 'cat' ? '🐈' : '🐾'}
-                </span>
-              )}
-            </div>
+            <PhotoUpload
+              petId={petId}
+              currentPhotoUrl={pet.photo_url}
+              onPhotoUpdated={(photoUrl) => setPet({ ...pet, photo_url: photoUrl })}
+              compact
+              species={pet.species}
+            />
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{pet.name}</h1>
               <p className="text-gray-500 capitalize">
@@ -166,12 +157,6 @@ export default function PetDetail() {
           </div>
 
           <div className="flex space-x-3">
-            <button
-              onClick={() => setShowEditModal(true)}
-              className="btn-secondary"
-            >
-              Edit
-            </button>
             {isPremium ? (
               <button
                 onClick={() => setShowAccessModal(true)}
@@ -231,7 +216,7 @@ export default function PetDetail() {
       {/* Tab Content */}
       <div className="card">
         {activeTab === 'overview' && (
-          <OverviewTab pet={pet} conditions={conditions} allergies={allergies} medications={medications} />
+          <OverviewTab pet={pet} token={token!} onPetUpdated={handlePetUpdated} conditions={conditions} allergies={allergies} medications={medications} onNavigateTab={setActiveTab} />
         )}
         {activeTab === 'timeline' && (
           isPremium ? (
@@ -308,15 +293,6 @@ export default function PetDetail() {
         />
       )}
 
-      {/* Edit Modal */}
-      {showEditModal && (
-        <EditPetModal
-          pet={pet}
-          onClose={() => setShowEditModal(false)}
-          onPetUpdated={handlePetUpdated}
-        />
-      )}
-
       {/* Manage Access Modal */}
       {showAccessModal && (
         isPremium ? (
@@ -348,93 +324,221 @@ export default function PetDetail() {
 }
 
 // Overview Tab
-function OverviewTab({ pet, conditions, allergies, medications }: {
+type OverviewField = 'name' | 'species' | 'breed' | 'sex' | 'date_of_birth' | 'weight' | 'microchip_id' | 'special_instructions';
+
+const SPECIES_OPTIONS = [
+  { value: 'dog', label: 'Dog' }, { value: 'cat', label: 'Cat' }, { value: 'bird', label: 'Bird' },
+  { value: 'rabbit', label: 'Rabbit' }, { value: 'hamster', label: 'Hamster' }, { value: 'fish', label: 'Fish' },
+  { value: 'reptile', label: 'Reptile' }, { value: 'other', label: 'Other' },
+];
+
+function OverviewTab({ pet, token, onPetUpdated, conditions, allergies, medications, onNavigateTab }: {
   pet: Pet;
+  token: string;
+  onPetUpdated: (pet: Pet) => void;
+  onNavigateTab: (tab: TabType) => void;
   conditions: PetCondition[];
   allergies: PetAllergy[];
   medications: PetMedication[];
 }) {
   const activeMeds = medications.filter(m => m.is_active);
+  const [editingField, setEditingField] = useState<OverviewField | null>(null);
+
+  const handleSaveField = async (field: OverviewField, values: Record<string, string | boolean>) => {
+    const payload: Record<string, unknown> = {};
+    switch (field) {
+      case 'name':
+        payload.name = values.name;
+        break;
+      case 'species':
+        payload.species = values.species;
+        break;
+      case 'breed':
+        payload.breed = (values.breed as string) || null;
+        break;
+      case 'sex':
+        payload.sex = (values.sex as string) || null;
+        payload.is_fixed = values.is_fixed;
+        break;
+      case 'date_of_birth':
+        payload.date_of_birth = (values.date_of_birth as string) || null;
+        break;
+      case 'weight':
+        payload.weight_kg = values.weight_kg ? Number(values.weight_kg) : null;
+        payload.weight_unit = values.weight_unit;
+        break;
+      case 'microchip_id':
+        payload.microchip_id = (values.microchip_id as string) || null;
+        break;
+      case 'special_instructions':
+        payload.special_instructions = (values.special_instructions as string) || null;
+        break;
+    }
+    const updated = await petsApi.update(pet.id, payload as Parameters<typeof petsApi.update>[1], token);
+    onPetUpdated(updated);
+    setEditingField(null);
+  };
+
+  const fieldConfigs: Record<OverviewField, { fields: EditField[]; values: Record<string, string | boolean> }> = {
+    name: {
+      fields: [{ key: 'name', placeholder: 'Pet name *', required: true }],
+      values: { name: pet.name },
+    },
+    species: {
+      fields: [{ key: 'species', placeholder: 'Species', type: 'select', options: SPECIES_OPTIONS, required: true }],
+      values: { species: pet.species },
+    },
+    breed: {
+      fields: [{ key: 'breed', placeholder: 'Breed', type: 'text' }],
+      values: { breed: pet.breed || '' },
+    },
+    sex: {
+      fields: [
+        { key: 'sex', placeholder: 'Sex', type: 'select', options: [{ value: '', label: 'Select...' }, { value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }] },
+        { key: 'is_fixed', placeholder: 'Spayed / Neutered', type: 'checkbox' },
+      ],
+      values: { sex: pet.sex || '', is_fixed: pet.is_fixed || false },
+    },
+    date_of_birth: {
+      fields: [{ key: 'date_of_birth', placeholder: 'Date of Birth', type: 'date' }],
+      values: { date_of_birth: pet.date_of_birth ? pet.date_of_birth.split('T')[0] : '' },
+    },
+    weight: {
+      fields: [
+        { key: 'weight_kg', placeholder: 'Weight', type: 'number', step: '0.1', min: '0', gridGroup: 'weight' },
+        { key: 'weight_unit', placeholder: 'Unit', type: 'select', options: [{ value: 'lbs', label: 'pounds (lbs)' }, { value: 'kg', label: 'kilograms (kg)' }], gridGroup: 'weight' },
+      ],
+      values: { weight_kg: pet.weight_kg ? String(pet.weight_kg) : '', weight_unit: pet.weight_unit || 'lbs' },
+    },
+    microchip_id: {
+      fields: [{ key: 'microchip_id', placeholder: 'Microchip ID', type: 'text' }],
+      values: { microchip_id: pet.microchip_id || '' },
+    },
+    special_instructions: {
+      fields: [{ key: 'special_instructions', placeholder: 'Any special care instructions for emergency staff...', type: 'textarea', rows: 3 }],
+      values: { special_instructions: pet.special_instructions || '' },
+    },
+  };
+
+  const renderEditableField = (field: OverviewField, label: string, displayValue: React.ReactNode, show = true) => {
+    if (!show && editingField !== field) return null;
+
+    if (editingField === field) {
+      const config = fieldConfigs[field];
+      return (
+        <div className="col-span-2">
+          <dt className="text-sm text-gray-500 mb-1">{label}</dt>
+          <InlineEditForm
+            fields={config.fields}
+            values={config.values}
+            onSave={(vals) => handleSaveField(field, vals)}
+            onCancel={() => setEditingField(null)}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div
+        className="group cursor-pointer rounded-lg p-2 -m-2 hover:bg-gray-50 transition-colors"
+        onClick={() => setEditingField(field)}
+      >
+        <dt className="text-sm text-gray-500 flex items-center gap-1">
+          {label}
+          <svg className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
+        </dt>
+        <dd className="text-gray-900">{displayValue}</dd>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-3">Basic Information</h3>
         <dl className="grid grid-cols-2 gap-4">
-          <div>
-            <dt className="text-sm text-gray-500">Species</dt>
-            <dd className="text-gray-900 capitalize">{pet.species}</dd>
-          </div>
-          {pet.breed && (
-            <div>
-              <dt className="text-sm text-gray-500">Breed</dt>
-              <dd className="text-gray-900">{pet.breed}</dd>
-            </div>
-          )}
-          {pet.sex && (
-            <div>
-              <dt className="text-sm text-gray-500">Sex</dt>
-              <dd className="text-gray-900 capitalize">{pet.sex}{pet.is_fixed ? ' (Spayed/Neutered)' : ''}</dd>
-            </div>
-          )}
-          {pet.date_of_birth && (
-            <div>
-              <dt className="text-sm text-gray-500">Date of Birth</dt>
-              <dd className="text-gray-900">{new Date(pet.date_of_birth.split('T')[0] + 'T00:00:00').toLocaleDateString()}</dd>
-            </div>
-          )}
-          {pet.weight_kg && (
-            <div>
-              <dt className="text-sm text-gray-500">Weight</dt>
-              <dd className="text-gray-900">{formatWeight(pet.weight_kg, pet.weight_unit)}</dd>
-            </div>
-          )}
-          {pet.microchip_id && (
-            <div>
-              <dt className="text-sm text-gray-500">Microchip ID</dt>
-              <dd className="text-gray-900 font-mono">{pet.microchip_id}</dd>
-            </div>
-          )}
+          {renderEditableField('name', 'Name', pet.name)}
+          {renderEditableField('species', 'Species', <span className="capitalize">{pet.species}</span>)}
+          {renderEditableField('breed', 'Breed', pet.breed, !!pet.breed)}
+          {renderEditableField('sex', 'Sex', <span className="capitalize">{pet.sex}{pet.is_fixed ? ' (Spayed/Neutered)' : ''}</span>, !!pet.sex)}
+          {renderEditableField('date_of_birth', 'Date of Birth', pet.date_of_birth ? new Date(pet.date_of_birth.split('T')[0] + 'T00:00:00').toLocaleDateString() : null, !!pet.date_of_birth)}
+          {renderEditableField('weight', 'Weight', pet.weight_kg ? formatWeight(pet.weight_kg, pet.weight_unit) : null, !!pet.weight_kg)}
+          {renderEditableField('microchip_id', 'Microchip ID', <span className="font-mono">{pet.microchip_id}</span>, !!pet.microchip_id)}
         </dl>
       </div>
 
-      {pet.special_instructions && (
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Special Instructions</h3>
-          <p className="text-gray-700 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            {pet.special_instructions}
-          </p>
-        </div>
-      )}
+      <div>
+        {editingField === 'special_instructions' ? (
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Special Instructions</h3>
+            <InlineEditForm
+              fields={fieldConfigs.special_instructions.fields}
+              values={fieldConfigs.special_instructions.values}
+              onSave={(vals) => handleSaveField('special_instructions', vals)}
+              onCancel={() => setEditingField(null)}
+            />
+          </div>
+        ) : (
+          <div
+            className="group cursor-pointer rounded-lg p-2 -m-2 hover:bg-gray-50 transition-colors"
+            onClick={() => setEditingField('special_instructions')}
+          >
+            <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-1">
+              Special Instructions
+              <svg className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+            </h3>
+            {pet.special_instructions ? (
+              <p className="text-gray-700 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                {pet.special_instructions}
+              </p>
+            ) : (
+              <p className="text-gray-400 text-sm">Click to add special instructions</p>
+            )}
+          </div>
+        )}
+      </div>
 
       {(conditions.length > 0 || allergies.length > 0 || activeMeds.length > 0) && (
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-3">Health Summary</h3>
           <div className="grid gap-4 md:grid-cols-3">
             {conditions.length > 0 && (
-              <div className="bg-orange-50 rounded-lg p-4">
+              <div
+                className="bg-orange-50 rounded-lg p-4 cursor-pointer hover:bg-orange-100 transition-colors"
+                onClick={() => onNavigateTab('conditions')}
+              >
                 <h4 className="font-medium text-orange-800 mb-2">Conditions ({conditions.length})</h4>
                 <ul className="text-sm text-orange-700 space-y-1">
                   {conditions.slice(0, 3).map(c => <li key={c.id}>{c.name}</li>)}
-                  {conditions.length > 3 && <li>+{conditions.length - 3} more</li>}
+                  {conditions.length > 3 && <li className="font-medium">+{conditions.length - 3} more →</li>}
                 </ul>
               </div>
             )}
             {allergies.length > 0 && (
-              <div className="bg-red-50 rounded-lg p-4">
+              <div
+                className="bg-red-50 rounded-lg p-4 cursor-pointer hover:bg-red-100 transition-colors"
+                onClick={() => onNavigateTab('allergies')}
+              >
                 <h4 className="font-medium text-red-800 mb-2">Allergies ({allergies.length})</h4>
                 <ul className="text-sm text-red-700 space-y-1">
                   {allergies.slice(0, 3).map(a => <li key={a.id}>{a.allergen}</li>)}
-                  {allergies.length > 3 && <li>+{allergies.length - 3} more</li>}
+                  {allergies.length > 3 && <li className="font-medium">+{allergies.length - 3} more →</li>}
                 </ul>
               </div>
             )}
             {activeMeds.length > 0 && (
-              <div className="bg-blue-50 rounded-lg p-4">
+              <div
+                className="bg-blue-50 rounded-lg p-4 cursor-pointer hover:bg-blue-100 transition-colors"
+                onClick={() => onNavigateTab('medications')}
+              >
                 <h4 className="font-medium text-blue-800 mb-2">Active Medications ({activeMeds.length})</h4>
                 <ul className="text-sm text-blue-700 space-y-1">
                   {activeMeds.slice(0, 3).map(m => <li key={m.id}>{m.name}</li>)}
-                  {activeMeds.length > 3 && <li>+{activeMeds.length - 3} more</li>}
+                  {activeMeds.length > 3 && <li className="font-medium">+{activeMeds.length - 3} more →</li>}
                 </ul>
               </div>
             )}
@@ -445,7 +549,26 @@ function OverviewTab({ pet, conditions, allergies, medications }: {
   );
 }
 
+// Shared severity options
+const SEVERITY_OPTIONS = [
+  { value: '', label: 'Severity (optional)' },
+  { value: 'mild', label: 'Mild' },
+  { value: 'moderate', label: 'Moderate' },
+  { value: 'severe', label: 'Severe' },
+];
+
+const ALLERGY_SEVERITY_OPTIONS = [
+  ...SEVERITY_OPTIONS,
+  { value: 'life-threatening', label: 'Life-threatening' },
+];
+
 // Conditions Tab
+const CONDITION_FIELDS: EditField[] = [
+  { key: 'name', placeholder: 'Condition name *', required: true },
+  { key: 'severity', placeholder: 'Severity', type: 'select', options: SEVERITY_OPTIONS },
+  { key: 'notes', placeholder: 'Notes (optional)', type: 'textarea' },
+];
+
 function ConditionsTab({ petId, token, conditions, setConditions }: {
   petId: number;
   token: string;
@@ -453,33 +576,21 @@ function ConditionsTab({ petId, token, conditions, setConditions }: {
   setConditions: (c: PetCondition[]) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
-  const [name, setName] = useState('');
-  const [severity, setSeverity] = useState('');
-  const [notes, setNotes] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editSeverity, setEditSeverity] = useState('');
-  const [editNotes, setEditNotes] = useState('');
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [addValues, setAddValues] = useState<Record<string, string | boolean>>({ name: '', severity: '', notes: '' });
 
-  const handleAdd = async () => {
-    if (!name.trim()) return;
-    const condition = await petsApi.addCondition(petId, { name, severity: severity || null, notes: notes || null, diagnosed_date: null }, token);
+  const handleAdd = async (values: Record<string, string | boolean>) => {
+    if (!(values.name as string).trim()) return;
+    const condition = await petsApi.addCondition(petId, { name: values.name as string, severity: (values.severity as string) || null, notes: (values.notes as string) || null, diagnosed_date: null }, token);
     setConditions([condition, ...conditions]);
     setShowForm(false);
-    setName(''); setSeverity(''); setNotes('');
+    setAddValues({ name: '', severity: '', notes: '' });
   };
 
-  const startEdit = (c: PetCondition) => {
-    setEditingId(c.id);
-    setEditName(c.name);
-    setEditSeverity(c.severity || '');
-    setEditNotes(c.notes || '');
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingId || !editName.trim()) return;
-    const updated = await petsApi.updateCondition(petId, editingId, { name: editName, severity: editSeverity || null, notes: editNotes || null }, token);
+  const handleSaveEdit = async (values: Record<string, string | boolean>) => {
+    if (!editingId || !(values.name as string).trim()) return;
+    const updated = await petsApi.updateCondition(petId, editingId, { name: values.name as string, severity: (values.severity as string) || null, notes: (values.notes as string) || null }, token);
     setConditions(conditions.map(c => c.id === editingId ? updated : c));
     setEditingId(null);
   };
@@ -498,20 +609,13 @@ function ConditionsTab({ petId, token, conditions, setConditions }: {
       </div>
 
       {showForm && (
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-3">
-          <input type="text" placeholder="Condition name *" value={name} onChange={e => setName(e.target.value)} className="input" />
-          <select value={severity} onChange={e => setSeverity(e.target.value)} className="input">
-            <option value="">Severity (optional)</option>
-            <option value="mild">Mild</option>
-            <option value="moderate">Moderate</option>
-            <option value="severe">Severe</option>
-          </select>
-          <textarea placeholder="Notes (optional)" value={notes} onChange={e => setNotes(e.target.value)} className="input" rows={2} />
-          <div className="flex gap-2">
-            <button onClick={handleAdd} className="btn-primary text-sm">Save</button>
-            <button onClick={() => setShowForm(false)} className="btn-secondary text-sm">Cancel</button>
-          </div>
-        </div>
+        <InlineEditForm
+          fields={CONDITION_FIELDS}
+          values={addValues}
+          onSave={handleAdd}
+          onCancel={() => setShowForm(false)}
+          className="mb-4"
+        />
       )}
 
       {conditions.length === 0 ? (
@@ -521,20 +625,12 @@ function ConditionsTab({ petId, token, conditions, setConditions }: {
           {conditions.map(c => (
             <li key={c.id} className="py-3">
               {editingId === c.id ? (
-                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                  <input type="text" placeholder="Condition name *" value={editName} onChange={e => setEditName(e.target.value)} className="input" />
-                  <select value={editSeverity} onChange={e => setEditSeverity(e.target.value)} className="input">
-                    <option value="">Severity (optional)</option>
-                    <option value="mild">Mild</option>
-                    <option value="moderate">Moderate</option>
-                    <option value="severe">Severe</option>
-                  </select>
-                  <textarea placeholder="Notes (optional)" value={editNotes} onChange={e => setEditNotes(e.target.value)} className="input" rows={2} />
-                  <div className="flex gap-2">
-                    <button onClick={handleSaveEdit} className="btn-primary text-sm">Save</button>
-                    <button onClick={() => setEditingId(null)} className="btn-secondary text-sm">Cancel</button>
-                  </div>
-                </div>
+                <InlineEditForm
+                  fields={CONDITION_FIELDS}
+                  values={{ name: c.name, severity: c.severity || '', notes: c.notes || '' }}
+                  onSave={handleSaveEdit}
+                  onCancel={() => setEditingId(null)}
+                />
               ) : (
                 <div className="flex justify-between items-start">
                   <div>
@@ -543,7 +639,7 @@ function ConditionsTab({ petId, token, conditions, setConditions }: {
                     {c.notes && <p className="text-sm text-gray-600 mt-1">{c.notes}</p>}
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => startEdit(c)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
+                    <button onClick={() => setEditingId(c.id)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
                     {deletingId === c.id ? (
                       <>
                         <span className="text-sm text-gray-500">Sure?</span>
@@ -565,6 +661,12 @@ function ConditionsTab({ petId, token, conditions, setConditions }: {
 }
 
 // Allergies Tab
+const ALLERGY_FIELDS: EditField[] = [
+  { key: 'allergen', placeholder: 'Allergen *', required: true },
+  { key: 'reaction', placeholder: 'Reaction (optional)' },
+  { key: 'severity', placeholder: 'Severity', type: 'select', options: ALLERGY_SEVERITY_OPTIONS },
+];
+
 function AllergiesTab({ petId, token, allergies, setAllergies }: {
   petId: number;
   token: string;
@@ -572,33 +674,21 @@ function AllergiesTab({ petId, token, allergies, setAllergies }: {
   setAllergies: (a: PetAllergy[]) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
-  const [allergen, setAllergen] = useState('');
-  const [reaction, setReaction] = useState('');
-  const [severity, setSeverity] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editAllergen, setEditAllergen] = useState('');
-  const [editReaction, setEditReaction] = useState('');
-  const [editSeverity, setEditSeverity] = useState('');
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [addValues, setAddValues] = useState<Record<string, string | boolean>>({ allergen: '', reaction: '', severity: '' });
 
-  const handleAdd = async () => {
-    if (!allergen.trim()) return;
-    const allergy = await petsApi.addAllergy(petId, { allergen, reaction: reaction || null, severity: severity || null }, token);
+  const handleAdd = async (values: Record<string, string | boolean>) => {
+    if (!(values.allergen as string).trim()) return;
+    const allergy = await petsApi.addAllergy(petId, { allergen: values.allergen as string, reaction: (values.reaction as string) || null, severity: (values.severity as string) || null }, token);
     setAllergies([allergy, ...allergies]);
     setShowForm(false);
-    setAllergen(''); setReaction(''); setSeverity('');
+    setAddValues({ allergen: '', reaction: '', severity: '' });
   };
 
-  const startEdit = (a: PetAllergy) => {
-    setEditingId(a.id);
-    setEditAllergen(a.allergen);
-    setEditReaction(a.reaction || '');
-    setEditSeverity(a.severity || '');
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingId || !editAllergen.trim()) return;
-    const updated = await petsApi.updateAllergy(petId, editingId, { allergen: editAllergen, reaction: editReaction || null, severity: editSeverity || null }, token);
+  const handleSaveEdit = async (values: Record<string, string | boolean>) => {
+    if (!editingId || !(values.allergen as string).trim()) return;
+    const updated = await petsApi.updateAllergy(petId, editingId, { allergen: values.allergen as string, reaction: (values.reaction as string) || null, severity: (values.severity as string) || null }, token);
     setAllergies(allergies.map(a => a.id === editingId ? updated : a));
     setEditingId(null);
   };
@@ -617,21 +707,13 @@ function AllergiesTab({ petId, token, allergies, setAllergies }: {
       </div>
 
       {showForm && (
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-3">
-          <input type="text" placeholder="Allergen *" value={allergen} onChange={e => setAllergen(e.target.value)} className="input" />
-          <input type="text" placeholder="Reaction (optional)" value={reaction} onChange={e => setReaction(e.target.value)} className="input" />
-          <select value={severity} onChange={e => setSeverity(e.target.value)} className="input">
-            <option value="">Severity (optional)</option>
-            <option value="mild">Mild</option>
-            <option value="moderate">Moderate</option>
-            <option value="severe">Severe</option>
-            <option value="life-threatening">Life-threatening</option>
-          </select>
-          <div className="flex gap-2">
-            <button onClick={handleAdd} className="btn-primary text-sm">Save</button>
-            <button onClick={() => setShowForm(false)} className="btn-secondary text-sm">Cancel</button>
-          </div>
-        </div>
+        <InlineEditForm
+          fields={ALLERGY_FIELDS}
+          values={addValues}
+          onSave={handleAdd}
+          onCancel={() => setShowForm(false)}
+          className="mb-4"
+        />
       )}
 
       {allergies.length === 0 ? (
@@ -641,21 +723,12 @@ function AllergiesTab({ petId, token, allergies, setAllergies }: {
           {allergies.map(a => (
             <li key={a.id} className="py-3">
               {editingId === a.id ? (
-                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                  <input type="text" placeholder="Allergen *" value={editAllergen} onChange={e => setEditAllergen(e.target.value)} className="input" />
-                  <input type="text" placeholder="Reaction (optional)" value={editReaction} onChange={e => setEditReaction(e.target.value)} className="input" />
-                  <select value={editSeverity} onChange={e => setEditSeverity(e.target.value)} className="input">
-                    <option value="">Severity (optional)</option>
-                    <option value="mild">Mild</option>
-                    <option value="moderate">Moderate</option>
-                    <option value="severe">Severe</option>
-                    <option value="life-threatening">Life-threatening</option>
-                  </select>
-                  <div className="flex gap-2">
-                    <button onClick={handleSaveEdit} className="btn-primary text-sm">Save</button>
-                    <button onClick={() => setEditingId(null)} className="btn-secondary text-sm">Cancel</button>
-                  </div>
-                </div>
+                <InlineEditForm
+                  fields={ALLERGY_FIELDS}
+                  values={{ allergen: a.allergen, reaction: a.reaction || '', severity: a.severity || '' }}
+                  onSave={handleSaveEdit}
+                  onCancel={() => setEditingId(null)}
+                />
               ) : (
                 <div className="flex justify-between items-start">
                   <div>
@@ -664,7 +737,7 @@ function AllergiesTab({ petId, token, allergies, setAllergies }: {
                     {a.reaction && <p className="text-sm text-gray-600 mt-1">Reaction: {a.reaction}</p>}
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => startEdit(a)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
+                    <button onClick={() => setEditingId(a.id)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
                     {deletingId === a.id ? (
                       <>
                         <span className="text-sm text-gray-500">Sure?</span>
@@ -686,6 +759,12 @@ function AllergiesTab({ petId, token, allergies, setAllergies }: {
 }
 
 // Medications Tab
+const MEDICATION_FIELDS: EditField[] = [
+  { key: 'name', placeholder: 'Medication name *', required: true },
+  { key: 'dosage', placeholder: 'Dosage (e.g., 10mg)' },
+  { key: 'frequency', placeholder: 'Frequency (e.g., twice daily)' },
+];
+
 function MedicationsTab({ petId, token, medications, setMedications }: {
   petId: number;
   token: string;
@@ -693,36 +772,24 @@ function MedicationsTab({ petId, token, medications, setMedications }: {
   setMedications: (m: PetMedication[]) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
-  const [name, setName] = useState('');
-  const [dosage, setDosage] = useState('');
-  const [frequency, setFrequency] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editDosage, setEditDosage] = useState('');
-  const [editFrequency, setEditFrequency] = useState('');
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [addValues, setAddValues] = useState<Record<string, string | boolean>>({ name: '', dosage: '', frequency: '' });
 
-  const handleAdd = async () => {
-    if (!name.trim()) return;
+  const handleAdd = async (values: Record<string, string | boolean>) => {
+    if (!(values.name as string).trim()) return;
     const med = await petsApi.addMedication(petId, {
-      name, dosage: dosage || null, frequency: frequency || null,
+      name: values.name as string, dosage: (values.dosage as string) || null, frequency: (values.frequency as string) || null,
       start_date: null, end_date: null, prescribing_vet: null, notes: null, is_active: true
     }, token);
     setMedications([med, ...medications]);
     setShowForm(false);
-    setName(''); setDosage(''); setFrequency('');
+    setAddValues({ name: '', dosage: '', frequency: '' });
   };
 
-  const startEdit = (m: PetMedication) => {
-    setEditingId(m.id);
-    setEditName(m.name);
-    setEditDosage(m.dosage || '');
-    setEditFrequency(m.frequency || '');
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingId || !editName.trim()) return;
-    const updated = await petsApi.updateMedication(petId, editingId, { name: editName, dosage: editDosage || null, frequency: editFrequency || null }, token);
+  const handleSaveEdit = async (values: Record<string, string | boolean>) => {
+    if (!editingId || !(values.name as string).trim()) return;
+    const updated = await petsApi.updateMedication(petId, editingId, { name: values.name as string, dosage: (values.dosage as string) || null, frequency: (values.frequency as string) || null }, token);
     setMedications(medications.map(m => m.id === editingId ? updated : m));
     setEditingId(null);
   };
@@ -744,15 +811,12 @@ function MedicationsTab({ petId, token, medications, setMedications }: {
   const renderMedRow = (m: PetMedication, isInactive?: boolean) => (
     <li key={m.id} className="p-3">
       {editingId === m.id ? (
-        <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-          <input type="text" placeholder="Medication name *" value={editName} onChange={e => setEditName(e.target.value)} className="input" />
-          <input type="text" placeholder="Dosage (e.g., 10mg)" value={editDosage} onChange={e => setEditDosage(e.target.value)} className="input" />
-          <input type="text" placeholder="Frequency (e.g., twice daily)" value={editFrequency} onChange={e => setEditFrequency(e.target.value)} className="input" />
-          <div className="flex gap-2">
-            <button onClick={handleSaveEdit} className="btn-primary text-sm">Save</button>
-            <button onClick={() => setEditingId(null)} className="btn-secondary text-sm">Cancel</button>
-          </div>
-        </div>
+        <InlineEditForm
+          fields={MEDICATION_FIELDS}
+          values={{ name: m.name, dosage: m.dosage || '', frequency: m.frequency || '' }}
+          onSave={handleSaveEdit}
+          onCancel={() => setEditingId(null)}
+        />
       ) : (
         <div className="flex justify-between items-start">
           <div>
@@ -761,7 +825,7 @@ function MedicationsTab({ petId, token, medications, setMedications }: {
             {m.frequency && <span className="text-sm text-gray-500"> - {m.frequency}</span>}
           </div>
           <div className="flex gap-2">
-            <button onClick={() => startEdit(m)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
+            <button onClick={() => setEditingId(m.id)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
             <button onClick={() => handleToggleActive(m)} className={`text-sm ${isInactive ? 'text-primary-600 hover:text-primary-800' : 'text-gray-600 hover:text-gray-800'}`}>
               {isInactive ? 'Reactivate' : 'Discontinue'}
             </button>
@@ -788,15 +852,13 @@ function MedicationsTab({ petId, token, medications, setMedications }: {
       </div>
 
       {showForm && (
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-3">
-          <input type="text" placeholder="Medication name *" value={name} onChange={e => setName(e.target.value)} className="input" />
-          <input type="text" placeholder="Dosage (e.g., 10mg)" value={dosage} onChange={e => setDosage(e.target.value)} className="input" />
-          <input type="text" placeholder="Frequency (e.g., twice daily)" value={frequency} onChange={e => setFrequency(e.target.value)} className="input" />
-          <div className="flex gap-2">
-            <button onClick={handleAdd} className="btn-primary text-sm">Save</button>
-            <button onClick={() => setShowForm(false)} className="btn-secondary text-sm">Cancel</button>
-          </div>
-        </div>
+        <InlineEditForm
+          fields={MEDICATION_FIELDS}
+          values={addValues}
+          onSave={handleAdd}
+          onCancel={() => setShowForm(false)}
+          className="mb-4"
+        />
       )}
 
       {active.length > 0 && (
@@ -825,6 +887,12 @@ function MedicationsTab({ petId, token, medications, setMedications }: {
 }
 
 // Vaccinations Tab
+const VACCINATION_FIELDS: EditField[] = [
+  { key: 'name', placeholder: 'Vaccination name *', required: true },
+  { key: 'administered_date', placeholder: 'Date administered', type: 'date', label: 'Date administered *', required: true, gridGroup: 'dates' },
+  { key: 'expiration_date', placeholder: 'Expiration date', type: 'date', label: 'Expiration date', gridGroup: 'dates' },
+];
+
 function VaccinationsTab({ petId, token, vaccinations, setVaccinations }: {
   petId: number;
   token: string;
@@ -832,39 +900,27 @@ function VaccinationsTab({ petId, token, vaccinations, setVaccinations }: {
   setVaccinations: (v: PetVaccination[]) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
-  const [name, setName] = useState('');
-  const [adminDate, setAdminDate] = useState('');
-  const [expDate, setExpDate] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editAdminDate, setEditAdminDate] = useState('');
-  const [editExpDate, setEditExpDate] = useState('');
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [addValues, setAddValues] = useState<Record<string, string | boolean>>({ name: '', administered_date: '', expiration_date: '' });
 
-  const handleAdd = async () => {
-    if (!name.trim() || !adminDate) return;
+  const toDateInput = (d: string | null) => d ? d.split('T')[0] : '';
+
+  const handleAdd = async (values: Record<string, string | boolean>) => {
+    if (!(values.name as string).trim() || !values.administered_date) return;
     const vac = await petsApi.addVaccination(petId, {
-      name, administered_date: adminDate,
-      expiration_date: expDate || null,
+      name: values.name as string, administered_date: values.administered_date as string,
+      expiration_date: (values.expiration_date as string) || null,
       administered_by: null, lot_number: null
     }, token);
     setVaccinations([vac, ...vaccinations]);
     setShowForm(false);
-    setName(''); setAdminDate(''); setExpDate('');
+    setAddValues({ name: '', administered_date: '', expiration_date: '' });
   };
 
-  const toDateInput = (d: string | null) => d ? d.split('T')[0] : '';
-
-  const startEdit = (v: PetVaccination) => {
-    setEditingId(v.id);
-    setEditName(v.name);
-    setEditAdminDate(toDateInput(v.administered_date));
-    setEditExpDate(toDateInput(v.expiration_date));
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingId || !editName.trim() || !editAdminDate) return;
-    const updated = await petsApi.updateVaccination(petId, editingId, { name: editName, administered_date: editAdminDate, expiration_date: editExpDate || null }, token);
+  const handleSaveEdit = async (values: Record<string, string | boolean>) => {
+    if (!editingId || !(values.name as string).trim() || !values.administered_date) return;
+    const updated = await petsApi.updateVaccination(petId, editingId, { name: values.name as string, administered_date: values.administered_date as string, expiration_date: (values.expiration_date as string) || null }, token);
     setVaccinations(vaccinations.map(v => v.id === editingId ? updated : v));
     setEditingId(null);
   };
@@ -888,23 +944,13 @@ function VaccinationsTab({ petId, token, vaccinations, setVaccinations }: {
       </div>
 
       {showForm && (
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-3">
-          <input type="text" placeholder="Vaccination name *" value={name} onChange={e => setName(e.target.value)} className="input" />
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-sm text-gray-600">Date administered *</label>
-              <input type="date" value={adminDate} onChange={e => setAdminDate(e.target.value)} className="input" />
-            </div>
-            <div>
-              <label className="text-sm text-gray-600">Expiration date</label>
-              <input type="date" value={expDate} onChange={e => setExpDate(e.target.value)} className="input" />
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={handleAdd} className="btn-primary text-sm">Save</button>
-            <button onClick={() => setShowForm(false)} className="btn-secondary text-sm">Cancel</button>
-          </div>
-        </div>
+        <InlineEditForm
+          fields={VACCINATION_FIELDS}
+          values={addValues}
+          onSave={handleAdd}
+          onCancel={() => setShowForm(false)}
+          className="mb-4"
+        />
       )}
 
       {vaccinations.length === 0 ? (
@@ -914,23 +960,12 @@ function VaccinationsTab({ petId, token, vaccinations, setVaccinations }: {
           {vaccinations.map(v => (
             <li key={v.id} className="py-3">
               {editingId === v.id ? (
-                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                  <input type="text" placeholder="Vaccination name *" value={editName} onChange={e => setEditName(e.target.value)} className="input" />
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-sm text-gray-600">Date administered *</label>
-                      <input type="date" value={editAdminDate} onChange={e => setEditAdminDate(e.target.value)} className="input" />
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600">Expiration date</label>
-                      <input type="date" value={editExpDate} onChange={e => setEditExpDate(e.target.value)} className="input" />
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={handleSaveEdit} className="btn-primary text-sm">Save</button>
-                    <button onClick={() => setEditingId(null)} className="btn-secondary text-sm">Cancel</button>
-                  </div>
-                </div>
+                <InlineEditForm
+                  fields={VACCINATION_FIELDS}
+                  values={{ name: v.name, administered_date: toDateInput(v.administered_date), expiration_date: toDateInput(v.expiration_date) }}
+                  onSave={handleSaveEdit}
+                  onCancel={() => setEditingId(null)}
+                />
               ) : (
                 <div className="flex justify-between items-start">
                   <div>
@@ -945,7 +980,7 @@ function VaccinationsTab({ petId, token, vaccinations, setVaccinations }: {
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => startEdit(v)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
+                    <button onClick={() => setEditingId(v.id)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
                     {deletingId === v.id ? (
                       <>
                         <span className="text-sm text-gray-500">Sure?</span>
@@ -967,6 +1002,12 @@ function VaccinationsTab({ petId, token, vaccinations, setVaccinations }: {
 }
 
 // Vets Tab
+const VET_FIELDS: EditField[] = [
+  { key: 'clinic_name', placeholder: 'Clinic name *', required: true },
+  { key: 'vet_name', placeholder: 'Vet name' },
+  { key: 'phone', placeholder: 'Phone number', type: 'tel' },
+];
+
 function VetsTab({ petId, token, vets, setVets }: {
   petId: number;
   token: string;
@@ -974,36 +1015,24 @@ function VetsTab({ petId, token, vets, setVets }: {
   setVets: (v: PetVet[]) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
-  const [clinicName, setClinicName] = useState('');
-  const [vetName, setVetName] = useState('');
-  const [phone, setPhone] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editClinicName, setEditClinicName] = useState('');
-  const [editVetName, setEditVetName] = useState('');
-  const [editPhone, setEditPhone] = useState('');
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [addValues, setAddValues] = useState<Record<string, string | boolean>>({ clinic_name: '', vet_name: '', phone: '' });
 
-  const handleAdd = async () => {
-    if (!clinicName.trim()) return;
+  const handleAdd = async (values: Record<string, string | boolean>) => {
+    if (!(values.clinic_name as string).trim()) return;
     const vet = await petsApi.addVet(petId, {
-      clinic_name: clinicName, vet_name: vetName || null,
-      phone: phone || null, email: null, address: null, is_primary: vets.length === 0
+      clinic_name: values.clinic_name as string, vet_name: (values.vet_name as string) || null,
+      phone: (values.phone as string) || null, email: null, address: null, is_primary: vets.length === 0
     }, token);
     setVets([vet, ...vets]);
     setShowForm(false);
-    setClinicName(''); setVetName(''); setPhone('');
+    setAddValues({ clinic_name: '', vet_name: '', phone: '' });
   };
 
-  const startEdit = (v: PetVet) => {
-    setEditingId(v.id);
-    setEditClinicName(v.clinic_name);
-    setEditVetName(v.vet_name || '');
-    setEditPhone(v.phone || '');
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingId || !editClinicName.trim()) return;
-    const updated = await petsApi.updateVet(petId, editingId, { clinic_name: editClinicName, vet_name: editVetName || null, phone: editPhone || null }, token);
+  const handleSaveEdit = async (values: Record<string, string | boolean>) => {
+    if (!editingId || !(values.clinic_name as string).trim()) return;
+    const updated = await petsApi.updateVet(petId, editingId, { clinic_name: values.clinic_name as string, vet_name: (values.vet_name as string) || null, phone: (values.phone as string) || null }, token);
     setVets(vets.map(v => v.id === editingId ? updated : v));
     setEditingId(null);
   };
@@ -1027,15 +1056,13 @@ function VetsTab({ petId, token, vets, setVets }: {
       </div>
 
       {showForm && (
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-3">
-          <input type="text" placeholder="Clinic name *" value={clinicName} onChange={e => setClinicName(e.target.value)} className="input" />
-          <input type="text" placeholder="Vet name" value={vetName} onChange={e => setVetName(e.target.value)} className="input" />
-          <input type="tel" placeholder="Phone number" value={phone} onChange={e => setPhone(e.target.value)} className="input" />
-          <div className="flex gap-2">
-            <button onClick={handleAdd} className="btn-primary text-sm">Save</button>
-            <button onClick={() => setShowForm(false)} className="btn-secondary text-sm">Cancel</button>
-          </div>
-        </div>
+        <InlineEditForm
+          fields={VET_FIELDS}
+          values={addValues}
+          onSave={handleAdd}
+          onCancel={() => setShowForm(false)}
+          className="mb-4"
+        />
       )}
 
       {vets.length === 0 ? (
@@ -1045,15 +1072,12 @@ function VetsTab({ petId, token, vets, setVets }: {
           {vets.map(v => (
             <li key={v.id} className="py-3">
               {editingId === v.id ? (
-                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                  <input type="text" placeholder="Clinic name *" value={editClinicName} onChange={e => setEditClinicName(e.target.value)} className="input" />
-                  <input type="text" placeholder="Vet name" value={editVetName} onChange={e => setEditVetName(e.target.value)} className="input" />
-                  <input type="tel" placeholder="Phone number" value={editPhone} onChange={e => setEditPhone(e.target.value)} className="input" />
-                  <div className="flex gap-2">
-                    <button onClick={handleSaveEdit} className="btn-primary text-sm">Save</button>
-                    <button onClick={() => setEditingId(null)} className="btn-secondary text-sm">Cancel</button>
-                  </div>
-                </div>
+                <InlineEditForm
+                  fields={VET_FIELDS}
+                  values={{ clinic_name: v.clinic_name, vet_name: v.vet_name || '', phone: v.phone || '' }}
+                  onSave={handleSaveEdit}
+                  onCancel={() => setEditingId(null)}
+                />
               ) : (
                 <div className="flex justify-between items-start">
                   <div>
@@ -1062,7 +1086,7 @@ function VetsTab({ petId, token, vets, setVets }: {
                     {v.phone && <p className="text-sm text-gray-500">{v.phone}</p>}
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => startEdit(v)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
+                    <button onClick={() => setEditingId(v.id)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
                     {!v.is_primary && (
                       <button onClick={() => handleSetPrimary(v.id)} className="text-primary-600 hover:text-primary-800 text-sm">Set as Primary</button>
                     )}
@@ -1087,6 +1111,12 @@ function VetsTab({ petId, token, vets, setVets }: {
 }
 
 // Contacts Tab
+const CONTACT_FIELDS: EditField[] = [
+  { key: 'name', placeholder: 'Name *', required: true },
+  { key: 'phone', placeholder: 'Phone *', type: 'tel', required: true },
+  { key: 'relationship', placeholder: 'Relationship (e.g., spouse, neighbor)' },
+];
+
 function ContactsTab({ petId, token, contacts, setContacts }: {
   petId: number;
   token: string;
@@ -1094,35 +1124,23 @@ function ContactsTab({ petId, token, contacts, setContacts }: {
   setContacts: (c: PetEmergencyContact[]) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [relationship, setRelationship] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editPhone, setEditPhone] = useState('');
-  const [editRelationship, setEditRelationship] = useState('');
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [addValues, setAddValues] = useState<Record<string, string | boolean>>({ name: '', phone: '', relationship: '' });
 
-  const handleAdd = async () => {
-    if (!name.trim() || !phone.trim()) return;
+  const handleAdd = async (values: Record<string, string | boolean>) => {
+    if (!(values.name as string).trim() || !(values.phone as string).trim()) return;
     const contact = await petsApi.addEmergencyContact(petId, {
-      name, phone, relationship: relationship || null, email: null, is_primary: contacts.length === 0
+      name: values.name as string, phone: values.phone as string, relationship: (values.relationship as string) || null, email: null, is_primary: contacts.length === 0
     }, token);
     setContacts([contact, ...contacts]);
     setShowForm(false);
-    setName(''); setPhone(''); setRelationship('');
+    setAddValues({ name: '', phone: '', relationship: '' });
   };
 
-  const startEdit = (c: PetEmergencyContact) => {
-    setEditingId(c.id);
-    setEditName(c.name);
-    setEditPhone(c.phone);
-    setEditRelationship(c.relationship || '');
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingId || !editName.trim() || !editPhone.trim()) return;
-    const updated = await petsApi.updateEmergencyContact(petId, editingId, { name: editName, phone: editPhone, relationship: editRelationship || null }, token);
+  const handleSaveEdit = async (values: Record<string, string | boolean>) => {
+    if (!editingId || !(values.name as string).trim() || !(values.phone as string).trim()) return;
+    const updated = await petsApi.updateEmergencyContact(petId, editingId, { name: values.name as string, phone: values.phone as string, relationship: (values.relationship as string) || null }, token);
     setContacts(contacts.map(c => c.id === editingId ? updated : c));
     setEditingId(null);
   };
@@ -1141,15 +1159,13 @@ function ContactsTab({ petId, token, contacts, setContacts }: {
       </div>
 
       {showForm && (
-        <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-3">
-          <input type="text" placeholder="Name *" value={name} onChange={e => setName(e.target.value)} className="input" />
-          <input type="tel" placeholder="Phone *" value={phone} onChange={e => setPhone(e.target.value)} className="input" />
-          <input type="text" placeholder="Relationship (e.g., spouse, neighbor)" value={relationship} onChange={e => setRelationship(e.target.value)} className="input" />
-          <div className="flex gap-2">
-            <button onClick={handleAdd} className="btn-primary text-sm">Save</button>
-            <button onClick={() => setShowForm(false)} className="btn-secondary text-sm">Cancel</button>
-          </div>
-        </div>
+        <InlineEditForm
+          fields={CONTACT_FIELDS}
+          values={addValues}
+          onSave={handleAdd}
+          onCancel={() => setShowForm(false)}
+          className="mb-4"
+        />
       )}
 
       {contacts.length === 0 ? (
@@ -1159,15 +1175,12 @@ function ContactsTab({ petId, token, contacts, setContacts }: {
           {contacts.map(c => (
             <li key={c.id} className="py-3">
               {editingId === c.id ? (
-                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                  <input type="text" placeholder="Name *" value={editName} onChange={e => setEditName(e.target.value)} className="input" />
-                  <input type="tel" placeholder="Phone *" value={editPhone} onChange={e => setEditPhone(e.target.value)} className="input" />
-                  <input type="text" placeholder="Relationship (e.g., spouse, neighbor)" value={editRelationship} onChange={e => setEditRelationship(e.target.value)} className="input" />
-                  <div className="flex gap-2">
-                    <button onClick={handleSaveEdit} className="btn-primary text-sm">Save</button>
-                    <button onClick={() => setEditingId(null)} className="btn-secondary text-sm">Cancel</button>
-                  </div>
-                </div>
+                <InlineEditForm
+                  fields={CONTACT_FIELDS}
+                  values={{ name: c.name, phone: c.phone, relationship: c.relationship || '' }}
+                  onSave={handleSaveEdit}
+                  onCancel={() => setEditingId(null)}
+                />
               ) : (
                 <div className="flex justify-between items-start">
                   <div>
@@ -1176,7 +1189,7 @@ function ContactsTab({ petId, token, contacts, setContacts }: {
                     <p className="text-sm text-gray-500">{c.phone}</p>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => startEdit(c)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
+                    <button onClick={() => setEditingId(c.id)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
                     {deletingId === c.id ? (
                       <>
                         <span className="text-sm text-gray-500">Sure?</span>
