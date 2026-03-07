@@ -10,10 +10,9 @@ import {
   PetMedication,
   PetVaccination,
   PetEmergencyContact,
-  API_URL,
 } from '../api/client';
-import EditPetModal from '../components/EditPetModal';
 import ManageAccessModal from '../components/ManageAccessModal';
+import PhotoUpload from '../components/PhotoUpload';
 import ShareModal from '../components/ShareModal';
 import ShareWallet from '../components/ShareWallet';
 import InlineEditForm, { EditField } from '../components/InlineEditForm';
@@ -48,7 +47,6 @@ export default function PetDetail() {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [showShareModal, setShowShareModal] = useState(false);
   const [showLinkWallet, setShowLinkWallet] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [showAccessModal, setShowAccessModal] = useState(false);
 
   // Health records state
@@ -107,12 +105,6 @@ export default function PetDetail() {
 
   const shareUrl = pet ? `${window.location.origin}/card/${pet.share_id}` : '';
 
-  const getFullPhotoUrl = (url: string | null) => {
-    if (!url) return null;
-    if (url.startsWith('http')) return url;
-    return `${API_URL}${url}`;
-  };
-
   const handlePetUpdated = (updatedPet: Pet) => {
     setPet(updatedPet);
   };
@@ -147,15 +139,13 @@ export default function PetDetail() {
       <div className="card mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center space-x-4">
-            <div className="w-20 h-20 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
-              {pet.photo_url ? (
-                <img src={getFullPhotoUrl(pet.photo_url)!} alt={pet.name} className="w-20 h-20 rounded-full object-cover" />
-              ) : (
-                <span className="text-4xl">
-                  {pet.species === 'dog' ? '🐕' : pet.species === 'cat' ? '🐈' : '🐾'}
-                </span>
-              )}
-            </div>
+            <PhotoUpload
+              petId={petId}
+              currentPhotoUrl={pet.photo_url}
+              onPhotoUpdated={(photoUrl) => setPet({ ...pet, photo_url: photoUrl })}
+              compact
+              species={pet.species}
+            />
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{pet.name}</h1>
               <p className="text-gray-500 capitalize">
@@ -167,12 +157,6 @@ export default function PetDetail() {
           </div>
 
           <div className="flex space-x-3">
-            <button
-              onClick={() => setShowEditModal(true)}
-              className="btn-secondary"
-            >
-              Edit
-            </button>
             {isPremium ? (
               <button
                 onClick={() => setShowAccessModal(true)}
@@ -232,7 +216,7 @@ export default function PetDetail() {
       {/* Tab Content */}
       <div className="card">
         {activeTab === 'overview' && (
-          <OverviewTab pet={pet} token={token!} onPetUpdated={handlePetUpdated} conditions={conditions} allergies={allergies} medications={medications} />
+          <OverviewTab pet={pet} token={token!} onPetUpdated={handlePetUpdated} conditions={conditions} allergies={allergies} medications={medications} onNavigateTab={setActiveTab} />
         )}
         {activeTab === 'timeline' && (
           isPremium ? (
@@ -309,15 +293,6 @@ export default function PetDetail() {
         />
       )}
 
-      {/* Edit Modal */}
-      {showEditModal && (
-        <EditPetModal
-          pet={pet}
-          onClose={() => setShowEditModal(false)}
-          onPetUpdated={handlePetUpdated}
-        />
-      )}
-
       {/* Manage Access Modal */}
       {showAccessModal && (
         isPremium ? (
@@ -349,7 +324,7 @@ export default function PetDetail() {
 }
 
 // Overview Tab
-type OverviewField = 'species' | 'breed' | 'sex' | 'date_of_birth' | 'weight' | 'microchip_id' | 'special_instructions';
+type OverviewField = 'name' | 'species' | 'breed' | 'sex' | 'date_of_birth' | 'weight' | 'microchip_id' | 'special_instructions';
 
 const SPECIES_OPTIONS = [
   { value: 'dog', label: 'Dog' }, { value: 'cat', label: 'Cat' }, { value: 'bird', label: 'Bird' },
@@ -357,10 +332,11 @@ const SPECIES_OPTIONS = [
   { value: 'reptile', label: 'Reptile' }, { value: 'other', label: 'Other' },
 ];
 
-function OverviewTab({ pet, token, onPetUpdated, conditions, allergies, medications }: {
+function OverviewTab({ pet, token, onPetUpdated, conditions, allergies, medications, onNavigateTab }: {
   pet: Pet;
   token: string;
   onPetUpdated: (pet: Pet) => void;
+  onNavigateTab: (tab: TabType) => void;
   conditions: PetCondition[];
   allergies: PetAllergy[];
   medications: PetMedication[];
@@ -371,6 +347,9 @@ function OverviewTab({ pet, token, onPetUpdated, conditions, allergies, medicati
   const handleSaveField = async (field: OverviewField, values: Record<string, string | boolean>) => {
     const payload: Record<string, unknown> = {};
     switch (field) {
+      case 'name':
+        payload.name = values.name;
+        break;
       case 'species':
         payload.species = values.species;
         break;
@@ -401,6 +380,10 @@ function OverviewTab({ pet, token, onPetUpdated, conditions, allergies, medicati
   };
 
   const fieldConfigs: Record<OverviewField, { fields: EditField[]; values: Record<string, string | boolean> }> = {
+    name: {
+      fields: [{ key: 'name', placeholder: 'Pet name *', required: true }],
+      values: { name: pet.name },
+    },
     species: {
       fields: [{ key: 'species', placeholder: 'Species', type: 'select', options: SPECIES_OPTIONS, required: true }],
       values: { species: pet.species },
@@ -476,6 +459,7 @@ function OverviewTab({ pet, token, onPetUpdated, conditions, allergies, medicati
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-3">Basic Information</h3>
         <dl className="grid grid-cols-2 gap-4">
+          {renderEditableField('name', 'Name', pet.name)}
           {renderEditableField('species', 'Species', <span className="capitalize">{pet.species}</span>)}
           {renderEditableField('breed', 'Breed', pet.breed, !!pet.breed)}
           {renderEditableField('sex', 'Sex', <span className="capitalize">{pet.sex}{pet.is_fixed ? ' (Spayed/Neutered)' : ''}</span>, !!pet.sex)}
@@ -523,29 +507,38 @@ function OverviewTab({ pet, token, onPetUpdated, conditions, allergies, medicati
           <h3 className="text-lg font-semibold text-gray-900 mb-3">Health Summary</h3>
           <div className="grid gap-4 md:grid-cols-3">
             {conditions.length > 0 && (
-              <div className="bg-orange-50 rounded-lg p-4">
+              <div
+                className="bg-orange-50 rounded-lg p-4 cursor-pointer hover:bg-orange-100 transition-colors"
+                onClick={() => onNavigateTab('conditions')}
+              >
                 <h4 className="font-medium text-orange-800 mb-2">Conditions ({conditions.length})</h4>
                 <ul className="text-sm text-orange-700 space-y-1">
                   {conditions.slice(0, 3).map(c => <li key={c.id}>{c.name}</li>)}
-                  {conditions.length > 3 && <li>+{conditions.length - 3} more</li>}
+                  {conditions.length > 3 && <li className="font-medium">+{conditions.length - 3} more →</li>}
                 </ul>
               </div>
             )}
             {allergies.length > 0 && (
-              <div className="bg-red-50 rounded-lg p-4">
+              <div
+                className="bg-red-50 rounded-lg p-4 cursor-pointer hover:bg-red-100 transition-colors"
+                onClick={() => onNavigateTab('allergies')}
+              >
                 <h4 className="font-medium text-red-800 mb-2">Allergies ({allergies.length})</h4>
                 <ul className="text-sm text-red-700 space-y-1">
                   {allergies.slice(0, 3).map(a => <li key={a.id}>{a.allergen}</li>)}
-                  {allergies.length > 3 && <li>+{allergies.length - 3} more</li>}
+                  {allergies.length > 3 && <li className="font-medium">+{allergies.length - 3} more →</li>}
                 </ul>
               </div>
             )}
             {activeMeds.length > 0 && (
-              <div className="bg-blue-50 rounded-lg p-4">
+              <div
+                className="bg-blue-50 rounded-lg p-4 cursor-pointer hover:bg-blue-100 transition-colors"
+                onClick={() => onNavigateTab('medications')}
+              >
                 <h4 className="font-medium text-blue-800 mb-2">Active Medications ({activeMeds.length})</h4>
                 <ul className="text-sm text-blue-700 space-y-1">
                   {activeMeds.slice(0, 3).map(m => <li key={m.id}>{m.name}</li>)}
-                  {activeMeds.length > 3 && <li>+{activeMeds.length - 3} more</li>}
+                  {activeMeds.length > 3 && <li className="font-medium">+{activeMeds.length - 3} more →</li>}
                 </ul>
               </div>
             )}
