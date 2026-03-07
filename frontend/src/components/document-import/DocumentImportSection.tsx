@@ -4,10 +4,8 @@ import {
   API_URL,
   documentsApi,
   DocumentUpload,
-  DocumentClassification,
 } from '../../api/client';
 import { DocumentUploadZone } from './DocumentUploadZone';
-import { ClassificationConfirmation } from './ClassificationConfirmation';
 import { DocumentExtractionReview } from './DocumentExtractionReview';
 import { ImageReviewForm } from './ImageReviewForm';
 
@@ -16,25 +14,20 @@ interface DocumentImportSectionProps {
   onImportComplete?: () => void;
 }
 
-type ViewState = 'upload' | 'classifying' | 'confirm' | 'processing' | 'review' | 'image_review';
+type ViewState = 'upload' | 'review' | 'image_review';
 type FilterType = 'all' | 'pdf' | 'image';
-
-interface UploadState {
-  upload: DocumentUpload;
-  classification?: DocumentClassification;
-}
 
 export function DocumentImportSection({ petId, onImportComplete }: DocumentImportSectionProps) {
   const { token } = useAuth();
   const [viewState, setViewState] = useState<ViewState>('upload');
-  const [currentUpload, setCurrentUpload] = useState<UploadState | null>(null);
+  const [currentUpload, setCurrentUpload] = useState<DocumentUpload | null>(null);
   const [uploads, setUploads] = useState<DocumentUpload[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [exifDateTaken, setExifDateTaken] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
-  const [historyFilter, setHistoryFilter] = useState<FilterType>('all');
-  const [historyExpanded, setHistoryExpanded] = useState(false);
+  const [reviewFilter, setReviewFilter] = useState<FilterType>('all');
+  const [completedFilter, setCompletedFilter] = useState<FilterType>('all');
+  const [completedExpanded, setCompletedExpanded] = useState(false);
 
   useEffect(() => {
     loadUploads();
@@ -60,65 +53,15 @@ export function DocumentImportSection({ petId, onImportComplete }: DocumentImpor
     setError(null);
 
     if (result.media_type === 'image') {
-      // Image: skip AI, go to image review
-      setCurrentUpload({ upload: result.upload });
+      // Image: go to image review form
+      setCurrentUpload(result.upload);
       setExifDateTaken(result.exif_date_taken || null);
       setViewState('image_review');
     } else {
-      // PDF: use upload_id from response to get the upload object
-      const upload = result.upload || result;
-      setCurrentUpload({ upload });
-      setViewState('classifying');
-
-      try {
-        const classifyResult = await documentsApi.classifyUpload(petId, upload.id, token!);
-        setCurrentUpload({
-          upload: classifyResult.upload,
-          classification: classifyResult.classification,
-        });
-        setViewState('confirm');
-      } catch (err: any) {
-        setError(err.message || 'Failed to classify document');
-        setViewState('upload');
-        setCurrentUpload(null);
-        loadUploads();
-      }
-    }
-  };
-
-  const handleConfirmImport = async () => {
-    if (!currentUpload || !token) return;
-
-    setViewState('processing');
-    setError(null);
-
-    try {
-      // Process the document for full extraction
-      const result = await documentsApi.processUpload(petId, currentUpload.upload.id, token);
-      setCurrentUpload({
-        upload: result.upload,
-        classification: currentUpload.classification,
-      });
+      // PDF: backend already processed, go straight to extraction review
+      setCurrentUpload(result.upload);
       setViewState('review');
-    } catch (err: any) {
-      setError(err.message || 'Failed to process document');
-      setViewState('confirm');
     }
-  };
-
-  const handleCancelImport = async () => {
-    if (!currentUpload || !token) return;
-
-    try {
-      // Delete the upload
-      await documentsApi.deleteUpload(petId, currentUpload.upload.id, token);
-    } catch (err) {
-      console.error('Failed to delete upload:', err);
-    }
-
-    setCurrentUpload(null);
-    setViewState('upload');
-    loadUploads();
   };
 
   const handleBackToUploads = () => {
@@ -136,11 +79,11 @@ export function DocumentImportSection({ petId, onImportComplete }: DocumentImpor
 
   const handleUploadSelect = (upload: DocumentUpload) => {
     if (upload.file_type === 'image' && (upload.status === 'pending_review' || upload.status === 'completed')) {
-      setCurrentUpload({ upload });
+      setCurrentUpload(upload);
       setExifDateTaken(null);
       setViewState('image_review');
     } else if (upload.status === 'completed' || upload.status === 'pending_review') {
-      setCurrentUpload({ upload });
+      setCurrentUpload(upload);
       setViewState('review');
     }
   };
@@ -161,7 +104,7 @@ export function DocumentImportSection({ petId, onImportComplete }: DocumentImpor
     return (
       <ImageReviewForm
         petId={petId}
-        upload={currentUpload.upload}
+        upload={currentUpload}
         exifDateTaken={exifDateTaken}
         onSave={() => {
           setCurrentUpload(null);
@@ -179,57 +122,10 @@ export function DocumentImportSection({ petId, onImportComplete }: DocumentImpor
     return (
       <DocumentExtractionReview
         petId={petId}
-        upload={currentUpload.upload}
+        upload={currentUpload}
         onBack={handleBackToUploads}
         onApprovalComplete={handleApprovalComplete}
       />
-    );
-  }
-
-  // Classifying state
-  if (viewState === 'classifying') {
-    return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <svg className="animate-spin h-12 w-12 text-blue-500 mb-4" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-        </svg>
-        <p className="text-gray-600">Analyzing document...</p>
-        <p className="text-sm text-gray-400 mt-1">This may take a few seconds</p>
-      </div>
-    );
-  }
-
-  // Processing state
-  if (viewState === 'processing') {
-    return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <svg className="animate-spin h-12 w-12 text-blue-500 mb-4" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-        </svg>
-        <p className="text-gray-600">Extracting health information...</p>
-        <p className="text-sm text-gray-400 mt-1">AI is reading your document</p>
-      </div>
-    );
-  }
-
-  // Confirmation state
-  if (viewState === 'confirm' && currentUpload?.classification) {
-    return (
-      <div className="space-y-6">
-        <ClassificationConfirmation
-          upload={currentUpload.upload}
-          classification={currentUpload.classification}
-          onConfirm={handleConfirmImport}
-          onCancel={handleCancelImport}
-        />
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-3">
-            <p className="text-sm text-red-600">{error}</p>
-          </div>
-        )}
-      </div>
     );
   }
 
@@ -266,12 +162,12 @@ export function DocumentImportSection({ petId, onImportComplete }: DocumentImpor
 
       {/* Uploads */}
       {uploads.length > 0 && (() => {
-        const activeStatuses = ['pending', 'classifying', 'classified', 'processing', 'pending_review'];
-        const historyStatuses = ['completed', 'failed'];
-        const allActive = uploads.filter((u) => activeStatuses.includes(u.status));
-        const allHistory = uploads.filter((u) => historyStatuses.includes(u.status));
-        const activeUploads = allActive.filter((u) => activeFilter === 'all' || u.file_type === activeFilter);
-        const historyUploads = allHistory.filter((u) => historyFilter === 'all' || u.file_type === historyFilter);
+        const reviewStatuses = ['pending', 'classifying', 'processing', 'pending_review'];
+        const completedStatuses = ['completed', 'failed'];
+        const allReview = uploads.filter((u) => reviewStatuses.includes(u.status));
+        const allCompleted = uploads.filter((u) => completedStatuses.includes(u.status));
+        const reviewUploads = allReview.filter((u) => reviewFilter === 'all' || u.file_type === reviewFilter);
+        const completedUploads = allCompleted.filter((u) => completedFilter === 'all' || u.file_type === completedFilter);
 
         const filterBar = (current: FilterType, onChange: (f: FilterType) => void) => (
           <div className="flex gap-1">
@@ -293,15 +189,15 @@ export function DocumentImportSection({ petId, onImportComplete }: DocumentImpor
 
         return (
           <div>
-            {/* Active uploads */}
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-medium text-gray-900">Active Uploads</h4>
-                {allActive.length > 0 && filterBar(activeFilter, setActiveFilter)}
-              </div>
-              {activeUploads.length > 0 ? (
+            {/* Needs Review */}
+            {allReview.length > 0 && (
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-medium text-gray-900">Needs Review ({allReview.length})</h4>
+                  {filterBar(reviewFilter, setReviewFilter)}
+                </div>
                 <div className="space-y-2">
-                  {activeUploads.map((upload) => (
+                  {reviewUploads.map((upload) => (
                     <DocumentUploadItem
                       key={upload.id}
                       upload={upload}
@@ -309,34 +205,32 @@ export function DocumentImportSection({ petId, onImportComplete }: DocumentImpor
                     />
                   ))}
                 </div>
-              ) : (
-                <p className="text-sm text-gray-500 py-3">No active uploads</p>
-              )}
-            </div>
+              </div>
+            )}
 
-            {/* History section — collapsible */}
-            {allHistory.length > 0 && (
+            {/* Completed section — collapsible */}
+            {allCompleted.length > 0 && (
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <button
-                    onClick={() => setHistoryExpanded(!historyExpanded)}
+                    onClick={() => setCompletedExpanded(!completedExpanded)}
                     className="flex items-center gap-2 text-sm font-medium text-gray-900 hover:text-gray-700"
                   >
                     <svg
-                      className={`h-4 w-4 transition-transform ${historyExpanded ? 'rotate-90' : ''}`}
+                      className={`h-4 w-4 transition-transform ${completedExpanded ? 'rotate-90' : ''}`}
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
                     >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
-                    History ({historyUploads.length})
+                    Completed ({allCompleted.length})
                   </button>
-                  {historyExpanded && filterBar(historyFilter, setHistoryFilter)}
+                  {completedExpanded && filterBar(completedFilter, setCompletedFilter)}
                 </div>
-                {historyExpanded && (
+                {completedExpanded && (
                   <div className="space-y-2">
-                    {historyUploads.map((upload) => (
+                    {completedUploads.map((upload) => (
                       <DocumentUploadItem
                         key={upload.id}
                         upload={upload}
@@ -377,7 +271,6 @@ function DocumentUploadItem({
   const statusColors: Record<string, string> = {
     pending: 'bg-blue-100 text-blue-700',
     classifying: 'bg-blue-100 text-blue-700',
-    classified: 'bg-blue-100 text-blue-700',
     processing: 'bg-blue-100 text-blue-700',
     pending_review: 'bg-purple-100 text-purple-700',
     completed: 'bg-green-100 text-green-700',
@@ -387,14 +280,13 @@ function DocumentUploadItem({
   const statusLabels: Record<string, string> = {
     pending: 'Processing...',
     classifying: 'Processing...',
-    classified: 'Processing...',
     processing: 'Processing...',
-    pending_review: 'Pending review',
+    pending_review: 'Needs review',
     completed: 'Done',
     failed: 'Failed',
   };
 
-  const isProcessing = ['pending', 'classifying', 'classified', 'processing'].includes(upload.status);
+  const isProcessing = ['pending', 'classifying', 'processing'].includes(upload.status);
   const canReview = upload.status === 'pending_review';
   const canView = upload.status === 'completed';
 
@@ -534,9 +426,29 @@ function DocumentUploadItem({
               )}
             </p>
           </div>
-          <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[upload.status] || 'bg-gray-100 text-gray-700'} ${isProcessing ? 'animate-pulse' : ''}`}>
-            {statusLabels[upload.status] || upload.status}
-          </span>
+          {upload.status === 'pending_review' && (upload.pending_items || upload.approved_items || upload.rejected_items) ? (
+            <div className="flex items-center gap-1.5">
+              {!!upload.pending_items && (
+                <span className="px-2 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-700">
+                  {upload.pending_items} pending
+                </span>
+              )}
+              {!!upload.approved_items && (
+                <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">
+                  {upload.approved_items} approved
+                </span>
+              )}
+              {!!upload.rejected_items && (
+                <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700">
+                  {upload.rejected_items} rejected
+                </span>
+              )}
+            </div>
+          ) : upload.status !== 'completed' && (
+            <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[upload.status] || 'bg-gray-100 text-gray-700'} ${isProcessing ? 'animate-pulse' : ''}`}>
+              {statusLabels[upload.status] || upload.status}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2 ml-3">
           {canReview && (
