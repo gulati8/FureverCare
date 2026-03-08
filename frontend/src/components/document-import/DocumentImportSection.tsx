@@ -282,7 +282,7 @@ function DocumentUploadItem({
     classifying: 'Processing...',
     processing: 'Processing...',
     pending_review: 'Needs review',
-    completed: 'Done',
+    completed: 'Imported',
     failed: 'Failed',
   };
 
