@@ -310,14 +310,17 @@ export interface PetAllergy {
   allergen: string;
   reaction: string | null;
   severity: string | null;
+  show_on_card: boolean;
   created_at: Date;
 }
 
 export async function createPetAllergy(petId: number, data: Omit<PetAllergy, 'id' | 'pet_id' | 'created_at'>, audit?: AuditContext): Promise<PetAllergy> {
+  // Default show_on_card to true for life-threatening/severe allergies
+  const showOnCard = data.show_on_card ?? (data.severity === 'life-threatening' || data.severity === 'severe');
   const result = await queryOne<PetAllergy>(
-    `INSERT INTO pet_allergies (pet_id, allergen, reaction, severity)
-     VALUES ($1, $2, $3, $4) RETURNING *`,
-    [petId, data.allergen, data.reaction, data.severity]
+    `INSERT INTO pet_allergies (pet_id, allergen, reaction, severity, show_on_card)
+     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+    [petId, data.allergen, data.reaction, data.severity, showOnCard]
   );
 
   if (audit && result) {
@@ -343,7 +346,7 @@ export async function updatePetAllergy(id: number, petId: number, updates: Parti
   const values: any[] = [];
   let paramCount = 1;
 
-  const allowedFields = ['allergen', 'reaction', 'severity'];
+  const allowedFields = ['allergen', 'reaction', 'severity', 'show_on_card'];
 
   for (const field of allowedFields) {
     if ((updates as any)[field] !== undefined) {

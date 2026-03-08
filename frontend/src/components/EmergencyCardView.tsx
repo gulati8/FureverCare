@@ -45,19 +45,22 @@ function buildAlerts(card: EmergencyCard): AlertItem[] {
     }
   }
 
+  // Allergies flagged to show on card
   for (const a of card.allergies) {
-    const severity = a.severity === 'life-threatening' ? ' (ANAPHYLAXIS RISK)' :
-      a.severity === 'severe' ? ' (SEVERE)' : '';
-    alerts.push({
-      type: 'allergy',
-      title: `${a.allergen} Allergy${severity}`,
-      detail: a.reaction ? `Reaction: ${a.reaction}` : 'Avoid this allergen',
-    });
+    if (a.show_on_card) {
+      const severity = a.severity === 'life-threatening' ? ' (ANAPHYLAXIS RISK)' :
+        a.severity === 'severe' ? ' (SEVERE)' : '';
+      alerts.push({
+        type: 'allergy',
+        title: `${a.allergen} Allergy${severity}`,
+        detail: a.reaction ? `Reaction: ${a.reaction}` : 'Avoid this allergen',
+      });
+    }
   }
 
   // Medications flagged to show on card
   for (const m of card.medications) {
-    if (m.show_on_card || m.notes) {
+    if (m.show_on_card) {
       alerts.push({
         type: 'medication',
         title: `On ${m.name}${m.notes ? ` - ${m.notes}` : ''}`,

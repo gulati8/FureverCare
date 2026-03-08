@@ -122,6 +122,7 @@ async function buildEmergencyCard(pet: any) {
       allergen: a.allergen,
       reaction: a.reaction,
       severity: a.severity,
+      show_on_card: a.show_on_card,
     })),
 
     medications: medications
