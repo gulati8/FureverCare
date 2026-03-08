@@ -250,11 +250,14 @@ export interface PetVet {
   created_at: string;
 }
 
+export type DatePrecision = 'day' | 'month' | 'year';
+
 export interface PetCondition {
   id: number;
   pet_id: number;
   name: string;
   diagnosed_date: string | null;
+  diagnosed_date_precision: DatePrecision;
   notes: string | null;
   severity: string | null;
   is_active: boolean;
@@ -278,7 +281,9 @@ export interface PetMedication {
   dosage: string | null;
   frequency: string | null;
   start_date: string | null;
+  start_date_precision: DatePrecision;
   end_date: string | null;
+  end_date_precision: DatePrecision;
   prescribing_vet: string | null;
   notes: string | null;
   is_active: boolean;
@@ -291,7 +296,9 @@ export interface PetVaccination {
   pet_id: number;
   name: string;
   administered_date: string;
+  administered_date_precision: DatePrecision;
   expiration_date: string | null;
+  expiration_date_precision: DatePrecision;
   administered_by: string | null;
   lot_number: string | null;
   created_at: string;

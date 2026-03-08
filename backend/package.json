@@ -40,6 +40,8 @@
     "db:migrate:subscriptions:dev": "tsx src/db/migrate-subscriptions.ts",
     "db:migrate:alerts": "node dist/db/migrate-alerts.js",
     "db:migrate:alerts:dev": "tsx src/db/migrate-alerts.ts",
+    "db:migrate:date-precision": "node dist/db/migrate-date-precision.js",
+    "db:migrate:date-precision:dev": "tsx src/db/migrate-date-precision.ts",
     "test:backend": "tsx --test src/models/health-records.test.ts"
   },
   "dependencies": {

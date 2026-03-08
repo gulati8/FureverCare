@@ -381,36 +381,116 @@ export async function classifyAndExtractDocument(
   };
 }
 
+/**
+ * Detect the precision of a date string extracted from a document.
+ * - Full date (YYYY-MM-DD or similar) -> 'day'
+ * - Month+year (e.g., "March 2024", "2024-03") -> 'month'
+ * - Year only (e.g., "2024") -> 'year'
+ */
+function detectDatePrecision(dateStr: string | null | undefined): 'day' | 'month' | 'year' {
+  if (!dateStr) return 'day';
+
+  const cleaned = dateStr.trim();
+
+  // Year only: exactly 4 digits
+  if (/^\d{4}$/.test(cleaned)) return 'year';
+
+  // Month + year patterns: "2024-03", "March 2024", "Mar 2024", "03/2024"
+  if (/^\d{4}-\d{2}$/.test(cleaned)) return 'month';
+  if (/^[A-Za-z]+\s+\d{4}$/.test(cleaned)) return 'month';
+  if (/^\d{2}\/\d{4}$/.test(cleaned)) return 'month';
+
+  // Full date: YYYY-MM-DD or other patterns with day component
+  return 'day';
+}
+
+/**
+ * Normalize a date string to YYYY-MM-DD format, filling in missing components:
+ * - Year only -> YYYY-01-01
+ * - Month+year -> YYYY-MM-01
+ * - Full date -> YYYY-MM-DD
+ */
+function normalizeDateForStorage(dateStr: string | null | undefined, precision: 'day' | 'month' | 'year'): string | null {
+  if (!dateStr) return null;
+
+  const cleaned = dateStr.trim();
+
+  if (precision === 'year') {
+    const yearMatch = cleaned.match(/(\d{4})/);
+    return yearMatch ? `${yearMatch[1]}-01-01` : null;
+  }
+
+  if (precision === 'month') {
+    // Handle YYYY-MM
+    const yymm = cleaned.match(/^(\d{4})-(\d{2})$/);
+    if (yymm) return `${yymm[1]}-${yymm[2]}-01`;
+
+    // Handle "Month YYYY"
+    const monthNames: Record<string, string> = {
+      january: '01', february: '02', march: '03', april: '04',
+      may: '05', june: '06', july: '07', august: '08',
+      september: '09', october: '10', november: '11', december: '12',
+      jan: '01', feb: '02', mar: '03', apr: '04',
+      jun: '06', jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+    };
+    const monthYear = cleaned.match(/^([A-Za-z]+)\s+(\d{4})$/);
+    if (monthYear) {
+      const mm = monthNames[monthYear[1].toLowerCase()];
+      if (mm) return `${monthYear[2]}-${mm}-01`;
+    }
+
+    // Handle MM/YYYY
+    const mmyyyy = cleaned.match(/^(\d{2})\/(\d{4})$/);
+    if (mmyyyy) return `${mmyyyy[2]}-${mmyyyy[1]}-01`;
+  }
+
+  // For 'day' precision, return as-is (should already be YYYY-MM-DD)
+  return cleaned;
+}
+
 export function mapExtractionToHealthRecord(recordType: RecordType, data: Record<string, any>): Record<string, any> {
   switch (recordType) {
-    case 'vaccination':
+    case 'vaccination': {
+      const adminPrecision = detectDatePrecision(data.administered_date);
+      const expPrecision = detectDatePrecision(data.expiration_date);
       return {
         name: data.name,
-        administered_date: data.administered_date,
-        expiration_date: data.expiration_date || null,
+        administered_date: normalizeDateForStorage(data.administered_date, adminPrecision) || data.administered_date,
+        administered_date_precision: adminPrecision,
+        expiration_date: normalizeDateForStorage(data.expiration_date, expPrecision) || data.expiration_date || null,
+        expiration_date_precision: expPrecision,
         administered_by: data.administered_by || null,
         lot_number: data.lot_number || null,
       };
+    }
 
-    case 'medication':
+    case 'medication': {
+      const startPrecision = detectDatePrecision(data.start_date);
+      const endPrecision = detectDatePrecision(data.end_date);
       return {
         name: data.name,
         dosage: data.dosage || null,
         frequency: data.frequency || null,
-        start_date: data.start_date || null,
-        end_date: data.end_date || null,
+        start_date: normalizeDateForStorage(data.start_date, startPrecision) || data.start_date || null,
+        start_date_precision: startPrecision,
+        end_date: normalizeDateForStorage(data.end_date, endPrecision) || data.end_date || null,
+        end_date_precision: endPrecision,
         prescribing_vet: data.prescribing_vet || null,
         notes: data.notes || null,
         is_active: data.is_active !== false,
       };
+    }
 
-    case 'condition':
+    case 'condition': {
+      const diagPrecision = detectDatePrecision(data.diagnosed_date);
       return {
         name: data.name,
-        diagnosed_date: data.diagnosed_date || null,
+        diagnosed_date: normalizeDateForStorage(data.diagnosed_date, diagPrecision) || data.diagnosed_date || null,
+        diagnosed_date_precision: diagPrecision,
         notes: data.notes || null,
         severity: data.severity || null,
       };
+    }
 
     case 'allergy':
       return {
