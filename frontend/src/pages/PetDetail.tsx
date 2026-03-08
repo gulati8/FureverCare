@@ -10,6 +10,7 @@ import {
   PetMedication,
   PetVaccination,
   PetEmergencyContact,
+  PetAlert,
 } from '../api/client';
 import ManageAccessModal from '../components/ManageAccessModal';
 import PhotoUpload from '../components/PhotoUpload';
@@ -21,7 +22,7 @@ import { AuditLogViewer } from '../components/audit/AuditLogViewer';
 import { MedicalTimeline } from '../components/MedicalTimeline';
 import UpgradeBanner from '../components/UpgradeBanner';
 
-type TabType = 'overview' | 'timeline' | 'conditions' | 'allergies' | 'medications' | 'vaccinations' | 'contacts' | 'vets' | 'documents' | 'history';
+type TabType = 'overview' | 'timeline' | 'conditions' | 'allergies' | 'medications' | 'vaccinations' | 'contacts' | 'vets' | 'alerts' | 'documents' | 'history';
 
 const KG_TO_LBS = 2.20462;
 
@@ -56,6 +57,7 @@ export default function PetDetail() {
   const [medications, setMedications] = useState<PetMedication[]>([]);
   const [vaccinations, setVaccinations] = useState<PetVaccination[]>([]);
   const [emergencyContacts, setEmergencyContacts] = useState<PetEmergencyContact[]>([]);
+  const [alerts, setAlerts] = useState<PetAlert[]>([]);
 
   const petId = parseInt(id || '0');
 
@@ -67,7 +69,7 @@ export default function PetDetail() {
     if (!token || !id) return;
     setIsLoading(true);
     try {
-      const [petData, vetsData, conditionsData, allergiesData, medsData, vacsData, contactsData] = await Promise.all([
+      const [petData, vetsData, conditionsData, allergiesData, medsData, vacsData, contactsData, alertsData] = await Promise.all([
         petsApi.get(petId, token),
         petsApi.getVets(petId, token),
         petsApi.getConditions(petId, token),
@@ -75,6 +77,7 @@ export default function PetDetail() {
         petsApi.getMedications(petId, token),
         petsApi.getVaccinations(petId, token),
         petsApi.getEmergencyContacts(petId, token),
+        petsApi.getAlerts(petId, token),
       ]);
       setPet(petData);
       setVets(vetsData);
@@ -83,6 +86,7 @@ export default function PetDetail() {
       setMedications(medsData);
       setVaccinations(vacsData);
       setEmergencyContacts(contactsData);
+      setAlerts(alertsData);
     } catch (err) {
       console.error('Failed to load pet:', err);
       navigate('/dashboard');
@@ -129,6 +133,7 @@ export default function PetDetail() {
     { id: 'vaccinations', label: 'Vaccinations', count: vaccinations.length },
     { id: 'vets', label: 'Veterinarians', count: vets.length },
     { id: 'contacts', label: 'Emergency Contacts', count: emergencyContacts.length },
+    { id: 'alerts', label: 'Alerts', count: alerts.filter(a => a.is_active).length + conditions.filter(c => c.show_on_card).length + medications.filter(m => m.show_on_card).length || undefined },
     { id: 'documents', label: 'Import Documents' },
     { id: 'history', label: 'History' },
   ];
@@ -253,6 +258,9 @@ export default function PetDetail() {
         )}
         {activeTab === 'contacts' && (
           <ContactsTab petId={petId} token={token!} contacts={emergencyContacts} setContacts={setEmergencyContacts} />
+        )}
+        {activeTab === 'alerts' && (
+          <AlertsTab petId={petId} token={token!} alerts={alerts} setAlerts={setAlerts} conditions={conditions} setConditions={setConditions} medications={medications} setMedications={setMedications} />
         )}
         {activeTab === 'documents' && (
           isPremium ? (
@@ -565,7 +573,8 @@ const ALLERGY_SEVERITY_OPTIONS = [
 // Conditions Tab
 const CONDITION_FIELDS: EditField[] = [
   { key: 'name', placeholder: 'Condition name *', required: true },
-  { key: 'severity', placeholder: 'Severity', type: 'select', options: SEVERITY_OPTIONS },
+  { key: 'diagnosed_date', placeholder: 'Diagnosed date', type: 'date', label: 'Diagnosed date', gridGroup: 'meta' },
+  { key: 'severity', placeholder: 'Severity', type: 'select', options: SEVERITY_OPTIONS, gridGroup: 'meta' },
   { key: 'notes', placeholder: 'Notes (optional)', type: 'textarea' },
 ];
 
@@ -578,21 +587,45 @@ function ConditionsTab({ petId, token, conditions, setConditions }: {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [addValues, setAddValues] = useState<Record<string, string | boolean>>({ name: '', severity: '', notes: '' });
+  const [addValues, setAddValues] = useState<Record<string, string | boolean>>({ name: '', severity: '', notes: '', diagnosed_date: '' });
+
+  const toDateInput = (d: string | null) => d ? d.split('T')[0] : '';
 
   const handleAdd = async (values: Record<string, string | boolean>) => {
     if (!(values.name as string).trim()) return;
-    const condition = await petsApi.addCondition(petId, { name: values.name as string, severity: (values.severity as string) || null, notes: (values.notes as string) || null, diagnosed_date: null }, token);
+    const condition = await petsApi.addCondition(petId, {
+      name: values.name as string,
+      severity: (values.severity as string) || null,
+      notes: (values.notes as string) || null,
+      diagnosed_date: (values.diagnosed_date as string) || null,
+      is_active: true,
+      show_on_card: false,
+    }, token);
     setConditions([condition, ...conditions]);
     setShowForm(false);
-    setAddValues({ name: '', severity: '', notes: '' });
+    setAddValues({ name: '', severity: '', notes: '', diagnosed_date: '' });
   };
 
   const handleSaveEdit = async (values: Record<string, string | boolean>) => {
     if (!editingId || !(values.name as string).trim()) return;
-    const updated = await petsApi.updateCondition(petId, editingId, { name: values.name as string, severity: (values.severity as string) || null, notes: (values.notes as string) || null }, token);
+    const updated = await petsApi.updateCondition(petId, editingId, {
+      name: values.name as string,
+      severity: (values.severity as string) || null,
+      notes: (values.notes as string) || null,
+      diagnosed_date: (values.diagnosed_date as string) || null,
+    }, token);
     setConditions(conditions.map(c => c.id === editingId ? updated : c));
     setEditingId(null);
+  };
+
+  const handleToggleActive = async (c: PetCondition) => {
+    const updated = await petsApi.updateCondition(petId, c.id, { is_active: !c.is_active }, token);
+    setConditions(conditions.map(x => x.id === c.id ? updated : x));
+  };
+
+  const handleToggleShowOnCard = async (c: PetCondition) => {
+    const updated = await petsApi.updateCondition(petId, c.id, { show_on_card: !c.show_on_card }, token);
+    setConditions(conditions.map(x => x.id === c.id ? updated : x));
   };
 
   const handleDelete = async (id: number) => {
@@ -600,6 +633,56 @@ function ConditionsTab({ petId, token, conditions, setConditions }: {
     setConditions(conditions.filter(c => c.id !== id));
     setDeletingId(null);
   };
+
+  const active = conditions.filter(c => c.is_active);
+  const inactive = conditions.filter(c => !c.is_active);
+
+  const renderConditionRow = (c: PetCondition, isInactive?: boolean) => (
+    <li key={c.id} className="p-3">
+      {editingId === c.id ? (
+        <InlineEditForm
+          fields={CONDITION_FIELDS}
+          values={{ name: c.name, severity: c.severity || '', notes: c.notes || '', diagnosed_date: toDateInput(c.diagnosed_date) }}
+          onSave={handleSaveEdit}
+          onCancel={() => setEditingId(null)}
+        />
+      ) : (
+        <div className="flex justify-between items-start">
+          <div>
+            <div className="flex items-center gap-2">
+              <p className={`font-medium ${isInactive ? 'line-through' : ''}`}>{c.name}</p>
+              {c.show_on_card && (
+                <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-semibold">ALERT</span>
+              )}
+            </div>
+            <div className="flex gap-2 text-sm text-gray-500">
+              {c.severity && <span className="capitalize">{c.severity}</span>}
+              {c.diagnosed_date && <span>Diagnosed: {new Date(c.diagnosed_date.split('T')[0] + 'T00:00:00').toLocaleDateString()}</span>}
+            </div>
+            {c.notes && <p className="text-sm text-gray-600 mt-1">{c.notes}</p>}
+          </div>
+          <div className="flex gap-2 flex-shrink-0">
+            <button onClick={() => handleToggleShowOnCard(c)} className={`text-sm ${c.show_on_card ? 'text-red-600 hover:text-red-800' : 'text-gray-400 hover:text-gray-600'}`} title={c.show_on_card ? 'Remove from card' : 'Show on card'}>
+              {c.show_on_card ? '🔔' : '🔕'}
+            </button>
+            <button onClick={() => setEditingId(c.id)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
+            <button onClick={() => handleToggleActive(c)} className={`text-sm ${isInactive ? 'text-primary-600 hover:text-primary-800' : 'text-gray-600 hover:text-gray-800'}`}>
+              {isInactive ? 'Reactivate' : 'Discontinue'}
+            </button>
+            {deletingId === c.id ? (
+              <>
+                <span className="text-sm text-gray-500">Sure?</span>
+                <button onClick={() => handleDelete(c.id)} className="text-red-600 hover:text-red-800 text-sm font-semibold">Yes</button>
+                <button onClick={() => setDeletingId(null)} className="text-gray-600 hover:text-gray-800 text-sm">No</button>
+              </>
+            ) : (
+              <button onClick={() => setDeletingId(c.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
+            )}
+          </div>
+        </div>
+      )}
+    </li>
+  );
 
   return (
     <div>
@@ -618,43 +701,26 @@ function ConditionsTab({ petId, token, conditions, setConditions }: {
         />
       )}
 
-      {conditions.length === 0 ? (
+      {active.length > 0 && (
+        <div className="mb-6">
+          <h4 className="text-sm font-medium text-gray-500 mb-2">Active Conditions</h4>
+          <ul className="divide-y border rounded-lg">
+            {active.map(c => renderConditionRow(c))}
+          </ul>
+        </div>
+      )}
+
+      {inactive.length > 0 && (
+        <div>
+          <h4 className="text-sm font-medium text-gray-500 mb-2">Discontinued Conditions</h4>
+          <ul className="divide-y border rounded-lg opacity-60">
+            {inactive.map(c => renderConditionRow(c, true))}
+          </ul>
+        </div>
+      )}
+
+      {conditions.length === 0 && (
         <p className="text-gray-500 text-center py-8">No medical conditions recorded</p>
-      ) : (
-        <ul className="divide-y">
-          {conditions.map(c => (
-            <li key={c.id} className="py-3">
-              {editingId === c.id ? (
-                <InlineEditForm
-                  fields={CONDITION_FIELDS}
-                  values={{ name: c.name, severity: c.severity || '', notes: c.notes || '' }}
-                  onSave={handleSaveEdit}
-                  onCancel={() => setEditingId(null)}
-                />
-              ) : (
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-medium">{c.name}</p>
-                    {c.severity && <span className="text-sm text-gray-500 capitalize">{c.severity}</span>}
-                    {c.notes && <p className="text-sm text-gray-600 mt-1">{c.notes}</p>}
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => setEditingId(c.id)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
-                    {deletingId === c.id ? (
-                      <>
-                        <span className="text-sm text-gray-500">Sure?</span>
-                        <button onClick={() => handleDelete(c.id)} className="text-red-600 hover:text-red-800 text-sm font-semibold">Yes</button>
-                        <button onClick={() => setDeletingId(null)} className="text-gray-600 hover:text-gray-800 text-sm">No</button>
-                      </>
-                    ) : (
-                      <button onClick={() => setDeletingId(c.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
       )}
     </div>
   );
@@ -780,7 +846,7 @@ function MedicationsTab({ petId, token, medications, setMedications }: {
     if (!(values.name as string).trim()) return;
     const med = await petsApi.addMedication(petId, {
       name: values.name as string, dosage: (values.dosage as string) || null, frequency: (values.frequency as string) || null,
-      start_date: null, end_date: null, prescribing_vet: null, notes: null, is_active: true
+      start_date: null, end_date: null, prescribing_vet: null, notes: null, is_active: true, show_on_card: false
     }, token);
     setMedications([med, ...medications]);
     setShowForm(false);
@@ -796,6 +862,11 @@ function MedicationsTab({ petId, token, medications, setMedications }: {
 
   const handleToggleActive = async (med: PetMedication) => {
     const updated = await petsApi.updateMedication(petId, med.id, { is_active: !med.is_active }, token);
+    setMedications(medications.map(m => m.id === med.id ? updated : m));
+  };
+
+  const handleToggleShowOnCard = async (med: PetMedication) => {
+    const updated = await petsApi.updateMedication(petId, med.id, { show_on_card: !med.show_on_card }, token);
     setMedications(medications.map(m => m.id === med.id ? updated : m));
   };
 
@@ -820,11 +891,19 @@ function MedicationsTab({ petId, token, medications, setMedications }: {
       ) : (
         <div className="flex justify-between items-start">
           <div>
-            <p className={`font-medium ${isInactive ? 'line-through' : ''}`}>{m.name}</p>
+            <div className="flex items-center gap-2">
+              <p className={`font-medium ${isInactive ? 'line-through' : ''}`}>{m.name}</p>
+              {m.show_on_card && (
+                <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-semibold">ALERT</span>
+              )}
+            </div>
             {m.dosage && <span className="text-sm text-gray-500">{m.dosage}</span>}
             {m.frequency && <span className="text-sm text-gray-500"> - {m.frequency}</span>}
           </div>
           <div className="flex gap-2">
+            <button onClick={() => handleToggleShowOnCard(m)} className={`text-sm ${m.show_on_card ? 'text-red-600 hover:text-red-800' : 'text-gray-400 hover:text-gray-600'}`} title={m.show_on_card ? 'Remove from card' : 'Show on card'}>
+              {m.show_on_card ? '🔔' : '🔕'}
+            </button>
             <button onClick={() => setEditingId(m.id)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
             <button onClick={() => handleToggleActive(m)} className={`text-sm ${isInactive ? 'text-primary-600 hover:text-primary-800' : 'text-gray-600 hover:text-gray-800'}`}>
               {isInactive ? 'Reactivate' : 'Discontinue'}
@@ -1205,6 +1284,156 @@ function ContactsTab({ petId, token, contacts, setContacts }: {
             </li>
           ))}
         </ul>
+      )}
+    </div>
+  );
+}
+
+// Predefined alert suggestions
+const ALERT_SUGGESTIONS = [
+  'Seizure watch',
+  'Dog aggressive/reactive',
+  'Limited Kitty Minutes',
+  'Chill protocol',
+  'Muzzle trained/Muzzle at vets',
+  'On Chemo Drugs',
+  'Heart Murmur',
+  'Bleeding Risk',
+  'Not up to date on rabies',
+];
+
+// Alerts Tab
+function AlertsTab({ petId, token, alerts, setAlerts, conditions, setConditions, medications, setMedications }: {
+  petId: number;
+  token: string;
+  alerts: PetAlert[];
+  setAlerts: (a: PetAlert[]) => void;
+  conditions: PetCondition[];
+  setConditions: (c: PetCondition[]) => void;
+  medications: PetMedication[];
+  setMedications: (m: PetMedication[]) => void;
+}) {
+  const [showForm, setShowForm] = useState(false);
+  const [newAlertText, setNewAlertText] = useState('');
+
+  const conditionAlerts = conditions.filter(c => c.show_on_card && c.is_active);
+  const medicationAlerts = medications.filter(m => m.show_on_card && m.is_active);
+  const customAlerts = alerts.filter(a => a.is_active);
+
+  const handleAddAlert = async () => {
+    if (!newAlertText.trim()) return;
+    const alert = await petsApi.addAlert(petId, { alert_text: newAlertText.trim() }, token);
+    setAlerts([alert, ...alerts]);
+    setNewAlertText('');
+    setShowForm(false);
+  };
+
+  const handleRemoveCustomAlert = async (id: number) => {
+    await petsApi.deleteAlert(petId, id, token);
+    setAlerts(alerts.filter(a => a.id !== id));
+  };
+
+  const handleRemoveConditionAlert = async (c: PetCondition) => {
+    const updated = await petsApi.updateCondition(petId, c.id, { show_on_card: false }, token);
+    setConditions(conditions.map(x => x.id === c.id ? updated : x));
+  };
+
+  const handleRemoveMedicationAlert = async (m: PetMedication) => {
+    const updated = await petsApi.updateMedication(petId, m.id, { show_on_card: false }, token);
+    setMedications(medications.map(x => x.id === m.id ? updated : x));
+  };
+
+  const totalAlerts = conditionAlerts.length + medicationAlerts.length + customAlerts.length;
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-4">
+        <div>
+          <h3 className="text-lg font-semibold">Medical Alerts</h3>
+          <p className="text-sm text-gray-500">These alerts appear on the emergency card</p>
+        </div>
+        <button onClick={() => setShowForm(!showForm)} className="btn-primary text-sm">+ Add Alert</button>
+      </div>
+
+      {showForm && (
+        <div className="bg-gray-50 border rounded-lg p-4 mb-4">
+          <div className="mb-3">
+            <input
+              type="text"
+              list="alert-suggestions"
+              value={newAlertText}
+              onChange={(e) => setNewAlertText(e.target.value)}
+              placeholder="e.g., Seizure watch, Muzzle at vets"
+              className="w-full input text-sm"
+              maxLength={200}
+              onKeyDown={(e) => e.key === 'Enter' && handleAddAlert()}
+            />
+            <datalist id="alert-suggestions">
+              {ALERT_SUGGESTIONS.map(s => <option key={s} value={s} />)}
+            </datalist>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={handleAddAlert} disabled={!newAlertText.trim()} className="btn-primary text-sm disabled:opacity-50">Save</button>
+            <button onClick={() => { setShowForm(false); setNewAlertText(''); }} className="btn-secondary text-sm">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {totalAlerts === 0 ? (
+        <p className="text-gray-500 text-center py-8">No alerts configured. Use the bell icon on conditions and medications, or add custom alerts above.</p>
+      ) : (
+        <div className="space-y-6">
+          {/* Condition Alerts */}
+          {conditionAlerts.length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium text-orange-700 mb-2">From Conditions</h4>
+              <ul className="divide-y border rounded-lg">
+                {conditionAlerts.map(c => (
+                  <li key={c.id} className="p-3 flex justify-between items-center">
+                    <div>
+                      <p className="font-medium text-sm">{c.name}</p>
+                      {c.severity && <span className="text-xs text-gray-500 capitalize">{c.severity}</span>}
+                    </div>
+                    <button onClick={() => handleRemoveConditionAlert(c)} className="text-gray-400 hover:text-red-600 text-sm" title="Remove from alerts">✕</button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Medication Alerts */}
+          {medicationAlerts.length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium text-blue-700 mb-2">From Medications</h4>
+              <ul className="divide-y border rounded-lg">
+                {medicationAlerts.map(m => (
+                  <li key={m.id} className="p-3 flex justify-between items-center">
+                    <div>
+                      <p className="font-medium text-sm">{m.name}</p>
+                      {m.dosage && <span className="text-xs text-gray-500">{m.dosage}</span>}
+                    </div>
+                    <button onClick={() => handleRemoveMedicationAlert(m)} className="text-gray-400 hover:text-red-600 text-sm" title="Remove from alerts">✕</button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Custom Alerts */}
+          {customAlerts.length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium text-red-700 mb-2">Custom Alerts</h4>
+              <ul className="divide-y border rounded-lg">
+                {customAlerts.map(a => (
+                  <li key={a.id} className="p-3 flex justify-between items-center">
+                    <p className="font-medium text-sm">{a.alert_text}</p>
+                    <button onClick={() => handleRemoveCustomAlert(a.id)} className="text-gray-400 hover:text-red-600 text-sm" title="Remove alert">✕</button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

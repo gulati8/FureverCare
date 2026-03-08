@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
+import { query as dbQuery } from '../db/pool.js';
 import { authenticate, AuthRequest } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { checkPetLimit } from '../middleware/subscription.js';
@@ -25,6 +26,7 @@ import {
   getPetMedications, createPetMedication, updatePetMedication, deletePetMedication,
   getPetVaccinations, createPetVaccination, updatePetVaccination, deletePetVaccination,
   getPetEmergencyContacts, createPetEmergencyContact, updatePetEmergencyContact, deletePetEmergencyContact,
+  getPetAlerts, createPetAlert, updatePetAlert, deletePetAlert,
 } from '../models/health-records.js';
 
 const router = Router();
@@ -533,6 +535,112 @@ router.delete('/:id/emergency-contacts/:contactId', authenticate, async (req: Au
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete emergency contact' });
+  }
+});
+
+// --- Source Document Lookup ---
+router.get('/:id/records/:recordType/:recordId/source', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const petId = parseInt(req.params.id);
+    if (!await verifyPetAccess(petId, req.userId!)) {
+      res.status(404).json({ error: 'Pet not found' });
+      return;
+    }
+    const { recordType, recordId } = req.params;
+
+    // Look up in document_extraction_items first (new system)
+    const docResult = await dbQuery<any>(
+      `SELECT dei.id, du.id as upload_id, du.original_filename, du.file_type
+       FROM document_extraction_items dei
+       JOIN document_extractions de ON de.id = dei.extraction_id
+       JOIN document_uploads du ON du.id = de.document_upload_id
+       WHERE dei.created_record_id = $1
+         AND dei.created_record_type = $2
+         AND du.pet_id = $3
+       LIMIT 1`,
+      [parseInt(recordId), recordType, petId]
+    );
+
+    if (docResult.length > 0) {
+      res.json({ source: 'document_import', upload_id: docResult[0].upload_id, filename: docResult[0].original_filename, file_type: docResult[0].file_type });
+      return;
+    }
+
+    // Fall back to audit log
+    const auditResult = await dbQuery<any>(
+      `SELECT source, source_pdf_upload_id FROM audit_log
+       WHERE entity_type = $1 AND entity_id = $2 AND action = 'create'
+       ORDER BY created_at ASC LIMIT 1`,
+      [recordType, parseInt(recordId)]
+    );
+
+    if (auditResult.length > 0 && auditResult[0].source !== 'manual') {
+      res.json({ source: auditResult[0].source, upload_id: auditResult[0].source_pdf_upload_id, filename: null, file_type: null });
+      return;
+    }
+
+    res.json({ source: 'manual', upload_id: null, filename: null, file_type: null });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to look up record source' });
+  }
+});
+
+// --- Alerts ---
+router.get('/:id/alerts', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
+      res.status(404).json({ error: 'Pet not found' });
+      return;
+    }
+    const alerts = await getPetAlerts(parseInt(req.params.id));
+    res.json(alerts);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch alerts' });
+  }
+});
+
+router.post('/:id/alerts', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
+      res.status(404).json({ error: 'Pet not found' });
+      return;
+    }
+    const audit = { userId: req.userId!, source: 'manual' as const, ipAddress: req.ip, userAgent: req.headers['user-agent'] };
+    const alert = await createPetAlert(parseInt(req.params.id), req.body, audit);
+    res.status(201).json(alert);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to add alert' });
+  }
+});
+
+router.patch('/:id/alerts/:alertId', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
+      res.status(404).json({ error: 'Pet not found' });
+      return;
+    }
+    const audit = { userId: req.userId!, source: 'manual' as const, ipAddress: req.ip, userAgent: req.headers['user-agent'] };
+    const alert = await updatePetAlert(parseInt(req.params.alertId), parseInt(req.params.id), req.body, audit);
+    if (!alert) {
+      res.status(404).json({ error: 'Alert not found' });
+      return;
+    }
+    res.json(alert);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update alert' });
+  }
+});
+
+router.delete('/:id/alerts/:alertId', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
+      res.status(404).json({ error: 'Pet not found' });
+      return;
+    }
+    await deletePetAlert(parseInt(req.params.alertId), parseInt(req.params.id));
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete alert' });
   }
 });
 

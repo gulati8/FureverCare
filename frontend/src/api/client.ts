@@ -155,6 +155,18 @@ export const petsApi = {
     api.patch<PetEmergencyContact>(`/api/pets/${petId}/emergency-contacts/${contactId}`, data, token),
   deleteEmergencyContact: (petId: number, contactId: number, token: string) =>
     api.delete(`/api/pets/${petId}/emergency-contacts/${contactId}`, token),
+
+  getRecordSource: (petId: number, recordType: string, recordId: number, token: string) =>
+    api.get<{ source: string; upload_id: number | null; filename: string | null; file_type: string | null }>(`/api/pets/${petId}/records/${recordType}/${recordId}/source`, token),
+
+  getAlerts: (petId: number, token: string) =>
+    api.get<PetAlert[]>(`/api/pets/${petId}/alerts`, token),
+  addAlert: (petId: number, data: { alert_text: string }, token: string) =>
+    api.post<PetAlert>(`/api/pets/${petId}/alerts`, data, token),
+  updateAlert: (petId: number, alertId: number, data: Partial<PetAlert>, token: string) =>
+    api.patch<PetAlert>(`/api/pets/${petId}/alerts/${alertId}`, data, token),
+  deleteAlert: (petId: number, alertId: number, token: string) =>
+    api.delete(`/api/pets/${petId}/alerts/${alertId}`, token),
 };
 
 // Public API (no auth required)
@@ -245,6 +257,8 @@ export interface PetCondition {
   diagnosed_date: string | null;
   notes: string | null;
   severity: string | null;
+  is_active: boolean;
+  show_on_card: boolean;
   created_at: string;
 }
 
@@ -268,6 +282,7 @@ export interface PetMedication {
   prescribing_vet: string | null;
   notes: string | null;
   is_active: boolean;
+  show_on_card: boolean;
   created_at: string;
 }
 
@@ -293,6 +308,14 @@ export interface PetEmergencyContact {
   created_at: string;
 }
 
+export interface PetAlert {
+  id: number;
+  pet_id: number;
+  alert_text: string;
+  is_active: boolean;
+  created_at: string;
+}
+
 export interface EmergencyCard {
   pet: {
     name: string;
@@ -313,12 +336,13 @@ export interface EmergencyCard {
     phone: string | null;
     email: string;
   } | null;
-  conditions: Array<{ name: string; severity: string | null; notes: string | null }>;
+  conditions: Array<{ name: string; severity: string | null; notes: string | null; show_on_card?: boolean }>;
   allergies: Array<{ allergen: string; reaction: string | null; severity: string | null }>;
-  medications: Array<{ name: string; dosage: string | null; frequency: string | null; notes: string | null }>;
+  medications: Array<{ name: string; dosage: string | null; frequency: string | null; notes: string | null; show_on_card?: boolean }>;
   vaccinations: Array<{ name: string; administered_date: string; expiration_date: string | null }>;
   veterinarians: Array<{ clinic_name: string; vet_name: string | null; phone: string | null; is_primary: boolean }>;
   emergency_contacts: Array<{ name: string; relationship: string | null; phone: string; is_primary: boolean }>;
+  custom_alerts?: Array<{ alert_text: string }>;
   generated_at: string;
 }
 

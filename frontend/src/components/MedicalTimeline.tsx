@@ -174,6 +174,7 @@ export function MedicalTimeline({ conditions, allergies, medications, vaccinatio
         subtitle: c.diagnosed_date ? undefined : 'Date not specified',
         details: c.notes ? [c.notes] : undefined,
         severity: c.severity || undefined,
+        isActive: c.is_active,
       });
     });
 
