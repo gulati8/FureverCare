@@ -17,6 +17,7 @@ import PhotoUpload from '../components/PhotoUpload';
 import ShareModal from '../components/ShareModal';
 import ShareWallet from '../components/ShareWallet';
 import InlineEditForm, { EditField } from '../components/InlineEditForm';
+import { formatFlexibleDate } from '../components/FlexibleDateInput';
 import { DocumentImportSection } from '../components/document-import/DocumentImportSection';
 import { AuditLogViewer } from '../components/audit/AuditLogViewer';
 import { MedicalTimeline } from '../components/MedicalTimeline';
@@ -573,8 +574,8 @@ const ALLERGY_SEVERITY_OPTIONS = [
 // Conditions Tab
 const CONDITION_FIELDS: EditField[] = [
   { key: 'name', placeholder: 'Condition name *', required: true },
-  { key: 'diagnosed_date', placeholder: 'Diagnosed date', type: 'date', label: 'Diagnosed date', gridGroup: 'meta' },
-  { key: 'severity', placeholder: 'Severity', type: 'select', options: SEVERITY_OPTIONS, gridGroup: 'meta' },
+  { key: 'diagnosed_date', placeholder: 'Date diagnosed', type: 'flexible_date', label: 'Date diagnosed', precisionKey: 'diagnosed_date_precision' },
+  { key: 'severity', placeholder: 'Severity', type: 'select', options: SEVERITY_OPTIONS },
   { key: 'notes', placeholder: 'Notes (optional)', type: 'textarea' },
 ];
 
@@ -587,9 +588,7 @@ function ConditionsTab({ petId, token, conditions, setConditions }: {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [addValues, setAddValues] = useState<Record<string, string | boolean>>({ name: '', severity: '', notes: '', diagnosed_date: '' });
-
-  const toDateInput = (d: string | null) => d ? d.split('T')[0] : '';
+  const [addValues, setAddValues] = useState<Record<string, string | boolean>>({ name: '', diagnosed_date: '', diagnosed_date_precision: 'day', severity: '', notes: '' });
 
   const handleAdd = async (values: Record<string, string | boolean>) => {
     if (!(values.name as string).trim()) return;
@@ -598,12 +597,13 @@ function ConditionsTab({ petId, token, conditions, setConditions }: {
       severity: (values.severity as string) || null,
       notes: (values.notes as string) || null,
       diagnosed_date: (values.diagnosed_date as string) || null,
+      diagnosed_date_precision: (values.diagnosed_date_precision as string as any) || 'day',
       is_active: true,
       show_on_card: false,
     }, token);
     setConditions([condition, ...conditions]);
     setShowForm(false);
-    setAddValues({ name: '', severity: '', notes: '', diagnosed_date: '' });
+    setAddValues({ name: '', diagnosed_date: '', diagnosed_date_precision: 'day', severity: '', notes: '' });
   };
 
   const handleSaveEdit = async (values: Record<string, string | boolean>) => {
@@ -613,6 +613,7 @@ function ConditionsTab({ petId, token, conditions, setConditions }: {
       severity: (values.severity as string) || null,
       notes: (values.notes as string) || null,
       diagnosed_date: (values.diagnosed_date as string) || null,
+      diagnosed_date_precision: (values.diagnosed_date_precision as string as any) || 'day',
     }, token);
     setConditions(conditions.map(c => c.id === editingId ? updated : c));
     setEditingId(null);
@@ -642,7 +643,7 @@ function ConditionsTab({ petId, token, conditions, setConditions }: {
       {editingId === c.id ? (
         <InlineEditForm
           fields={CONDITION_FIELDS}
-          values={{ name: c.name, severity: c.severity || '', notes: c.notes || '', diagnosed_date: toDateInput(c.diagnosed_date) }}
+          values={{ name: c.name, severity: c.severity || '', notes: c.notes || '', diagnosed_date: c.diagnosed_date ? c.diagnosed_date.split('T')[0] : '', diagnosed_date_precision: c.diagnosed_date_precision || 'day' }}
           onSave={handleSaveEdit}
           onCancel={() => setEditingId(null)}
         />
@@ -657,7 +658,7 @@ function ConditionsTab({ petId, token, conditions, setConditions }: {
             </div>
             <div className="flex gap-2 text-sm text-gray-500">
               {c.severity && <span className="capitalize">{c.severity}</span>}
-              {c.diagnosed_date && <span>Diagnosed: {new Date(c.diagnosed_date.split('T')[0] + 'T00:00:00').toLocaleDateString()}</span>}
+              {c.diagnosed_date && <span>Diagnosed: {formatFlexibleDate(c.diagnosed_date, c.diagnosed_date_precision)}</span>}
             </div>
             {c.notes && <p className="text-sm text-gray-600 mt-1">{c.notes}</p>}
           </div>
@@ -829,6 +830,7 @@ const MEDICATION_FIELDS: EditField[] = [
   { key: 'name', placeholder: 'Medication name *', required: true },
   { key: 'dosage', placeholder: 'Dosage (e.g., 10mg)' },
   { key: 'frequency', placeholder: 'Frequency (e.g., twice daily)' },
+  { key: 'start_date', placeholder: 'Start date', type: 'flexible_date', label: 'Start date', precisionKey: 'start_date_precision' },
 ];
 
 function MedicationsTab({ petId, token, medications, setMedications }: {
@@ -840,22 +842,28 @@ function MedicationsTab({ petId, token, medications, setMedications }: {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [addValues, setAddValues] = useState<Record<string, string | boolean>>({ name: '', dosage: '', frequency: '' });
+  const [addValues, setAddValues] = useState<Record<string, string | boolean>>({ name: '', dosage: '', frequency: '', start_date: '', start_date_precision: 'day' });
 
   const handleAdd = async (values: Record<string, string | boolean>) => {
     if (!(values.name as string).trim()) return;
     const med = await petsApi.addMedication(petId, {
       name: values.name as string, dosage: (values.dosage as string) || null, frequency: (values.frequency as string) || null,
-      start_date: null, end_date: null, prescribing_vet: null, notes: null, is_active: true, show_on_card: false
+      start_date: (values.start_date as string) || null,
+      start_date_precision: (values.start_date_precision as string as any) || 'day',
+      end_date: null, end_date_precision: 'day', prescribing_vet: null, notes: null, is_active: true, show_on_card: false
     }, token);
     setMedications([med, ...medications]);
     setShowForm(false);
-    setAddValues({ name: '', dosage: '', frequency: '' });
+    setAddValues({ name: '', dosage: '', frequency: '', start_date: '', start_date_precision: 'day' });
   };
 
   const handleSaveEdit = async (values: Record<string, string | boolean>) => {
     if (!editingId || !(values.name as string).trim()) return;
-    const updated = await petsApi.updateMedication(petId, editingId, { name: values.name as string, dosage: (values.dosage as string) || null, frequency: (values.frequency as string) || null }, token);
+    const updated = await petsApi.updateMedication(petId, editingId, {
+      name: values.name as string, dosage: (values.dosage as string) || null, frequency: (values.frequency as string) || null,
+      start_date: (values.start_date as string) || null,
+      start_date_precision: (values.start_date_precision as string as any) || 'day',
+    }, token);
     setMedications(medications.map(m => m.id === editingId ? updated : m));
     setEditingId(null);
   };
@@ -884,7 +892,7 @@ function MedicationsTab({ petId, token, medications, setMedications }: {
       {editingId === m.id ? (
         <InlineEditForm
           fields={MEDICATION_FIELDS}
-          values={{ name: m.name, dosage: m.dosage || '', frequency: m.frequency || '' }}
+          values={{ name: m.name, dosage: m.dosage || '', frequency: m.frequency || '', start_date: m.start_date ? m.start_date.split('T')[0] : '', start_date_precision: m.start_date_precision || 'day' }}
           onSave={handleSaveEdit}
           onCancel={() => setEditingId(null)}
         />
@@ -899,6 +907,7 @@ function MedicationsTab({ petId, token, medications, setMedications }: {
             </div>
             {m.dosage && <span className="text-sm text-gray-500">{m.dosage}</span>}
             {m.frequency && <span className="text-sm text-gray-500"> - {m.frequency}</span>}
+            {m.start_date && <p className="text-sm text-gray-500">Started: {formatFlexibleDate(m.start_date, m.start_date_precision)}</p>}
           </div>
           <div className="flex gap-2">
             <button onClick={() => handleToggleShowOnCard(m)} className={`text-sm ${m.show_on_card ? 'text-red-600 hover:text-red-800' : 'text-gray-400 hover:text-gray-600'}`} title={m.show_on_card ? 'Remove from card' : 'Show on card'}>
@@ -968,8 +977,8 @@ function MedicationsTab({ petId, token, medications, setMedications }: {
 // Vaccinations Tab
 const VACCINATION_FIELDS: EditField[] = [
   { key: 'name', placeholder: 'Vaccination name *', required: true },
-  { key: 'administered_date', placeholder: 'Date administered', type: 'date', label: 'Date administered *', required: true, gridGroup: 'dates' },
-  { key: 'expiration_date', placeholder: 'Expiration date', type: 'date', label: 'Expiration date', gridGroup: 'dates' },
+  { key: 'administered_date', placeholder: 'Date administered', type: 'flexible_date', label: 'Date administered *', required: true, precisionKey: 'administered_date_precision' },
+  { key: 'expiration_date', placeholder: 'Expiration date', type: 'flexible_date', label: 'Expiration date', precisionKey: 'expiration_date_precision' },
 ];
 
 function VaccinationsTab({ petId, token, vaccinations, setVaccinations }: {
@@ -981,7 +990,7 @@ function VaccinationsTab({ petId, token, vaccinations, setVaccinations }: {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [addValues, setAddValues] = useState<Record<string, string | boolean>>({ name: '', administered_date: '', expiration_date: '' });
+  const [addValues, setAddValues] = useState<Record<string, string | boolean>>({ name: '', administered_date: '', administered_date_precision: 'day', expiration_date: '', expiration_date_precision: 'day' });
 
   const toDateInput = (d: string | null) => d ? d.split('T')[0] : '';
 
@@ -989,17 +998,25 @@ function VaccinationsTab({ petId, token, vaccinations, setVaccinations }: {
     if (!(values.name as string).trim() || !values.administered_date) return;
     const vac = await petsApi.addVaccination(petId, {
       name: values.name as string, administered_date: values.administered_date as string,
+      administered_date_precision: (values.administered_date_precision as string as any) || 'day',
       expiration_date: (values.expiration_date as string) || null,
+      expiration_date_precision: (values.expiration_date_precision as string as any) || 'day',
       administered_by: null, lot_number: null
     }, token);
     setVaccinations([vac, ...vaccinations]);
     setShowForm(false);
-    setAddValues({ name: '', administered_date: '', expiration_date: '' });
+    setAddValues({ name: '', administered_date: '', administered_date_precision: 'day', expiration_date: '', expiration_date_precision: 'day' });
   };
 
   const handleSaveEdit = async (values: Record<string, string | boolean>) => {
     if (!editingId || !(values.name as string).trim() || !values.administered_date) return;
-    const updated = await petsApi.updateVaccination(petId, editingId, { name: values.name as string, administered_date: values.administered_date as string, expiration_date: (values.expiration_date as string) || null }, token);
+    const updated = await petsApi.updateVaccination(petId, editingId, {
+      name: values.name as string,
+      administered_date: values.administered_date as string,
+      administered_date_precision: (values.administered_date_precision as string as any) || 'day',
+      expiration_date: (values.expiration_date as string) || null,
+      expiration_date_precision: (values.expiration_date_precision as string as any) || 'day',
+    }, token);
     setVaccinations(vaccinations.map(v => v.id === editingId ? updated : v));
     setEditingId(null);
   };
@@ -1041,7 +1058,7 @@ function VaccinationsTab({ petId, token, vaccinations, setVaccinations }: {
               {editingId === v.id ? (
                 <InlineEditForm
                   fields={VACCINATION_FIELDS}
-                  values={{ name: v.name, administered_date: toDateInput(v.administered_date), expiration_date: toDateInput(v.expiration_date) }}
+                  values={{ name: v.name, administered_date: toDateInput(v.administered_date), administered_date_precision: v.administered_date_precision || 'day', expiration_date: toDateInput(v.expiration_date), expiration_date_precision: v.expiration_date_precision || 'day' }}
                   onSave={handleSaveEdit}
                   onCancel={() => setEditingId(null)}
                 />
@@ -1050,11 +1067,11 @@ function VaccinationsTab({ petId, token, vaccinations, setVaccinations }: {
                   <div>
                     <p className="font-medium">{v.name}</p>
                     <p className="text-sm text-gray-500">
-                      Administered: {new Date(v.administered_date.split('T')[0] + 'T00:00:00').toLocaleDateString()}
+                      Administered: {formatFlexibleDate(v.administered_date, v.administered_date_precision)}
                     </p>
                     {v.expiration_date && (
                       <p className={`text-sm ${isExpired(v.expiration_date) ? 'text-red-600' : 'text-gray-500'}`}>
-                        {isExpired(v.expiration_date) ? 'Expired' : 'Expires'}: {new Date(v.expiration_date.split('T')[0] + 'T00:00:00').toLocaleDateString()}
+                        {isExpired(v.expiration_date) ? 'Expired' : 'Expires'}: {formatFlexibleDate(v.expiration_date, v.expiration_date_precision)}
                       </p>
                     )}
                   </div>

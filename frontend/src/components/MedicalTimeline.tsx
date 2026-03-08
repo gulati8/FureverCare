@@ -4,7 +4,9 @@ import {
   PetAllergy,
   PetMedication,
   PetVaccination,
+  DatePrecision,
 } from '../api/client';
+import { formatFlexibleDate } from './FlexibleDateInput';
 
 type EventType = 'vaccination' | 'medication_start' | 'medication_end' | 'condition' | 'allergy';
 
@@ -12,12 +14,16 @@ interface TimelineEvent {
   id: string;
   type: EventType;
   date: Date;
+  dateStr: string;
+  datePrecision: DatePrecision;
   title: string;
   subtitle?: string;
   details?: string[];
   severity?: string;
   isActive?: boolean;
   expirationDate?: Date;
+  expirationDateStr?: string;
+  expirationDatePrecision?: DatePrecision;
   isExpired?: boolean;
 }
 
@@ -119,18 +125,23 @@ export function MedicalTimeline({ conditions, allergies, medications, vaccinatio
       const date = parseDate(v.administered_date);
       const expirationDate = v.expiration_date ? parseDate(v.expiration_date) : undefined;
       const isExpired = expirationDate ? expirationDate < new Date() : false;
+      const expPrecision = v.expiration_date_precision || 'day';
 
       allEvents.push({
         id: `vac-${v.id}`,
         type: 'vaccination',
         date,
+        dateStr: v.administered_date,
+        datePrecision: v.administered_date_precision || 'day',
         title: v.name,
         subtitle: v.administered_by ? `Administered by ${v.administered_by}` : undefined,
         details: [
           ...(v.lot_number ? [`Lot #: ${v.lot_number}`] : []),
-          ...(expirationDate ? [`${isExpired ? 'Expired' : 'Expires'}: ${formatDate(expirationDate)}`] : []),
+          ...(expirationDate ? [`${isExpired ? 'Expired' : 'Expires'}: ${formatFlexibleDate(v.expiration_date, expPrecision)}`] : []),
         ],
         expirationDate,
+        expirationDateStr: v.expiration_date || undefined,
+        expirationDatePrecision: expPrecision,
         isExpired,
       });
     });
@@ -142,6 +153,8 @@ export function MedicalTimeline({ conditions, allergies, medications, vaccinatio
           id: `med-start-${m.id}`,
           type: 'medication_start',
           date: parseDate(m.start_date),
+          dateStr: m.start_date,
+          datePrecision: m.start_date_precision || 'day',
           title: m.name,
           subtitle: m.dosage ? `${m.dosage}${m.frequency ? ` - ${m.frequency}` : ''}` : m.frequency || undefined,
           details: [
@@ -157,6 +170,8 @@ export function MedicalTimeline({ conditions, allergies, medications, vaccinatio
           id: `med-end-${m.id}`,
           type: 'medication_end',
           date: parseDate(m.end_date),
+          dateStr: m.end_date,
+          datePrecision: m.end_date_precision || 'day',
           title: `${m.name} discontinued`,
           subtitle: m.dosage || undefined,
         });
@@ -166,10 +181,14 @@ export function MedicalTimeline({ conditions, allergies, medications, vaccinatio
     // Add conditions
     conditions.forEach((c) => {
       const date = c.diagnosed_date ? parseDate(c.diagnosed_date) : parseDate(c.created_at);
+      const dateStr = c.diagnosed_date || c.created_at;
+      const datePrecision = c.diagnosed_date ? (c.diagnosed_date_precision || 'day') : 'day';
       allEvents.push({
         id: `cond-${c.id}`,
         type: 'condition',
         date,
+        dateStr,
+        datePrecision,
         title: c.name,
         subtitle: c.diagnosed_date ? undefined : 'Date not specified',
         details: c.notes ? [c.notes] : undefined,
@@ -184,6 +203,8 @@ export function MedicalTimeline({ conditions, allergies, medications, vaccinatio
         id: `allergy-${a.id}`,
         type: 'allergy',
         date: parseDate(a.created_at),
+        dateStr: a.created_at,
+        datePrecision: 'day',
         title: a.allergen,
         subtitle: a.reaction || undefined,
         severity: a.severity || undefined,
@@ -335,7 +356,7 @@ export function MedicalTimeline({ conditions, allergies, medications, vaccinatio
                         )}
                       </div>
                       <div className="text-right text-sm text-gray-500 whitespace-nowrap">
-                        <div>{formatDate(event.date)}</div>
+                        <div>{formatFlexibleDate(event.dateStr, event.datePrecision)}</div>
                         {parsedDob && event.date >= parsedDob && (
                           <div className="text-xs text-gray-400">
                             {calculateAge(parsedDob, event.date)}

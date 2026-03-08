@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react';
+import FlexibleDateInput from './FlexibleDateInput';
+import { DatePrecision } from '../api/client';
 
 export interface EditField {
   key: string;
   placeholder: string;
-  type?: 'text' | 'tel' | 'date' | 'number' | 'textarea' | 'select' | 'checkbox';
+  type?: 'text' | 'tel' | 'date' | 'number' | 'textarea' | 'select' | 'checkbox' | 'flexible_date';
+  /** For flexible_date type: the key in values that holds the precision string */
+  precisionKey?: string;
   options?: { value: string; label: string }[];
   required?: boolean;
   label?: string;
@@ -70,6 +74,24 @@ export default function InlineEditForm({ fields, values: initialValues, onSave, 
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
+        </div>
+      );
+    }
+
+    if (field.type === 'flexible_date') {
+      const precisionKey = field.precisionKey || `${field.key}_precision`;
+      const currentPrecision = (values[precisionKey] as string as DatePrecision) || 'day';
+      return (
+        <div key={field.key}>
+          <FlexibleDateInput
+            value={val as string}
+            precision={currentPrecision}
+            onChange={(date, precision) => {
+              setValues(prev => ({ ...prev, [field.key]: date, [precisionKey]: precision }));
+            }}
+            label={field.label || field.placeholder}
+            required={field.required}
+          />
         </div>
       );
     }
