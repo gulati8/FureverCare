@@ -124,6 +124,7 @@ export function ExtractionItemCard({
             <FieldEditor label="Prescribing Vet" value={currentData.prescribing_vet} fieldKey="prescribing_vet" onChange={handleFieldChange} isModified={isFieldModified('prescribing_vet')} />
             <FieldEditor label="Notes" value={currentData.notes} fieldKey="notes" onChange={handleFieldChange} isModified={isFieldModified('notes')} />
             <FieldEditor label="Active" value={currentData.is_active} fieldKey="is_active" type="boolean" onChange={handleFieldChange} isModified={isFieldModified('is_active')} />
+            <FieldEditor label="Show on Emergency Card" value={currentData.show_on_card} fieldKey="show_on_card" type="boolean" onChange={handleFieldChange} isModified={isFieldModified('show_on_card')} />
           </>
         );
 
@@ -134,6 +135,7 @@ export function ExtractionItemCard({
             <FieldEditor label="Diagnosed Date" value={currentData.diagnosed_date} fieldKey="diagnosed_date" type="date" onChange={handleFieldChange} isModified={isFieldModified('diagnosed_date')} />
             <FieldEditor label="Severity" value={currentData.severity} fieldKey="severity" type="select" options={SEVERITY_OPTIONS} onChange={handleFieldChange} isModified={isFieldModified('severity')} />
             <FieldEditor label="Notes" value={currentData.notes} fieldKey="notes" onChange={handleFieldChange} isModified={isFieldModified('notes')} />
+            <FieldEditor label="Show on Emergency Card" value={currentData.show_on_card} fieldKey="show_on_card" type="boolean" onChange={handleFieldChange} isModified={isFieldModified('show_on_card')} />
           </>
         );
 
@@ -143,6 +145,7 @@ export function ExtractionItemCard({
             <FieldEditor label="Allergen" value={currentData.allergen} fieldKey="allergen" onChange={handleFieldChange} isModified={isFieldModified('allergen')} />
             <FieldEditor label="Reaction" value={currentData.reaction} fieldKey="reaction" onChange={handleFieldChange} isModified={isFieldModified('reaction')} />
             <FieldEditor label="Severity" value={currentData.severity} fieldKey="severity" type="select" options={ALLERGY_SEVERITY_OPTIONS} onChange={handleFieldChange} isModified={isFieldModified('severity')} />
+            <FieldEditor label="Show on Emergency Card" value={currentData.show_on_card} fieldKey="show_on_card" type="boolean" onChange={handleFieldChange} isModified={isFieldModified('show_on_card')} />
           </>
         );
 
@@ -254,12 +257,14 @@ export function ExtractionItemCard({
           { field: 'prescribing_vet', label: 'Prescribing Vet' },
           { field: 'notes', label: 'Notes' },
           { field: 'is_active', label: 'Active' },
+          { field: 'show_on_card', label: 'Show on Card' },
         ];
       case 'condition':
         return [
           { field: 'diagnosed_date', label: 'Diagnosed date' },
           { field: 'notes', label: 'Notes' },
           { field: 'severity', label: 'Severity' },
+          { field: 'show_on_card', label: 'Show on Card' },
         ];
       case 'vet':
         return [

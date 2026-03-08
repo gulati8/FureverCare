@@ -190,7 +190,7 @@ export async function approveDocumentExtractionItems(
             const existingMed = match.medication;
             // Merge: update existing record with new non-null fields
             const updates: Record<string, any> = {};
-            const fields = ['dosage', 'frequency', 'start_date', 'start_date_precision', 'end_date', 'end_date_precision', 'prescribing_vet', 'notes', 'is_active'] as const;
+            const fields = ['dosage', 'frequency', 'start_date', 'start_date_precision', 'end_date', 'end_date_precision', 'prescribing_vet', 'notes', 'is_active', 'show_on_card'] as const;
             for (const field of fields) {
               if (dataToSave[field] !== undefined && dataToSave[field] !== null) {
                 updates[field] = dataToSave[field];
@@ -221,7 +221,7 @@ export async function approveDocumentExtractionItems(
             const existingCondition = matches[0].condition;
             // Merge: update existing record with new non-null fields
             const updates: Record<string, any> = {};
-            const fields = ['diagnosed_date', 'diagnosed_date_precision', 'notes', 'severity'] as const;
+            const fields = ['diagnosed_date', 'diagnosed_date_precision', 'notes', 'severity', 'show_on_card'] as const;
             for (const field of fields) {
               if (dataToSave[field] !== undefined && dataToSave[field] !== null) {
                 updates[field] = dataToSave[field];
@@ -451,7 +451,7 @@ export async function approveMergeDocumentExtractionItems(
         if (match) {
           const existingMed = match.medication;
           const updates: Record<string, any> = {};
-          const fields = ['dosage', 'frequency', 'start_date', 'start_date_precision', 'end_date', 'end_date_precision', 'prescribing_vet', 'notes', 'is_active'] as const;
+          const fields = ['dosage', 'frequency', 'start_date', 'start_date_precision', 'end_date', 'end_date_precision', 'prescribing_vet', 'notes', 'is_active', 'show_on_card'] as const;
 
           for (const field of fields) {
             if (mergeItem.fieldOverrides && mergeItem.fieldOverrides[field]) {
@@ -508,7 +508,7 @@ export async function approveMergeDocumentExtractionItems(
         if (matches.length > 0) {
           const existingCondition = matches[0].condition;
           const updates: Record<string, any> = {};
-          const fields = ['diagnosed_date', 'diagnosed_date_precision', 'notes', 'severity'] as const;
+          const fields = ['diagnosed_date', 'diagnosed_date_precision', 'notes', 'severity', 'show_on_card'] as const;
 
           for (const field of fields) {
             if (mergeItem.fieldOverrides && mergeItem.fieldOverrides[field]) {

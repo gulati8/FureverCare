@@ -566,6 +566,42 @@ router.get('/:id/records/:recordType/:recordId/source', authenticate, async (req
       return;
     }
 
+    // Check pdf_extraction_items (legacy PDF import)
+    const pdfResult = await dbQuery<any>(
+      `SELECT pei.id, pu.id as upload_id, pu.original_filename, 'pdf' as file_type
+       FROM pdf_extraction_items pei
+       JOIN pdf_extractions pe ON pe.id = pei.extraction_id
+       JOIN pdf_uploads pu ON pu.id = pe.pdf_upload_id
+       WHERE pei.created_record_id = $1
+         AND pei.created_record_type = $2
+         AND pu.pet_id = $3
+       LIMIT 1`,
+      [parseInt(recordId), recordType, petId]
+    );
+
+    if (pdfResult.length > 0) {
+      res.json({ source: 'pdf_import', upload_id: pdfResult[0].upload_id, filename: pdfResult[0].original_filename, file_type: pdfResult[0].file_type });
+      return;
+    }
+
+    // Check image_extraction_items (legacy image import)
+    const imgResult = await dbQuery<any>(
+      `SELECT iei.id, iu.id as upload_id, iu.original_filename, 'image' as file_type
+       FROM image_extraction_items iei
+       JOIN image_extractions ie ON ie.id = iei.extraction_id
+       JOIN image_uploads iu ON iu.id = ie.image_upload_id
+       WHERE iei.created_record_id = $1
+         AND iei.created_record_type = $2
+         AND iu.pet_id = $3
+       LIMIT 1`,
+      [parseInt(recordId), recordType, petId]
+    );
+
+    if (imgResult.length > 0) {
+      res.json({ source: 'image_import', upload_id: imgResult[0].upload_id, filename: imgResult[0].original_filename, file_type: imgResult[0].file_type });
+      return;
+    }
+
     // Fall back to audit log
     const auditResult = await dbQuery<any>(
       `SELECT source, source_pdf_upload_id FROM audit_log
