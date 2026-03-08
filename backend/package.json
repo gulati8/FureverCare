@@ -38,6 +38,12 @@
     "db:seed:cms:dev": "tsx src/db/seed-cms.ts",
     "db:migrate:subscriptions": "node dist/db/migrate-subscriptions.js",
     "db:migrate:subscriptions:dev": "tsx src/db/migrate-subscriptions.ts",
+    "db:migrate:alerts": "node dist/db/migrate-alerts.js",
+    "db:migrate:alerts:dev": "tsx src/db/migrate-alerts.ts",
+    "db:migrate:date-precision": "node dist/db/migrate-date-precision.js",
+    "db:migrate:date-precision:dev": "tsx src/db/migrate-date-precision.ts",
+    "db:migrate:allergy-show-on-card": "node dist/db/migrate-allergy-show-on-card.js",
+    "db:migrate:allergy-show-on-card:dev": "tsx src/db/migrate-allergy-show-on-card.ts",
     "test:backend": "tsx --test src/models/health-records.test.ts"
   },
   "dependencies": {

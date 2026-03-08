@@ -34,28 +34,44 @@ interface AlertItem {
 function buildAlerts(card: EmergencyCard): AlertItem[] {
   const alerts: AlertItem[] = [];
 
-  for (const a of card.allergies) {
-    const severity = a.severity === 'life-threatening' ? ' (ANAPHYLAXIS RISK)' :
-      a.severity === 'severe' ? ' (SEVERE)' : '';
-    alerts.push({
-      type: 'allergy',
-      title: `${a.allergen} Allergy${severity}`,
-      detail: a.reaction ? `Reaction: ${a.reaction}` : 'Avoid this allergen',
-    });
+  // Custom alerts (owner-entered behavioral/safety flags)
+  if (card.custom_alerts) {
+    for (const a of card.custom_alerts) {
+      alerts.push({
+        type: 'condition',
+        title: a.alert_text,
+        detail: 'Owner alert',
+      });
+    }
   }
 
+  // Allergies flagged to show on card
+  for (const a of card.allergies) {
+    if (a.show_on_card) {
+      const severity = a.severity === 'life-threatening' ? ' (ANAPHYLAXIS RISK)' :
+        a.severity === 'severe' ? ' (SEVERE)' : '';
+      alerts.push({
+        type: 'allergy',
+        title: `${a.allergen} Allergy${severity}`,
+        detail: a.reaction ? `Reaction: ${a.reaction}` : 'Avoid this allergen',
+      });
+    }
+  }
+
+  // Medications flagged to show on card
   for (const m of card.medications) {
-    if (m.notes) {
+    if (m.show_on_card) {
       alerts.push({
         type: 'medication',
-        title: `On ${m.name} - ${m.notes}`,
+        title: `On ${m.name}${m.notes ? ` - ${m.notes}` : ''}`,
         detail: [m.dosage, m.frequency].filter(Boolean).join(' '),
       });
     }
   }
 
+  // Conditions flagged to show on card
   for (const c of card.conditions) {
-    if (c.severity === 'life-threatening' || c.severity === 'severe' || c.severity === 'critical') {
+    if (c.show_on_card) {
       alerts.push({
         type: 'condition',
         title: c.name,
@@ -306,26 +322,15 @@ export default function EmergencyCardView({ card, resolvePhotoUrl }: Props) {
               <span className="text-[11px] text-gray-500">{conditions.length} item{conditions.length !== 1 ? 's' : ''}</span>
             </div>
             <div className="space-y-2">
-              {conditions.map((c, i) => {
-                const level = severityToIndicator(c.severity);
-                const isLow = level === 'low';
-                return (
-                  <div key={i} className={`${isLow ? 'bg-gray-50 border-gray-200' : 'bg-orange-50 border-orange-200/50'} border rounded-xl p-3 flex items-start gap-2.5`}>
-                    <div className={`w-1 self-stretch rounded-full flex-shrink-0 ${indicatorColors[level]}`} />
+              {conditions.map((c, i) => (
+                  <div key={i} className="bg-orange-50 border-orange-200/50 border rounded-xl p-3 flex items-start gap-2.5">
+                    <div className="w-1 self-stretch rounded-full flex-shrink-0 bg-orange-500" />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-sm font-semibold text-gray-900">{c.name}</span>
-                        {c.severity && (
-                          <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${severityChipStyles[c.severity] || 'bg-gray-100 text-gray-600'}`}>
-                            {c.severity}
-                          </span>
-                        )}
-                      </div>
+                      <span className="text-sm font-semibold text-gray-900">{c.name}</span>
                       {c.notes && <p className="text-xs text-gray-600 mt-1">{c.notes}</p>}
                     </div>
                   </div>
-                );
-              })}
+              ))}
             </div>
           </section>
         )}

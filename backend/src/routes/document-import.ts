@@ -220,7 +220,7 @@ router.get('/:petId/documents/uploads', authenticate, async (req: AuthRequest, r
       rejected_count: string;
     }>(
       `SELECT de.document_upload_id,
-        COUNT(*) FILTER (WHERE dei.status = 'pending') AS pending_count,
+        COUNT(*) FILTER (WHERE dei.status IN ('pending', 'modified')) AS pending_count,
         COUNT(*) FILTER (WHERE dei.status = 'approved') AS approved_count,
         COUNT(*) FILTER (WHERE dei.status = 'rejected') AS rejected_count
       FROM document_extractions de
@@ -236,10 +236,20 @@ router.get('/:petId/documents/uploads', authenticate, async (req: AuthRequest, r
       rejected_items: parseInt(r.rejected_count),
     }]));
 
-    const enriched = uploads.map(u => ({
-      ...u,
-      ...(countsMap.get(u.id) || {}),
-    }));
+    const enriched = uploads.map(u => {
+      const counts = countsMap.get(u.id);
+      // Fix retroactive status: if upload is marked 'completed' but still has pending items,
+      // correct the status to 'pending_review' so it shows up in the right section
+      let status = u.status;
+      if (status === 'completed' && counts && counts.pending_items > 0) {
+        status = 'pending_review';
+      }
+      return {
+        ...u,
+        status,
+        ...(counts || {}),
+      };
+    });
 
     res.json(enriched);
   } catch (error) {
@@ -601,8 +611,12 @@ router.post('/:petId/documents/uploads/:id/extraction/approve', authenticate, as
       userAgent: metadata.userAgent || undefined,
     });
 
-    // Mark upload as completed now that user has reviewed
-    await updateDocumentUploadStatus(uploadId, 'completed');
+    // Only mark upload as completed when ALL items have been processed
+    const updatedExtraction = await getDocumentExtractionWithItems(uploadId);
+    const hasPending = updatedExtraction?.items.some(i => i.status === 'pending' || i.status === 'modified');
+    if (!hasPending) {
+      await updateDocumentUploadStatus(uploadId, 'completed');
+    }
 
     res.json(result);
   } catch (error: any) {
@@ -647,8 +661,12 @@ router.post('/:petId/documents/uploads/:id/extraction/approve-merge', authentica
       userAgent: metadata.userAgent || undefined,
     });
 
-    // Mark upload as completed now that user has reviewed
-    await updateDocumentUploadStatus(uploadId, 'completed');
+    // Only mark upload as completed when ALL items have been processed
+    const updatedExtraction = await getDocumentExtractionWithItems(uploadId);
+    const hasPending = updatedExtraction?.items.some(i => i.status === 'pending' || i.status === 'modified');
+    if (!hasPending) {
+      await updateDocumentUploadStatus(uploadId, 'completed');
+    }
 
     res.json(result);
   } catch (error: any) {
@@ -687,8 +705,12 @@ router.post('/:petId/documents/uploads/:id/extraction/reject', authenticate, asy
 
     const rejected = await rejectDocumentExtractionItems(extraction.extraction.id, itemIds, req.userId!);
 
-    // Mark upload as completed now that user has reviewed
-    await updateDocumentUploadStatus(uploadId, 'completed');
+    // Only mark upload as completed when ALL items have been processed
+    const updatedExtraction = await getDocumentExtractionWithItems(uploadId);
+    const hasPending = updatedExtraction?.items.some(i => i.status === 'pending' || i.status === 'modified');
+    if (!hasPending) {
+      await updateDocumentUploadStatus(uploadId, 'completed');
+    }
 
     res.json({ rejected });
   } catch (error: any) {

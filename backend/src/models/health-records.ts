@@ -198,16 +198,19 @@ export interface PetCondition {
   pet_id: number;
   name: string;
   diagnosed_date: Date | null;
+  diagnosed_date_precision: 'day' | 'month' | 'year';
   notes: string | null;
   severity: string | null;
+  is_active: boolean;
+  show_on_card: boolean;
   created_at: Date;
 }
 
 export async function createPetCondition(petId: number, data: Omit<PetCondition, 'id' | 'pet_id' | 'created_at'>, audit?: AuditContext): Promise<PetCondition> {
   const result = await queryOne<PetCondition>(
-    `INSERT INTO pet_conditions (pet_id, name, diagnosed_date, notes, severity)
-     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [petId, data.name, data.diagnosed_date, data.notes, data.severity]
+    `INSERT INTO pet_conditions (pet_id, name, diagnosed_date, diagnosed_date_precision, notes, severity, is_active, show_on_card)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+    [petId, data.name, data.diagnosed_date, data.diagnosed_date_precision || 'day', data.notes, data.severity, data.is_active ?? true, data.show_on_card ?? false]
   );
 
   if (audit && result) {
@@ -223,7 +226,7 @@ export async function createPetCondition(petId: number, data: Omit<PetCondition,
 }
 
 export async function getPetConditions(petId: number): Promise<PetCondition[]> {
-  return query<PetCondition>('SELECT * FROM pet_conditions WHERE pet_id = $1 ORDER BY created_at DESC', [petId]);
+  return query<PetCondition>('SELECT * FROM pet_conditions WHERE pet_id = $1 ORDER BY is_active DESC, created_at DESC', [petId]);
 }
 
 export async function updatePetCondition(id: number, petId: number, updates: Partial<Omit<PetCondition, 'id' | 'pet_id' | 'created_at'>>, audit?: AuditContext): Promise<PetCondition | null> {
@@ -234,7 +237,7 @@ export async function updatePetCondition(id: number, petId: number, updates: Par
   const values: any[] = [];
   let paramCount = 1;
 
-  const allowedFields = ['name', 'diagnosed_date', 'notes', 'severity'];
+  const allowedFields = ['name', 'diagnosed_date', 'diagnosed_date_precision', 'notes', 'severity', 'is_active', 'show_on_card'];
 
   for (const field of allowedFields) {
     if ((updates as any)[field] !== undefined) {
@@ -307,14 +310,17 @@ export interface PetAllergy {
   allergen: string;
   reaction: string | null;
   severity: string | null;
+  show_on_card: boolean;
   created_at: Date;
 }
 
 export async function createPetAllergy(petId: number, data: Omit<PetAllergy, 'id' | 'pet_id' | 'created_at'>, audit?: AuditContext): Promise<PetAllergy> {
+  // Default show_on_card to true for life-threatening/severe allergies
+  const showOnCard = data.show_on_card ?? (data.severity === 'life-threatening' || data.severity === 'severe');
   const result = await queryOne<PetAllergy>(
-    `INSERT INTO pet_allergies (pet_id, allergen, reaction, severity)
-     VALUES ($1, $2, $3, $4) RETURNING *`,
-    [petId, data.allergen, data.reaction, data.severity]
+    `INSERT INTO pet_allergies (pet_id, allergen, reaction, severity, show_on_card)
+     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+    [petId, data.allergen, data.reaction, data.severity, showOnCard]
   );
 
   if (audit && result) {
@@ -340,7 +346,7 @@ export async function updatePetAllergy(id: number, petId: number, updates: Parti
   const values: any[] = [];
   let paramCount = 1;
 
-  const allowedFields = ['allergen', 'reaction', 'severity'];
+  const allowedFields = ['allergen', 'reaction', 'severity', 'show_on_card'];
 
   for (const field of allowedFields) {
     if ((updates as any)[field] !== undefined) {
@@ -393,18 +399,21 @@ export interface PetMedication {
   dosage: string | null;
   frequency: string | null;
   start_date: Date | null;
+  start_date_precision: 'day' | 'month' | 'year';
   end_date: Date | null;
+  end_date_precision: 'day' | 'month' | 'year';
   prescribing_vet: string | null;
   notes: string | null;
   is_active: boolean;
+  show_on_card: boolean;
   created_at: Date;
 }
 
 export async function createPetMedication(petId: number, data: Omit<PetMedication, 'id' | 'pet_id' | 'created_at'>, audit?: AuditContext): Promise<PetMedication> {
   const result = await queryOne<PetMedication>(
-    `INSERT INTO pet_medications (pet_id, name, dosage, frequency, start_date, end_date, prescribing_vet, notes, is_active)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-    [petId, data.name, data.dosage, data.frequency, data.start_date, data.end_date, data.prescribing_vet, data.notes, data.is_active ?? true]
+    `INSERT INTO pet_medications (pet_id, name, dosage, frequency, start_date, start_date_precision, end_date, end_date_precision, prescribing_vet, notes, is_active, show_on_card)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+    [petId, data.name, data.dosage, data.frequency, data.start_date, data.start_date_precision || 'day', data.end_date, data.end_date_precision || 'day', data.prescribing_vet, data.notes, data.is_active ?? true, data.show_on_card ?? false]
   );
 
   if (audit && result) {
@@ -474,7 +483,7 @@ export async function updatePetMedication(id: number, petId: number, updates: Pa
   const values: any[] = [];
   let paramCount = 1;
 
-  const allowedFields = ['name', 'dosage', 'frequency', 'start_date', 'end_date', 'prescribing_vet', 'notes', 'is_active'];
+  const allowedFields = ['name', 'dosage', 'frequency', 'start_date', 'start_date_precision', 'end_date', 'end_date_precision', 'prescribing_vet', 'notes', 'is_active', 'show_on_card'];
 
   for (const field of allowedFields) {
     if ((updates as any)[field] !== undefined) {
@@ -525,7 +534,9 @@ export interface PetVaccination {
   pet_id: number;
   name: string;
   administered_date: Date;
+  administered_date_precision: 'day' | 'month' | 'year';
   expiration_date: Date | null;
+  expiration_date_precision: 'day' | 'month' | 'year';
   administered_by: string | null;
   lot_number: string | null;
   created_at: Date;
@@ -533,9 +544,9 @@ export interface PetVaccination {
 
 export async function createPetVaccination(petId: number, data: Omit<PetVaccination, 'id' | 'pet_id' | 'created_at'>, audit?: AuditContext): Promise<PetVaccination> {
   const result = await queryOne<PetVaccination>(
-    `INSERT INTO pet_vaccinations (pet_id, name, administered_date, expiration_date, administered_by, lot_number)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-    [petId, data.name, data.administered_date, data.expiration_date, data.administered_by, data.lot_number]
+    `INSERT INTO pet_vaccinations (pet_id, name, administered_date, administered_date_precision, expiration_date, expiration_date_precision, administered_by, lot_number)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+    [petId, data.name, data.administered_date, data.administered_date_precision || 'day', data.expiration_date, data.expiration_date_precision || 'day', data.administered_by, data.lot_number]
   );
 
   if (audit && result) {
@@ -561,7 +572,7 @@ export async function updatePetVaccination(id: number, petId: number, updates: P
   const values: any[] = [];
   let paramCount = 1;
 
-  const allowedFields = ['name', 'administered_date', 'expiration_date', 'administered_by', 'lot_number'];
+  const allowedFields = ['name', 'administered_date', 'administered_date_precision', 'expiration_date', 'expiration_date_precision', 'administered_by', 'lot_number'];
 
   for (const field of allowedFields) {
     if ((updates as any)[field] !== undefined) {
@@ -684,6 +695,86 @@ export async function deletePetEmergencyContact(id: number, petId: number, audit
 
   if (audit && existing) {
     await logDelete('pet_emergency_contacts', id, existing, audit.userId, {
+      source: audit.source,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    });
+  }
+
+  return true;
+}
+
+// Pet Alerts (custom owner-entered alerts)
+export interface PetAlert {
+  id: number;
+  pet_id: number;
+  alert_text: string;
+  is_active: boolean;
+  created_at: Date;
+}
+
+export async function createPetAlert(petId: number, data: { alert_text: string; is_active?: boolean }, audit?: AuditContext): Promise<PetAlert> {
+  const result = await queryOne<PetAlert>(
+    `INSERT INTO pet_alerts (pet_id, alert_text, is_active) VALUES ($1, $2, $3) RETURNING *`,
+    [petId, data.alert_text, data.is_active ?? true]
+  );
+
+  if (audit && result) {
+    await logCreate('pet_alerts', result.id, data, audit.userId, {
+      source: audit.source,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    });
+  }
+
+  return result!;
+}
+
+export async function getPetAlerts(petId: number): Promise<PetAlert[]> {
+  return query<PetAlert>('SELECT * FROM pet_alerts WHERE pet_id = $1 ORDER BY is_active DESC, created_at DESC', [petId]);
+}
+
+export async function updatePetAlert(id: number, petId: number, updates: Partial<{ alert_text: string; is_active: boolean }>, audit?: AuditContext): Promise<PetAlert | null> {
+  const existing = await queryOne<PetAlert>('SELECT * FROM pet_alerts WHERE id = $1 AND pet_id = $2', [id, petId]);
+
+  const fields: string[] = [];
+  const values: any[] = [];
+  let paramCount = 1;
+
+  for (const field of ['alert_text', 'is_active']) {
+    if ((updates as any)[field] !== undefined) {
+      fields.push(`${field} = $${paramCount++}`);
+      values.push((updates as any)[field]);
+    }
+  }
+
+  if (fields.length === 0) return null;
+
+  values.push(id, petId);
+
+  const result = await queryOne<PetAlert>(
+    `UPDATE pet_alerts SET ${fields.join(', ')} WHERE id = $${paramCount} AND pet_id = $${paramCount + 1} RETURNING *`,
+    values
+  );
+
+  if (audit && existing && result) {
+    await logUpdate('pet_alerts', id, existing, result, audit.userId, {
+      source: audit.source,
+      ipAddress: audit.ipAddress,
+      userAgent: audit.userAgent,
+    });
+  }
+
+  return result;
+}
+
+export async function deletePetAlert(id: number, petId: number, audit?: AuditContext): Promise<boolean> {
+  const existing = await queryOne<PetAlert>('SELECT * FROM pet_alerts WHERE id = $1 AND pet_id = $2', [id, petId]);
+
+  await query('DELETE FROM pet_alerts WHERE id = $1 AND pet_id = $2', [id, petId]);
+
+  if (audit && existing) {
+    await logDelete('pet_alerts', id, existing, audit.userId, {
       source: audit.source,
       ipAddress: audit.ipAddress,
       userAgent: audit.userAgent,

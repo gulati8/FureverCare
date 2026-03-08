@@ -144,6 +144,9 @@ jobs:
               \"docker compose -f docker-compose.prod.yml run --rm backend npm run db:migrate:image-import || true\",
               \"docker compose -f docker-compose.prod.yml run --rm backend npm run db:migrate:document-import || true\",
               \"docker compose -f docker-compose.prod.yml run --rm backend npm run db:migrate:image-metadata || true\",
+              \"docker compose -f docker-compose.prod.yml run --rm backend npm run db:migrate:alerts || true\",
+              \"docker compose -f docker-compose.prod.yml run --rm backend npm run db:migrate:date-precision || true\",
+              \"docker compose -f docker-compose.prod.yml run --rm backend npm run db:migrate:allergy-show-on-card || true\",
               \"docker compose -f docker-compose.prod.yml up -d\",
               \"docker image prune -f\"
             ]" \
