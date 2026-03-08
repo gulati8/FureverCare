@@ -144,7 +144,7 @@ export default function PetDetail() {
     { id: 'vaccinations', label: 'Vaccinations', count: vaccinations.length },
     { id: 'vets', label: 'Veterinarians', count: vets.length },
     { id: 'contacts', label: 'Emergency Contacts', count: emergencyContacts.length },
-    { id: 'alerts', label: 'Alerts', count: alerts.filter(a => a.is_active).length + conditions.filter(c => c.show_on_card).length + medications.filter(m => m.show_on_card).length || undefined },
+    { id: 'alerts', label: 'Alerts', count: alerts.filter(a => a.is_active).length + conditions.filter(c => c.show_on_card && c.is_active).length + allergies.filter(a => a.show_on_card).length + medications.filter(m => m.show_on_card && m.is_active).length || undefined },
     { id: 'images', label: 'Images', count: imageUploads.length || undefined },
     { id: 'documents', label: 'Import Documents' },
     { id: 'history', label: 'History' },
@@ -272,7 +272,7 @@ export default function PetDetail() {
           <ContactsTab petId={petId} token={token!} contacts={emergencyContacts} setContacts={setEmergencyContacts} />
         )}
         {activeTab === 'alerts' && (
-          <AlertsTab petId={petId} token={token!} alerts={alerts} setAlerts={setAlerts} conditions={conditions} setConditions={setConditions} medications={medications} setMedications={setMedications} />
+          <AlertsTab petId={petId} token={token!} alerts={alerts} setAlerts={setAlerts} conditions={conditions} setConditions={setConditions} allergies={allergies} setAllergies={setAllergies} medications={medications} setMedications={setMedications} />
         )}
         {activeTab === 'images' && (
           <ImagesTab petId={petId} images={imageUploads} />
@@ -764,7 +764,8 @@ function AllergiesTab({ petId, token, allergies, setAllergies, onNavigateToDocum
 
   const handleAdd = async (values: Record<string, string | boolean>) => {
     if (!(values.allergen as string).trim()) return;
-    const allergy = await petsApi.addAllergy(petId, { allergen: values.allergen as string, reaction: (values.reaction as string) || null, severity: (values.severity as string) || null }, token);
+    const severity = (values.severity as string) || null;
+    const allergy = await petsApi.addAllergy(petId, { allergen: values.allergen as string, reaction: (values.reaction as string) || null, severity, show_on_card: severity === 'life-threatening' || severity === 'severe' }, token);
     setAllergies([allergy, ...allergies]);
     setShowForm(false);
     setAddValues({ allergen: '', reaction: '', severity: '' });
@@ -775,6 +776,11 @@ function AllergiesTab({ petId, token, allergies, setAllergies, onNavigateToDocum
     const updated = await petsApi.updateAllergy(petId, editingId, { allergen: values.allergen as string, reaction: (values.reaction as string) || null, severity: (values.severity as string) || null }, token);
     setAllergies(allergies.map(a => a.id === editingId ? updated : a));
     setEditingId(null);
+  };
+
+  const handleToggleShowOnCard = async (a: PetAllergy) => {
+    const updated = await petsApi.updateAllergy(petId, a.id, { show_on_card: !a.show_on_card }, token);
+    setAllergies(allergies.map(x => x.id === a.id ? updated : x));
   };
 
   const handleDelete = async (id: number) => {
@@ -816,12 +822,20 @@ function AllergiesTab({ petId, token, allergies, setAllergies, onNavigateToDocum
               ) : (
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="font-medium">{a.allergen}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{a.allergen}</p>
+                      {a.show_on_card && (
+                        <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-semibold">ALERT</span>
+                      )}
+                    </div>
                     {a.severity && <span className={`text-sm capitalize ${a.severity === 'life-threatening' ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>{a.severity}</span>}
                     {a.reaction && <p className="text-sm text-gray-600 mt-1">Reaction: {a.reaction}</p>}
                     <SourceDocumentLink petId={petId} recordType="pet_allergies" recordId={a.id} onNavigateToDocuments={onNavigateToDocuments} />
                   </div>
                   <div className="flex gap-2">
+                    <button onClick={() => handleToggleShowOnCard(a)} className={`text-sm ${a.show_on_card ? 'text-red-600 hover:text-red-800' : 'text-gray-400 hover:text-gray-600'}`} title={a.show_on_card ? 'Remove from card' : 'Show on card'}>
+                      {a.show_on_card ? '🔔' : '🔕'}
+                    </button>
                     <button onClick={() => setEditingId(a.id)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
                     {deletingId === a.id ? (
                       <>
@@ -1342,13 +1356,15 @@ const ALERT_SUGGESTIONS = [
 ];
 
 // Alerts Tab
-function AlertsTab({ petId, token, alerts, setAlerts, conditions, setConditions, medications, setMedications }: {
+function AlertsTab({ petId, token, alerts, setAlerts, conditions, setConditions, allergies, setAllergies, medications, setMedications }: {
   petId: number;
   token: string;
   alerts: PetAlert[];
   setAlerts: (a: PetAlert[]) => void;
   conditions: PetCondition[];
   setConditions: (c: PetCondition[]) => void;
+  allergies: PetAllergy[];
+  setAllergies: (a: PetAllergy[]) => void;
   medications: PetMedication[];
   setMedications: (m: PetMedication[]) => void;
 }) {
@@ -1356,6 +1372,7 @@ function AlertsTab({ petId, token, alerts, setAlerts, conditions, setConditions,
   const [newAlertText, setNewAlertText] = useState('');
 
   const conditionAlerts = conditions.filter(c => c.show_on_card && c.is_active);
+  const allergyAlerts = allergies.filter(a => a.show_on_card);
   const medicationAlerts = medications.filter(m => m.show_on_card && m.is_active);
   const customAlerts = alerts.filter(a => a.is_active);
 
@@ -1377,12 +1394,17 @@ function AlertsTab({ petId, token, alerts, setAlerts, conditions, setConditions,
     setConditions(conditions.map(x => x.id === c.id ? updated : x));
   };
 
+  const handleRemoveAllergyAlert = async (a: PetAllergy) => {
+    const updated = await petsApi.updateAllergy(petId, a.id, { show_on_card: false }, token);
+    setAllergies(allergies.map(x => x.id === a.id ? updated : x));
+  };
+
   const handleRemoveMedicationAlert = async (m: PetMedication) => {
     const updated = await petsApi.updateMedication(petId, m.id, { show_on_card: false }, token);
     setMedications(medications.map(x => x.id === m.id ? updated : x));
   };
 
-  const totalAlerts = conditionAlerts.length + medicationAlerts.length + customAlerts.length;
+  const totalAlerts = conditionAlerts.length + allergyAlerts.length + medicationAlerts.length + customAlerts.length;
 
   return (
     <div>
@@ -1419,7 +1441,7 @@ function AlertsTab({ petId, token, alerts, setAlerts, conditions, setConditions,
       )}
 
       {totalAlerts === 0 ? (
-        <p className="text-gray-500 text-center py-8">No alerts configured. Use the bell icon on conditions and medications, or add custom alerts above.</p>
+        <p className="text-gray-500 text-center py-8">No alerts configured. Use the bell icon on conditions, allergies, and medications, or add custom alerts above.</p>
       ) : (
         <div className="space-y-6">
           {/* Condition Alerts */}
@@ -1434,6 +1456,24 @@ function AlertsTab({ petId, token, alerts, setAlerts, conditions, setConditions,
                       {c.severity && <span className="text-xs text-gray-500 capitalize">{c.severity}</span>}
                     </div>
                     <button onClick={() => handleRemoveConditionAlert(c)} className="text-gray-400 hover:text-red-600 text-sm" title="Remove from alerts">✕</button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Allergy Alerts */}
+          {allergyAlerts.length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium text-red-700 mb-2">From Allergies</h4>
+              <ul className="divide-y border rounded-lg">
+                {allergyAlerts.map(a => (
+                  <li key={a.id} className="p-3 flex justify-between items-center">
+                    <div>
+                      <p className="font-medium text-sm">{a.allergen}</p>
+                      {a.severity && <span className={`text-xs capitalize ${a.severity === 'life-threatening' ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>{a.severity}</span>}
+                    </div>
+                    <button onClick={() => handleRemoveAllergyAlert(a)} className="text-gray-400 hover:text-red-600 text-sm" title="Remove from alerts">✕</button>
                   </li>
                 ))}
               </ul>
