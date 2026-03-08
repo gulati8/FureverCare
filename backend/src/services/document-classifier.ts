@@ -79,9 +79,9 @@ const EXTRACTION_PROMPT = `Extract all relevant pet health information from this
 
 For each piece of information found, categorize it into one of these record types:
 - vaccination: Vaccine records (name, date administered, expiration date, administered by, lot number)
-- medication: Prescriptions or medications (name, dosage, frequency, start date, end date, prescribing vet, notes)
-- condition: Medical conditions or diagnoses (name, diagnosed date, severity, notes)
-- allergy: Allergies (allergen, reaction, severity)
+- medication: Prescriptions or medications (name, dosage, frequency, start date, end date, prescribing vet, notes, show_on_card)
+- condition: Medical conditions or diagnoses (name, diagnosed date, severity, notes, show_on_card)
+- allergy: Allergies (allergen, reaction, severity, show_on_card)
 - vet: Veterinarian/clinic information (clinic name, vet name, phone, email, address)
 - emergency_contact: Emergency contacts mentioned (name, relationship, phone, email)
 
@@ -116,7 +116,8 @@ Respond with a JSON object:
         "end_date": null,
         "prescribing_vet": "Dr. Smith",
         "notes": "For allergies",
-        "is_active": true
+        "is_active": true,
+        "show_on_card": false
       },
       "confidence": 0.9
     }
@@ -137,6 +138,10 @@ Field formats:
 - severity should be: "mild", "moderate", or "severe" for conditions
 - severity for allergies: "mild", "moderate", "severe", or "life-threatening"
 - is_active for medications should be true for current prescriptions
+- show_on_card indicates whether this item should appear as an alert on the pet's emergency card:
+  - For allergies: true if severity is "life-threatening" or "severe"
+  - For conditions: true if the condition is clinically significant and would affect emergency treatment (e.g., epilepsy, heart disease, diabetes). False for minor/resolved conditions.
+  - For medications: true if the medication has critical drug interactions or the pet must not miss doses (e.g., insulin, anti-seizure, heart medication). False for routine supplements or topicals.
 
 Only extract information that is actually present in the document.
 Do not make up or assume information.
@@ -478,6 +483,7 @@ export function mapExtractionToHealthRecord(recordType: RecordType, data: Record
         prescribing_vet: data.prescribing_vet || null,
         notes: data.notes || null,
         is_active: data.is_active !== false,
+        show_on_card: data.show_on_card ?? false,
       };
     }
 
@@ -489,6 +495,7 @@ export function mapExtractionToHealthRecord(recordType: RecordType, data: Record
         diagnosed_date_precision: diagPrecision,
         notes: data.notes || null,
         severity: data.severity || null,
+        show_on_card: data.show_on_card ?? false,
       };
     }
 
@@ -497,6 +504,7 @@ export function mapExtractionToHealthRecord(recordType: RecordType, data: Record
         allergen: data.allergen,
         reaction: data.reaction || null,
         severity: data.severity || null,
+        show_on_card: data.show_on_card ?? (data.severity === 'life-threatening' || data.severity === 'severe'),
       };
 
     case 'vet':
