@@ -236,10 +236,20 @@ router.get('/:petId/documents/uploads', authenticate, async (req: AuthRequest, r
       rejected_items: parseInt(r.rejected_count),
     }]));
 
-    const enriched = uploads.map(u => ({
-      ...u,
-      ...(countsMap.get(u.id) || {}),
-    }));
+    const enriched = uploads.map(u => {
+      const counts = countsMap.get(u.id);
+      // Fix retroactive status: if upload is marked 'completed' but still has pending items,
+      // correct the status to 'pending_review' so it shows up in the right section
+      let status = u.status;
+      if (status === 'completed' && counts && counts.pending_items > 0) {
+        status = 'pending_review';
+      }
+      return {
+        ...u,
+        status,
+        ...(counts || {}),
+      };
+    });
 
     res.json(enriched);
   } catch (error) {
