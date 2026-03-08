@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import {
   petsApi,
+  documentsApi,
+  API_URL,
   Pet,
   PetVet,
   PetCondition,
@@ -11,6 +13,7 @@ import {
   PetVaccination,
   PetEmergencyContact,
   PetAlert,
+  DocumentUpload,
 } from '../api/client';
 import ManageAccessModal from '../components/ManageAccessModal';
 import PhotoUpload from '../components/PhotoUpload';
@@ -22,8 +25,9 @@ import { DocumentImportSection } from '../components/document-import/DocumentImp
 import { AuditLogViewer } from '../components/audit/AuditLogViewer';
 import { MedicalTimeline } from '../components/MedicalTimeline';
 import UpgradeBanner from '../components/UpgradeBanner';
+import SourceDocumentLink from '../components/SourceDocumentLink';
 
-type TabType = 'overview' | 'timeline' | 'conditions' | 'allergies' | 'medications' | 'vaccinations' | 'contacts' | 'vets' | 'alerts' | 'documents' | 'history';
+type TabType = 'overview' | 'timeline' | 'conditions' | 'allergies' | 'medications' | 'vaccinations' | 'contacts' | 'vets' | 'alerts' | 'images' | 'documents' | 'history';
 
 const KG_TO_LBS = 2.20462;
 
@@ -59,6 +63,7 @@ export default function PetDetail() {
   const [vaccinations, setVaccinations] = useState<PetVaccination[]>([]);
   const [emergencyContacts, setEmergencyContacts] = useState<PetEmergencyContact[]>([]);
   const [alerts, setAlerts] = useState<PetAlert[]>([]);
+  const [imageUploads, setImageUploads] = useState<DocumentUpload[]>([]);
 
   const petId = parseInt(id || '0');
 
@@ -70,7 +75,7 @@ export default function PetDetail() {
     if (!token || !id) return;
     setIsLoading(true);
     try {
-      const [petData, vetsData, conditionsData, allergiesData, medsData, vacsData, contactsData, alertsData] = await Promise.all([
+      const [petData, vetsData, conditionsData, allergiesData, medsData, vacsData, contactsData, alertsData, uploadsData] = await Promise.all([
         petsApi.get(petId, token),
         petsApi.getVets(petId, token),
         petsApi.getConditions(petId, token),
@@ -79,6 +84,7 @@ export default function PetDetail() {
         petsApi.getVaccinations(petId, token),
         petsApi.getEmergencyContacts(petId, token),
         petsApi.getAlerts(petId, token),
+        documentsApi.listUploads(petId, token).catch(() => [] as DocumentUpload[]),
       ]);
       setPet(petData);
       setVets(vetsData);
@@ -88,6 +94,10 @@ export default function PetDetail() {
       setVaccinations(vacsData);
       setEmergencyContacts(contactsData);
       setAlerts(alertsData);
+      setImageUploads(uploadsData.filter((u: any) => {
+        const isImage = u.file_type === 'image' || u.media_type === 'image' || (u.mime_type && u.mime_type.startsWith('image/'));
+        return isImage && u.status === 'completed';
+      }));
     } catch (err) {
       console.error('Failed to load pet:', err);
       navigate('/dashboard');
@@ -135,6 +145,7 @@ export default function PetDetail() {
     { id: 'vets', label: 'Veterinarians', count: vets.length },
     { id: 'contacts', label: 'Emergency Contacts', count: emergencyContacts.length },
     { id: 'alerts', label: 'Alerts', count: alerts.filter(a => a.is_active).length + conditions.filter(c => c.show_on_card).length + medications.filter(m => m.show_on_card).length || undefined },
+    { id: 'images', label: 'Images', count: imageUploads.length || undefined },
     { id: 'documents', label: 'Import Documents' },
     { id: 'history', label: 'History' },
   ];
@@ -243,16 +254,16 @@ export default function PetDetail() {
           )
         )}
         {activeTab === 'conditions' && (
-          <ConditionsTab petId={petId} token={token!} conditions={conditions} setConditions={setConditions} />
+          <ConditionsTab petId={petId} token={token!} conditions={conditions} setConditions={setConditions} onNavigateToDocuments={() => setActiveTab('documents')} />
         )}
         {activeTab === 'allergies' && (
-          <AllergiesTab petId={petId} token={token!} allergies={allergies} setAllergies={setAllergies} />
+          <AllergiesTab petId={petId} token={token!} allergies={allergies} setAllergies={setAllergies} onNavigateToDocuments={() => setActiveTab('documents')} />
         )}
         {activeTab === 'medications' && (
-          <MedicationsTab petId={petId} token={token!} medications={medications} setMedications={setMedications} />
+          <MedicationsTab petId={petId} token={token!} medications={medications} setMedications={setMedications} onNavigateToDocuments={() => setActiveTab('documents')} />
         )}
         {activeTab === 'vaccinations' && (
-          <VaccinationsTab petId={petId} token={token!} vaccinations={vaccinations} setVaccinations={setVaccinations} />
+          <VaccinationsTab petId={petId} token={token!} vaccinations={vaccinations} setVaccinations={setVaccinations} onNavigateToDocuments={() => setActiveTab('documents')} />
         )}
         {activeTab === 'vets' && (
           <VetsTab petId={petId} token={token!} vets={vets} setVets={setVets} />
@@ -262,6 +273,9 @@ export default function PetDetail() {
         )}
         {activeTab === 'alerts' && (
           <AlertsTab petId={petId} token={token!} alerts={alerts} setAlerts={setAlerts} conditions={conditions} setConditions={setConditions} medications={medications} setMedications={setMedications} />
+        )}
+        {activeTab === 'images' && (
+          <ImagesTab petId={petId} images={imageUploads} />
         )}
         {activeTab === 'documents' && (
           isPremium ? (
@@ -579,11 +593,12 @@ const CONDITION_FIELDS: EditField[] = [
   { key: 'notes', placeholder: 'Notes (optional)', type: 'textarea' },
 ];
 
-function ConditionsTab({ petId, token, conditions, setConditions }: {
+function ConditionsTab({ petId, token, conditions, setConditions, onNavigateToDocuments }: {
   petId: number;
   token: string;
   conditions: PetCondition[];
   setConditions: (c: PetCondition[]) => void;
+  onNavigateToDocuments: () => void;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -661,6 +676,7 @@ function ConditionsTab({ petId, token, conditions, setConditions }: {
               {c.diagnosed_date && <span>Diagnosed: {formatFlexibleDate(c.diagnosed_date, c.diagnosed_date_precision)}</span>}
             </div>
             {c.notes && <p className="text-sm text-gray-600 mt-1">{c.notes}</p>}
+            <SourceDocumentLink petId={petId} recordType="pet_conditions" recordId={c.id} onNavigateToDocuments={onNavigateToDocuments} />
           </div>
           <div className="flex gap-2 flex-shrink-0">
             <button onClick={() => handleToggleShowOnCard(c)} className={`text-sm ${c.show_on_card ? 'text-red-600 hover:text-red-800' : 'text-gray-400 hover:text-gray-600'}`} title={c.show_on_card ? 'Remove from card' : 'Show on card'}>
@@ -734,11 +750,12 @@ const ALLERGY_FIELDS: EditField[] = [
   { key: 'severity', placeholder: 'Severity', type: 'select', options: ALLERGY_SEVERITY_OPTIONS },
 ];
 
-function AllergiesTab({ petId, token, allergies, setAllergies }: {
+function AllergiesTab({ petId, token, allergies, setAllergies, onNavigateToDocuments }: {
   petId: number;
   token: string;
   allergies: PetAllergy[];
   setAllergies: (a: PetAllergy[]) => void;
+  onNavigateToDocuments: () => void;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -802,6 +819,7 @@ function AllergiesTab({ petId, token, allergies, setAllergies }: {
                     <p className="font-medium">{a.allergen}</p>
                     {a.severity && <span className={`text-sm capitalize ${a.severity === 'life-threatening' ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>{a.severity}</span>}
                     {a.reaction && <p className="text-sm text-gray-600 mt-1">Reaction: {a.reaction}</p>}
+                    <SourceDocumentLink petId={petId} recordType="pet_allergies" recordId={a.id} onNavigateToDocuments={onNavigateToDocuments} />
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => setEditingId(a.id)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
@@ -833,11 +851,12 @@ const MEDICATION_FIELDS: EditField[] = [
   { key: 'start_date', placeholder: 'Start date', type: 'flexible_date', label: 'Start date', precisionKey: 'start_date_precision' },
 ];
 
-function MedicationsTab({ petId, token, medications, setMedications }: {
+function MedicationsTab({ petId, token, medications, setMedications, onNavigateToDocuments }: {
   petId: number;
   token: string;
   medications: PetMedication[];
   setMedications: (m: PetMedication[]) => void;
+  onNavigateToDocuments: () => void;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -908,6 +927,7 @@ function MedicationsTab({ petId, token, medications, setMedications }: {
             {m.dosage && <span className="text-sm text-gray-500">{m.dosage}</span>}
             {m.frequency && <span className="text-sm text-gray-500"> - {m.frequency}</span>}
             {m.start_date && <p className="text-sm text-gray-500">Started: {formatFlexibleDate(m.start_date, m.start_date_precision)}</p>}
+            <SourceDocumentLink petId={petId} recordType="pet_medications" recordId={m.id} onNavigateToDocuments={onNavigateToDocuments} />
           </div>
           <div className="flex gap-2">
             <button onClick={() => handleToggleShowOnCard(m)} className={`text-sm ${m.show_on_card ? 'text-red-600 hover:text-red-800' : 'text-gray-400 hover:text-gray-600'}`} title={m.show_on_card ? 'Remove from card' : 'Show on card'}>
@@ -981,11 +1001,12 @@ const VACCINATION_FIELDS: EditField[] = [
   { key: 'expiration_date', placeholder: 'Expiration date', type: 'flexible_date', label: 'Expiration date', precisionKey: 'expiration_date_precision' },
 ];
 
-function VaccinationsTab({ petId, token, vaccinations, setVaccinations }: {
+function VaccinationsTab({ petId, token, vaccinations, setVaccinations, onNavigateToDocuments }: {
   petId: number;
   token: string;
   vaccinations: PetVaccination[];
   setVaccinations: (v: PetVaccination[]) => void;
+  onNavigateToDocuments: () => void;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -1074,6 +1095,7 @@ function VaccinationsTab({ petId, token, vaccinations, setVaccinations }: {
                         {isExpired(v.expiration_date) ? 'Expired' : 'Expires'}: {formatFlexibleDate(v.expiration_date, v.expiration_date_precision)}
                       </p>
                     )}
+                    <SourceDocumentLink petId={petId} recordType="pet_vaccinations" recordId={v.id} onNavigateToDocuments={onNavigateToDocuments} />
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => setEditingId(v.id)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
@@ -1450,6 +1472,135 @@ function AlertsTab({ petId, token, alerts, setAlerts, conditions, setConditions,
               </ul>
             </div>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Images Tab
+function ImagesTab({ petId, images }: { petId: number; images: DocumentUpload[] }) {
+  const [selectedImage, setSelectedImage] = useState<DocumentUpload | null>(null);
+
+  const getImageUrl = (upload: DocumentUpload) =>
+    `${API_URL}/api/pets/${petId}/documents/uploads/${upload.id}/file`;
+
+  if (images.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+        <h3 className="mt-2 text-sm font-medium text-gray-900">No images yet</h3>
+        <p className="mt-1 text-sm text-gray-500">
+          Upload images from the Import Documents tab.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-gray-900">
+          Images
+          <span className="ml-2 text-sm font-normal text-gray-500">({images.length})</span>
+        </h3>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+        {images.map((img) => (
+          <div
+            key={img.id}
+            className="group relative bg-gray-100 rounded-lg overflow-hidden cursor-pointer border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all"
+            onClick={() => setSelectedImage(img)}
+          >
+            <div className="aspect-square">
+              <img
+                src={getImageUrl(img)}
+                alt={img.user_tag || img.original_filename}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            </div>
+            <div className="p-2">
+              <p className="text-sm font-medium text-gray-900 truncate">
+                {img.user_tag || img.original_filename}
+              </p>
+              <div className="flex items-center gap-2 mt-0.5">
+                {img.date_taken && (
+                  <p className="text-xs text-gray-500">
+                    {new Date(img.date_taken).toLocaleDateString()}
+                  </p>
+                )}
+                {img.body_area && (
+                  <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
+                    {img.body_area}
+                  </span>
+                )}
+              </div>
+              {img.user_description && (
+                <p className="text-xs text-gray-500 mt-1 truncate">{img.user_description}</p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {selectedImage && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div
+            className="relative bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute top-3 right-3 z-10 bg-white bg-opacity-90 rounded-full p-1.5 text-gray-600 hover:text-gray-900 hover:bg-opacity-100 shadow-sm"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <div className="flex items-center justify-center bg-gray-900 max-h-[70vh]">
+              <img
+                src={getImageUrl(selectedImage)}
+                alt={selectedImage.user_tag || selectedImage.original_filename}
+                className="max-w-full max-h-[70vh] object-contain"
+              />
+            </div>
+
+            <div className="p-4 border-t">
+              <h4 className="font-medium text-gray-900">
+                {selectedImage.user_tag || selectedImage.original_filename}
+              </h4>
+              {selectedImage.user_description && (
+                <p className="text-sm text-gray-600 mt-1">{selectedImage.user_description}</p>
+              )}
+              <div className="flex flex-wrap gap-3 mt-2 text-sm text-gray-500">
+                {selectedImage.date_taken && (
+                  <span>Date: {new Date(selectedImage.date_taken).toLocaleDateString()}</span>
+                )}
+                {selectedImage.body_area && (
+                  <span>Area: {selectedImage.body_area}</span>
+                )}
+                <span>Uploaded: {new Date(selectedImage.created_at).toLocaleDateString()}</span>
+              </div>
+              <div className="mt-3">
+                <a
+                  href={getImageUrl(selectedImage)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
+                >
+                  Open full size
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
