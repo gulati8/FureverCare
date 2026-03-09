@@ -110,6 +110,7 @@ export function ExtractionItemCard({
             <FieldEditor label="Expiration Date" value={currentData.expiration_date} fieldKey="expiration_date" type="date" onChange={handleFieldChange} isModified={isFieldModified('expiration_date')} />
             <FieldEditor label="Administered By" value={currentData.administered_by} fieldKey="administered_by" onChange={handleFieldChange} isModified={isFieldModified('administered_by')} />
             <FieldEditor label="Lot Number" value={currentData.lot_number} fieldKey="lot_number" onChange={handleFieldChange} isModified={isFieldModified('lot_number')} />
+            <FieldEditor label="Show on Emergency Card" value={currentData.show_on_card} fieldKey="show_on_card" type="boolean" onChange={handleFieldChange} isModified={isFieldModified('show_on_card')} />
           </>
         );
 

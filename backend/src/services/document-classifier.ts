@@ -78,7 +78,7 @@ Only classify based on what you can actually see - do not guess.`;
 const EXTRACTION_PROMPT = `Extract all relevant pet health information from this document.
 
 For each piece of information found, categorize it into one of these record types:
-- vaccination: Vaccine records (name, date administered, expiration date, administered by, lot number)
+- vaccination: Vaccine records (name, date administered, expiration date, administered by, lot number, show_on_card)
 - medication: Prescriptions or medications (name, dosage, frequency, start date, end date, prescribing vet, notes, show_on_card)
 - condition: Medical conditions or diagnoses (name, diagnosed date, severity, notes, show_on_card)
 - allergy: Allergies (allergen, reaction, severity, show_on_card)
@@ -142,6 +142,7 @@ Field formats:
   - For allergies: true if severity is "life-threatening" or "severe"
   - For conditions: true if the condition is clinically significant and would affect emergency treatment (e.g., epilepsy, heart disease, diabetes). False for minor/resolved conditions.
   - For medications: true if the medication has critical drug interactions or the pet must not miss doses (e.g., insulin, anti-seizure, heart medication). False for routine supplements or topicals.
+  - For vaccinations: true if the vaccination is expired or critically overdue (e.g., rabies). False for routine up-to-date vaccinations.
 
 Only extract information that is actually present in the document.
 Do not make up or assume information.
@@ -466,6 +467,7 @@ export function mapExtractionToHealthRecord(recordType: RecordType, data: Record
         expiration_date_precision: expPrecision,
         administered_by: data.administered_by || null,
         lot_number: data.lot_number || null,
+        show_on_card: data.show_on_card ?? false,
       };
     }
 

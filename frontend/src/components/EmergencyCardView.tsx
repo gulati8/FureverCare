@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { EmergencyCard } from '../api/client';
 
@@ -26,7 +25,7 @@ function primaryWeight(value: number | string, unit: 'lbs' | 'kg' | null): strin
 }
 
 interface AlertItem {
-  type: 'allergy' | 'medication' | 'condition';
+  type: 'allergy' | 'medication' | 'condition' | 'vaccination';
   title: string;
   detail: string;
 }
@@ -45,66 +44,49 @@ function buildAlerts(card: EmergencyCard): AlertItem[] {
     }
   }
 
-  // Allergies flagged to show on card
+  // All allergies on card are alerts (backend only sends show_on_card items)
   for (const a of card.allergies) {
-    if (a.show_on_card) {
-      const severity = a.severity === 'life-threatening' ? ' (ANAPHYLAXIS RISK)' :
-        a.severity === 'severe' ? ' (SEVERE)' : '';
-      alerts.push({
-        type: 'allergy',
-        title: `${a.allergen} Allergy${severity}`,
-        detail: a.reaction ? `Reaction: ${a.reaction}` : 'Avoid this allergen',
-      });
-    }
+    const severity = a.severity === 'life-threatening' ? ' (ANAPHYLAXIS RISK)' :
+      a.severity === 'severe' ? ' (SEVERE)' : '';
+    alerts.push({
+      type: 'allergy',
+      title: `${a.allergen} Allergy${severity}`,
+      detail: a.reaction ? `Reaction: ${a.reaction}` : 'Avoid this allergen',
+    });
   }
 
-  // Medications flagged to show on card
+  // All medications on card are alerts
   for (const m of card.medications) {
-    if (m.show_on_card) {
-      alerts.push({
-        type: 'medication',
-        title: `On ${m.name}${m.notes ? ` - ${m.notes}` : ''}`,
-        detail: [m.dosage, m.frequency].filter(Boolean).join(' '),
-      });
-    }
+    alerts.push({
+      type: 'medication',
+      title: `On ${m.name}${m.notes ? ` - ${m.notes}` : ''}`,
+      detail: [m.dosage, m.frequency].filter(Boolean).join(' '),
+    });
   }
 
-  // Conditions flagged to show on card
+  // All conditions on card are alerts
   for (const c of card.conditions) {
-    if (c.show_on_card) {
-      alerts.push({
-        type: 'condition',
-        title: c.name,
-        detail: c.notes || 'Monitor during procedures',
-      });
-    }
+    alerts.push({
+      type: 'condition',
+      title: c.name,
+      detail: c.notes || 'Monitor during procedures',
+    });
+  }
+
+  // Vaccinations flagged as alerts (e.g., expired rabies)
+  for (const v of card.vaccinations) {
+    const isExpired = v.expiration_date && new Date(v.expiration_date) < new Date();
+    alerts.push({
+      type: 'vaccination',
+      title: `${v.name}${isExpired ? ' (EXPIRED)' : ''}`,
+      detail: v.expiration_date
+        ? `${isExpired ? 'Expired' : 'Expires'}: ${new Date(v.expiration_date.split('T')[0] + 'T00:00:00').toLocaleDateString()}`
+        : `Given ${new Date(v.administered_date.split('T')[0] + 'T00:00:00').toLocaleDateString()}`,
+    });
   }
 
   return alerts;
 }
-
-function severityToIndicator(severity: string | null): 'critical' | 'high' | 'medium' | 'low' {
-  switch (severity) {
-    case 'life-threatening': return 'critical';
-    case 'severe': case 'critical': return 'high';
-    case 'moderate': return 'medium';
-    default: return 'low';
-  }
-}
-
-const indicatorColors = {
-  critical: 'bg-red-600',
-  high: 'bg-orange-500',
-  medium: 'bg-yellow-500',
-  low: 'bg-gray-300',
-};
-
-const severityChipStyles: Record<string, string> = {
-  'life-threatening': 'bg-red-600 text-white',
-  'severe': 'bg-orange-500 text-white',
-  'moderate': 'bg-yellow-100 text-yellow-800',
-  'mild': 'bg-gray-100 text-gray-600',
-};
 
 interface Props {
   card: EmergencyCard;
@@ -112,8 +94,7 @@ interface Props {
 }
 
 export default function EmergencyCardView({ card, resolvePhotoUrl }: Props) {
-  const [vaccsExpanded, setVaccsExpanded] = useState(false);
-  const { pet, owner, conditions, allergies, medications, vaccinations, veterinarians, emergency_contacts } = card;
+  const { pet, owner, veterinarians, emergency_contacts } = card;
   const alerts = buildAlerts(card);
   const hasAlerts = alerts.length > 0;
 
@@ -156,10 +137,12 @@ export default function EmergencyCardView({ card, resolvePhotoUrl }: Props) {
                   <div className={`w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold flex-shrink-0 bg-white ${
                     alert.type === 'allergy' ? 'text-red-600' :
                     alert.type === 'medication' ? 'text-blue-600' :
+                    alert.type === 'vaccination' ? 'text-green-600' :
                     'text-orange-500'
                   }`}>
                     {alert.type === 'allergy' ? '⚠' :
-                     alert.type === 'medication' ? 'Rx' : '♥'}
+                     alert.type === 'medication' ? 'Rx' :
+                     alert.type === 'vaccination' ? '💉' : '♥'}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold leading-tight">{alert.title}</p>
@@ -232,107 +215,6 @@ export default function EmergencyCardView({ card, resolvePhotoUrl }: Props) {
             </h3>
             <p className="text-sm text-yellow-900">{pet.special_instructions}</p>
           </div>
-        )}
-
-        {/* Allergies */}
-        {allergies.length > 0 && (
-          <section>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[13px] font-bold uppercase tracking-wide text-red-700 flex items-center gap-2">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-                Allergies
-              </h3>
-              <span className="text-[11px] text-gray-500">{allergies.length} item{allergies.length !== 1 ? 's' : ''}</span>
-            </div>
-            <div className="space-y-2">
-              {allergies.map((a, i) => {
-                const level = severityToIndicator(a.severity);
-                return (
-                  <div key={i} className="bg-red-50 border border-red-200/50 rounded-xl p-3 flex items-start gap-2.5">
-                    <div className={`w-1 self-stretch rounded-full flex-shrink-0 ${indicatorColors[level]}`} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-sm font-semibold text-gray-900">{a.allergen}</span>
-                        {a.severity && (
-                          <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${severityChipStyles[a.severity] || 'bg-gray-100 text-gray-600'}`}>
-                            {a.severity === 'life-threatening' ? 'Anaphylaxis' : a.severity}
-                          </span>
-                        )}
-                      </div>
-                      {a.reaction && <p className="text-xs text-gray-600 mt-1">{a.reaction}</p>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        {/* Current Medications */}
-        {medications.length > 0 && (
-          <section>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[13px] font-bold uppercase tracking-wide text-blue-700 flex items-center gap-2">
-                <span className="text-sm font-bold">Rx</span>
-                Current Medications
-              </h3>
-              <span className="text-[11px] text-gray-500">{medications.length} item{medications.length !== 1 ? 's' : ''}</span>
-            </div>
-            <div className="space-y-2">
-              {medications.map((m, i) => {
-                const hasWarning = !!m.notes;
-                return (
-                  <div key={i} className="bg-blue-50 border border-blue-200/50 rounded-xl p-3 flex items-start gap-2.5">
-                    <div className={`w-1 self-stretch rounded-full flex-shrink-0 ${hasWarning ? 'bg-orange-500' : 'bg-gray-300'}`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900">{m.name}</p>
-                      {(m.dosage || m.frequency) && (
-                        <p className="text-xs text-gray-600 mt-0.5">
-                          {m.dosage}{m.dosage && m.frequency && ' - '}{m.frequency}
-                        </p>
-                      )}
-                      {m.notes && (
-                        <p className="text-[11px] font-semibold text-yellow-700 mt-1.5 flex items-center gap-1">
-                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                          {m.notes}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        {/* Medical Conditions */}
-        {conditions.length > 0 && (
-          <section>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[13px] font-bold uppercase tracking-wide text-orange-700 flex items-center gap-2">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                </svg>
-                Medical Conditions
-              </h3>
-              <span className="text-[11px] text-gray-500">{conditions.length} item{conditions.length !== 1 ? 's' : ''}</span>
-            </div>
-            <div className="space-y-2">
-              {conditions.map((c, i) => (
-                  <div key={i} className="bg-orange-50 border-orange-200/50 border rounded-xl p-3 flex items-start gap-2.5">
-                    <div className="w-1 self-stretch rounded-full flex-shrink-0 bg-orange-500" />
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-semibold text-gray-900">{c.name}</span>
-                      {c.notes && <p className="text-xs text-gray-600 mt-1">{c.notes}</p>}
-                    </div>
-                  </div>
-              ))}
-            </div>
-          </section>
         )}
 
         {/* Emergency Contacts */}
@@ -429,51 +311,6 @@ export default function EmergencyCardView({ card, resolvePhotoUrl }: Props) {
           </div>
         </section>
 
-        {/* Vaccinations (Expandable) */}
-        {vaccinations.length > 0 && (
-          <section>
-            <div className="border border-gray-200 rounded-xl overflow-hidden">
-              <button
-                onClick={() => setVaccsExpanded(!vaccsExpanded)}
-                className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
-              >
-                <span className="text-xs font-semibold text-gray-700">
-                  Vaccination Records ({vaccinations.length})
-                </span>
-                <svg
-                  className={`w-4 h-4 text-gray-400 transition-transform ${vaccsExpanded ? 'rotate-180' : ''}`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              {vaccsExpanded && (
-                <div className="px-4 py-2 border-t border-gray-200">
-                  {vaccinations.map((v, i) => {
-                    const isExpired = v.expiration_date && new Date(v.expiration_date) < new Date();
-                    return (
-                      <div key={i} className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-b-0">
-                        <span className="text-xs font-medium text-gray-900">{v.name}</span>
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
-                          isExpired
-                            ? 'bg-red-50 text-red-600'
-                            : 'bg-green-50 text-green-600'
-                        }`}>
-                          {v.expiration_date
-                            ? `${isExpired ? 'Expired' : 'Current'} - ${isExpired ? '' : 'Exp '}${new Date(v.expiration_date.split('T')[0] + 'T00:00:00').toLocaleDateString()}`
-                            : `Given ${new Date(v.administered_date.split('T')[0] + 'T00:00:00').toLocaleDateString()}`
-                          }
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </section>
-        )}
       </div>
 
       {/* Footer */}

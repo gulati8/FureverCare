@@ -539,14 +539,15 @@ export interface PetVaccination {
   expiration_date_precision: 'day' | 'month' | 'year';
   administered_by: string | null;
   lot_number: string | null;
+  show_on_card: boolean;
   created_at: Date;
 }
 
 export async function createPetVaccination(petId: number, data: Omit<PetVaccination, 'id' | 'pet_id' | 'created_at'>, audit?: AuditContext): Promise<PetVaccination> {
   const result = await queryOne<PetVaccination>(
-    `INSERT INTO pet_vaccinations (pet_id, name, administered_date, administered_date_precision, expiration_date, expiration_date_precision, administered_by, lot_number)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-    [petId, data.name, data.administered_date, data.administered_date_precision || 'day', data.expiration_date, data.expiration_date_precision || 'day', data.administered_by, data.lot_number]
+    `INSERT INTO pet_vaccinations (pet_id, name, administered_date, administered_date_precision, expiration_date, expiration_date_precision, administered_by, lot_number, show_on_card)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+    [petId, data.name, data.administered_date, data.administered_date_precision || 'day', data.expiration_date, data.expiration_date_precision || 'day', data.administered_by, data.lot_number, data.show_on_card ?? false]
   );
 
   if (audit && result) {
@@ -572,7 +573,7 @@ export async function updatePetVaccination(id: number, petId: number, updates: P
   const values: any[] = [];
   let paramCount = 1;
 
-  const allowedFields = ['name', 'administered_date', 'administered_date_precision', 'expiration_date', 'expiration_date_precision', 'administered_by', 'lot_number'];
+  const allowedFields = ['name', 'administered_date', 'administered_date_precision', 'expiration_date', 'expiration_date_precision', 'administered_by', 'lot_number', 'show_on_card'];
 
   for (const field of allowedFields) {
     if ((updates as any)[field] !== undefined) {
