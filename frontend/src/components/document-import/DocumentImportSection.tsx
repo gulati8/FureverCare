@@ -12,12 +12,15 @@ import { ImageReviewForm } from './ImageReviewForm';
 interface DocumentImportSectionProps {
   petId: number;
   onImportComplete?: () => void;
+  navigateToUploadId?: number | null;
+  highlightItemId?: number | null;
+  onNavigationHandled?: () => void;
 }
 
 type ViewState = 'upload' | 'review' | 'image_review';
 type FilterType = 'all' | 'pdf' | 'image';
 
-export function DocumentImportSection({ petId, onImportComplete }: DocumentImportSectionProps) {
+export function DocumentImportSection({ petId, onImportComplete, navigateToUploadId, highlightItemId, onNavigationHandled }: DocumentImportSectionProps) {
   const { token } = useAuth();
   const [viewState, setViewState] = useState<ViewState>('upload');
   const [currentUpload, setCurrentUpload] = useState<DocumentUpload | null>(null);
@@ -32,6 +35,23 @@ export function DocumentImportSection({ petId, onImportComplete }: DocumentImpor
   useEffect(() => {
     loadUploads();
   }, [petId, token]);
+
+  // Navigate to a specific upload's review when requested
+  useEffect(() => {
+    if (navigateToUploadId && uploads.length > 0 && viewState === 'upload') {
+      const upload = uploads.find(u => u.id === navigateToUploadId);
+      if (upload) {
+        setCurrentUpload(upload);
+        if (upload.file_type === 'image') {
+          setExifDateTaken(null);
+          setViewState('image_review');
+        } else {
+          setViewState('review');
+        }
+        onNavigationHandled?.();
+      }
+    }
+  }, [navigateToUploadId, uploads, viewState]);
 
   const loadUploads = async () => {
     if (!token) return;
@@ -125,6 +145,7 @@ export function DocumentImportSection({ petId, onImportComplete }: DocumentImpor
         upload={currentUpload}
         onBack={handleBackToUploads}
         onApprovalComplete={handleApprovalComplete}
+        highlightItemId={highlightItemId}
       />
     );
   }

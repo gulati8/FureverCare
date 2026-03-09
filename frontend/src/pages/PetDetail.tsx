@@ -54,6 +54,12 @@ export default function PetDetail() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showLinkWallet, setShowLinkWallet] = useState(false);
   const [showAccessModal, setShowAccessModal] = useState(false);
+  const [pendingDocNav, setPendingDocNav] = useState<{ uploadId: number; highlightItemId: number } | null>(null);
+
+  const handleNavigateToReview = (uploadId: number, highlightItemId: number) => {
+    setPendingDocNav({ uploadId, highlightItemId });
+    setActiveTab('documents');
+  };
 
   // Health records state
   const [vets, setVets] = useState<PetVet[]>([]);
@@ -254,16 +260,16 @@ export default function PetDetail() {
           )
         )}
         {activeTab === 'conditions' && (
-          <ConditionsTab petId={petId} token={token!} conditions={conditions} setConditions={setConditions} onNavigateToDocuments={() => setActiveTab('documents')} />
+          <ConditionsTab petId={petId} token={token!} conditions={conditions} setConditions={setConditions} onNavigateToReview={handleNavigateToReview} />
         )}
         {activeTab === 'allergies' && (
-          <AllergiesTab petId={petId} token={token!} allergies={allergies} setAllergies={setAllergies} onNavigateToDocuments={() => setActiveTab('documents')} />
+          <AllergiesTab petId={petId} token={token!} allergies={allergies} setAllergies={setAllergies} onNavigateToReview={handleNavigateToReview} />
         )}
         {activeTab === 'medications' && (
-          <MedicationsTab petId={petId} token={token!} medications={medications} setMedications={setMedications} onNavigateToDocuments={() => setActiveTab('documents')} />
+          <MedicationsTab petId={petId} token={token!} medications={medications} setMedications={setMedications} onNavigateToReview={handleNavigateToReview} />
         )}
         {activeTab === 'vaccinations' && (
-          <VaccinationsTab petId={petId} token={token!} vaccinations={vaccinations} setVaccinations={setVaccinations} onNavigateToDocuments={() => setActiveTab('documents')} />
+          <VaccinationsTab petId={petId} token={token!} vaccinations={vaccinations} setVaccinations={setVaccinations} onNavigateToReview={handleNavigateToReview} />
         )}
         {activeTab === 'vets' && (
           <VetsTab petId={petId} token={token!} vets={vets} setVets={setVets} />
@@ -279,7 +285,13 @@ export default function PetDetail() {
         )}
         {activeTab === 'documents' && (
           isPremium ? (
-            <DocumentImportSection petId={petId} onImportComplete={() => loadPetData()} />
+            <DocumentImportSection
+              petId={petId}
+              onImportComplete={() => loadPetData()}
+              navigateToUploadId={pendingDocNav?.uploadId}
+              highlightItemId={pendingDocNav?.highlightItemId}
+              onNavigationHandled={() => setPendingDocNav(null)}
+            />
           ) : (
             <div className="space-y-4">
               <UpgradeBanner type="feature" feature="upload" />
@@ -593,12 +605,12 @@ const CONDITION_FIELDS: EditField[] = [
   { key: 'notes', placeholder: 'Notes (optional)', type: 'textarea' },
 ];
 
-function ConditionsTab({ petId, token, conditions, setConditions, onNavigateToDocuments }: {
+function ConditionsTab({ petId, token, conditions, setConditions, onNavigateToReview }: {
   petId: number;
   token: string;
   conditions: PetCondition[];
   setConditions: (c: PetCondition[]) => void;
-  onNavigateToDocuments: () => void;
+  onNavigateToReview: (uploadId: number, highlightItemId: number) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -686,7 +698,7 @@ function ConditionsTab({ petId, token, conditions, setConditions, onNavigateToDo
               {c.diagnosed_date && <span>Diagnosed: {formatFlexibleDate(c.diagnosed_date, c.diagnosed_date_precision)}</span>}
             </div>
             {c.notes && <p className="text-sm text-gray-600 mt-1">{c.notes}</p>}
-            <SourceDocumentLink petId={petId} recordType="pet_conditions" recordId={c.id} onNavigateToDocuments={onNavigateToDocuments} />
+            <SourceDocumentLink petId={petId} recordType="pet_conditions" recordId={c.id} onNavigateToReview={onNavigateToReview} />
           </div>
           <div className="flex gap-2 flex-shrink-0">
             <button onClick={() => handleToggleShowOnCard(c)} className={`text-sm ${c.show_on_card ? 'text-red-600 hover:text-red-800' : 'text-gray-400 hover:text-gray-600'}`} title={c.show_on_card ? 'Remove from card' : 'Show on card'}>
@@ -760,12 +772,12 @@ const ALLERGY_FIELDS: EditField[] = [
   { key: 'severity', placeholder: 'Severity', type: 'select', options: ALLERGY_SEVERITY_OPTIONS },
 ];
 
-function AllergiesTab({ petId, token, allergies, setAllergies, onNavigateToDocuments }: {
+function AllergiesTab({ petId, token, allergies, setAllergies, onNavigateToReview }: {
   petId: number;
   token: string;
   allergies: PetAllergy[];
   setAllergies: (a: PetAllergy[]) => void;
-  onNavigateToDocuments: () => void;
+  onNavigateToReview: (uploadId: number, highlightItemId: number) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -845,7 +857,7 @@ function AllergiesTab({ petId, token, allergies, setAllergies, onNavigateToDocum
                     </div>
                     {a.severity && <span className={`text-sm capitalize ${a.severity === 'life-threatening' ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>{a.severity}</span>}
                     {a.reaction && <p className="text-sm text-gray-600 mt-1">Reaction: {a.reaction}</p>}
-                    <SourceDocumentLink petId={petId} recordType="pet_allergies" recordId={a.id} onNavigateToDocuments={onNavigateToDocuments} />
+                    <SourceDocumentLink petId={petId} recordType="pet_allergies" recordId={a.id} onNavigateToReview={onNavigateToReview} />
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => handleToggleShowOnCard(a)} className={`text-sm ${a.show_on_card ? 'text-red-600 hover:text-red-800' : 'text-gray-400 hover:text-gray-600'}`} title={a.show_on_card ? 'Remove from card' : 'Show on card'}>
@@ -880,12 +892,12 @@ const MEDICATION_FIELDS: EditField[] = [
   { key: 'start_date', placeholder: 'Start date', type: 'flexible_date', label: 'Start date', precisionKey: 'start_date_precision' },
 ];
 
-function MedicationsTab({ petId, token, medications, setMedications, onNavigateToDocuments }: {
+function MedicationsTab({ petId, token, medications, setMedications, onNavigateToReview }: {
   petId: number;
   token: string;
   medications: PetMedication[];
   setMedications: (m: PetMedication[]) => void;
-  onNavigateToDocuments: () => void;
+  onNavigateToReview: (uploadId: number, highlightItemId: number) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -966,7 +978,7 @@ function MedicationsTab({ petId, token, medications, setMedications, onNavigateT
             {m.dosage && <span className="text-sm text-gray-500">{m.dosage}</span>}
             {m.frequency && <span className="text-sm text-gray-500"> - {m.frequency}</span>}
             {m.start_date && <p className="text-sm text-gray-500">Started: {formatFlexibleDate(m.start_date, m.start_date_precision)}</p>}
-            <SourceDocumentLink petId={petId} recordType="pet_medications" recordId={m.id} onNavigateToDocuments={onNavigateToDocuments} />
+            <SourceDocumentLink petId={petId} recordType="pet_medications" recordId={m.id} onNavigateToReview={onNavigateToReview} />
           </div>
           <div className="flex gap-2">
             <button onClick={() => handleToggleShowOnCard(m)} className={`text-sm ${m.show_on_card ? 'text-red-600 hover:text-red-800' : 'text-gray-400 hover:text-gray-600'}`} title={m.show_on_card ? 'Remove from card' : 'Show on card'}>
@@ -1040,12 +1052,12 @@ const VACCINATION_FIELDS: EditField[] = [
   { key: 'expiration_date', placeholder: 'Expiration date', type: 'flexible_date', label: 'Expiration date', precisionKey: 'expiration_date_precision' },
 ];
 
-function VaccinationsTab({ petId, token, vaccinations, setVaccinations, onNavigateToDocuments }: {
+function VaccinationsTab({ petId, token, vaccinations, setVaccinations, onNavigateToReview }: {
   petId: number;
   token: string;
   vaccinations: PetVaccination[];
   setVaccinations: (v: PetVaccination[]) => void;
-  onNavigateToDocuments: () => void;
+  onNavigateToReview: (uploadId: number, highlightItemId: number) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -1149,7 +1161,7 @@ function VaccinationsTab({ petId, token, vaccinations, setVaccinations, onNaviga
                         {isExpired(v.expiration_date) ? 'Expired' : 'Expires'}: {formatFlexibleDate(v.expiration_date, v.expiration_date_precision)}
                       </p>
                     )}
-                    <SourceDocumentLink petId={petId} recordType="pet_vaccinations" recordId={v.id} onNavigateToDocuments={onNavigateToDocuments} />
+                    <SourceDocumentLink petId={petId} recordType="pet_vaccinations" recordId={v.id} onNavigateToReview={onNavigateToReview} />
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => handleToggleShowOnCard(v)} className={`text-sm ${v.show_on_card ? 'text-red-600 hover:text-red-800' : 'text-gray-400 hover:text-gray-600'}`} title={v.show_on_card ? 'Remove from card' : 'Show on card'}>
