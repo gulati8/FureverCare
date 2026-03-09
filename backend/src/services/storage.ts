@@ -96,10 +96,12 @@ class S3StorageProvider implements StorageProvider {
   private client: S3Client;
   private bucket: string;
   private region: string;
+  private keyPrefix: string;
 
   constructor() {
     this.bucket = config.storage.s3.bucket;
     this.region = config.storage.s3.region;
+    this.keyPrefix = config.storage.s3.keyPrefix;
     this.client = new S3Client({
       region: this.region,
       credentials: {
@@ -107,15 +109,16 @@ class S3StorageProvider implements StorageProvider {
         secretAccessKey: config.storage.s3.secretAccessKey,
       },
     });
+    if (this.keyPrefix) {
+      console.log(`S3 key prefix: ${this.keyPrefix}`);
+    }
   }
 
   private getKey(type: StorageType, petId: number | undefined, filename: string): string {
     const ext = path.extname(filename);
     const uniqueFilename = `${nanoid()}${ext}`;
-    if (petId) {
-      return `${type}/${petId}/${uniqueFilename}`;
-    }
-    return `${type}/${uniqueFilename}`;
+    const base = petId ? `${type}/${petId}/${uniqueFilename}` : `${type}/${uniqueFilename}`;
+    return this.keyPrefix ? `${this.keyPrefix}${base}` : base;
   }
 
   async upload(buffer: Buffer, options: UploadOptions): Promise<UploadResult> {

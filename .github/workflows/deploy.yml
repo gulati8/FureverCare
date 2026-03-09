@@ -241,10 +241,13 @@ jobs:
                 CLAUDE_API_KEY: ${CLAUDE_API_KEY:-}
                 STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
                 STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
-                STORAGE_PROVIDER: local
+                STORAGE_PROVIDER: s3
+                S3_BUCKET: ${S3_BUCKET}
+                S3_KEY_PREFIX: pr-PR_NUM_PLACEHOLDER/
+                AWS_REGION: ${AWS_REGION:-us-east-1}
+                AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+                AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
                 EMAIL_PROVIDER: console
-              volumes:
-                - uploads:/app/uploads
               restart: unless-stopped
               networks:
                 - proxy
@@ -262,7 +265,6 @@ jobs:
           volumes:
             pgdata:
             redisdata:
-            uploads:
 
           networks:
             proxy:
@@ -272,7 +274,7 @@ jobs:
           COMPOSEOF
           )
 
-          COMPOSE=$(echo "$COMPOSE" | sed "s/IMAGE_TAG_PLACEHOLDER/${IMAGE_TAG}/g" | sed "s/APP_NAME_PLACEHOLDER/${APP_NAME}/g")
+          COMPOSE=$(echo "$COMPOSE" | sed "s/IMAGE_TAG_PLACEHOLDER/${IMAGE_TAG}/g" | sed "s/APP_NAME_PLACEHOLDER/${APP_NAME}/g" | sed "s/PR_NUM_PLACEHOLDER/${PR_NUM}/g")
           COMPOSE_B64=$(echo "$COMPOSE" | base64 -w 0)
 
           COMMAND_ID=$(aws ssm send-command \
