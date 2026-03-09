@@ -31,6 +31,7 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
   const [reviewFilter, setReviewFilter] = useState<FilterType>('all');
   const [completedFilter, setCompletedFilter] = useState<FilterType>('all');
   const [completedExpanded, setCompletedExpanded] = useState(false);
+  const [activeHighlightItemId, setActiveHighlightItemId] = useState<number | null>(null);
 
   useEffect(() => {
     loadUploads();
@@ -42,6 +43,7 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
       const upload = uploads.find(u => u.id === navigateToUploadId);
       if (upload) {
         setCurrentUpload(upload);
+        setActiveHighlightItemId(highlightItemId ?? null);
         if (upload.file_type === 'image') {
           setExifDateTaken(null);
           setViewState('image_review');
@@ -86,6 +88,7 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
 
   const handleBackToUploads = () => {
     setCurrentUpload(null);
+    setActiveHighlightItemId(null);
     setViewState('upload');
     loadUploads();
   };
@@ -145,7 +148,7 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
         upload={currentUpload}
         onBack={handleBackToUploads}
         onApprovalComplete={handleApprovalComplete}
-        highlightItemId={highlightItemId}
+        highlightItemId={activeHighlightItemId}
       />
     );
   }
