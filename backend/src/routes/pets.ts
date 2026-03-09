@@ -573,20 +573,22 @@ router.get('/:id/records/:recordType/:recordId/source', authenticate, async (req
     const { recordType, recordId } = req.params;
 
     // Look up in document_extraction_items first (new system)
+    // Use the most recently updated item (latest approval/merge)
     const docResult = await dbQuery<any>(
-      `SELECT dei.id, du.id as upload_id, du.original_filename, du.mime_type as file_type
+      `SELECT dei.id as extraction_item_id, du.id as upload_id, du.original_filename, du.mime_type as file_type
        FROM document_extraction_items dei
        JOIN document_extractions de ON de.id = dei.extraction_id
        JOIN document_uploads du ON du.id = de.document_upload_id
        WHERE dei.created_record_id = $1
          AND dei.created_record_type = $2
          AND du.pet_id = $3
+       ORDER BY dei.updated_at DESC
        LIMIT 1`,
       [parseInt(recordId), recordType, petId]
     );
 
     if (docResult.length > 0) {
-      res.json({ source: 'document_import', upload_id: docResult[0].upload_id, filename: docResult[0].original_filename, file_type: docResult[0].file_type });
+      res.json({ source: 'document_import', upload_id: docResult[0].upload_id, extraction_item_id: docResult[0].extraction_item_id, filename: docResult[0].original_filename, file_type: docResult[0].file_type });
       return;
     }
 

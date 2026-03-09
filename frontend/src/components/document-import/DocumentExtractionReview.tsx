@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import {
   documentsApi,
@@ -15,6 +15,7 @@ interface DocumentExtractionReviewProps {
   upload: DocumentUpload;
   onBack: () => void;
   onApprovalComplete: () => void;
+  highlightItemId?: number | null;
 }
 
 export function DocumentExtractionReview({
@@ -22,6 +23,7 @@ export function DocumentExtractionReview({
   upload,
   onBack,
   onApprovalComplete,
+  highlightItemId,
 }: DocumentExtractionReviewProps) {
   const { token } = useAuth();
   const [extraction, setExtraction] = useState<DocumentExtractionWithItems | null>(null);
@@ -37,6 +39,17 @@ export function DocumentExtractionReview({
 
   // Phase 4: Per-field overrides for each duplicate item
   const [fieldOverrides, setFieldOverrides] = useState<Record<number, Record<string, 'existing' | 'imported'>>>({});
+
+  // Scroll to and highlight a specific extraction item
+  const highlightRef = useCallback((node: HTMLDivElement | null) => {
+    if (node && highlightItemId) {
+      setTimeout(() => {
+        node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        node.classList.add('ring-2', 'ring-blue-500', 'ring-offset-2', 'rounded-lg');
+        setTimeout(() => node.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2', 'rounded-lg'), 3000);
+      }, 300);
+    }
+  }, [highlightItemId]);
 
   useEffect(() => {
     loadExtraction();
@@ -384,19 +397,20 @@ export function DocumentExtractionReview({
               const isDuplicate = !!dupInfo;
 
               return (
-                <ExtractionItemCard
-                  key={item.id}
-                  item={item}
-                  isSelected={selectedIds.has(item.id)}
-                  onToggleSelect={() => toggleItemSelection(item.id)}
-                  onModify={(data) => handleModifyItem(item.id, data)}
-                  duplicateOf={dupInfo?.existingName}
-                  duplicateInfo={dupInfo}
-                  mergeAction={isDuplicate ? mergeActions[item.id] : undefined}
-                  onMergeActionChange={isDuplicate ? (action) => handleMergeActionChange(item.id, action) : undefined}
-                  fieldOverrides={isDuplicate ? fieldOverrides[item.id] : undefined}
-                  onFieldOverrideChange={isDuplicate ? (field, choice) => handleFieldOverrideChange(item.id, field, choice) : undefined}
-                />
+                <div key={item.id} ref={item.id === highlightItemId ? highlightRef : undefined}>
+                  <ExtractionItemCard
+                    item={item}
+                    isSelected={selectedIds.has(item.id)}
+                    onToggleSelect={() => toggleItemSelection(item.id)}
+                    onModify={(data) => handleModifyItem(item.id, data)}
+                    duplicateOf={dupInfo?.existingName}
+                    duplicateInfo={dupInfo}
+                    mergeAction={isDuplicate ? mergeActions[item.id] : undefined}
+                    onMergeActionChange={isDuplicate ? (action) => handleMergeActionChange(item.id, action) : undefined}
+                    fieldOverrides={isDuplicate ? fieldOverrides[item.id] : undefined}
+                    onFieldOverrideChange={isDuplicate ? (field, choice) => handleFieldOverrideChange(item.id, field, choice) : undefined}
+                  />
+                </div>
               );
             })}
           </div>
@@ -445,13 +459,14 @@ export function DocumentExtractionReview({
           </h4>
           <div className="space-y-3 opacity-75">
             {processedItems.map((item) => (
+              <div key={item.id} ref={item.id === highlightItemId ? highlightRef : undefined}>
               <ExtractionItemCard
-                key={item.id}
                 item={item}
                 isSelected={false}
                 onToggleSelect={() => {}}
                 onModify={() => {}}
               />
+              </div>
             ))}
           </div>
         </div>
