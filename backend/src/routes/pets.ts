@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
 import { query as dbQuery } from '../db/pool.js';
+import { cacheDelete } from '../db/redis.js';
 import { authenticate, AuthRequest } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { checkPetLimit } from '../middleware/subscription.js';
@@ -56,6 +57,14 @@ async function verifyPetAccess(petId: number, userId: number): Promise<boolean> 
 // Helper to verify pet edit access (owner or editor)
 async function verifyPetEditAccess(petId: number, userId: number): Promise<boolean> {
   return userCanEditPet(petId, userId);
+}
+
+// Invalidate the cached emergency card when health records change
+async function invalidateCardCache(petId: number): Promise<void> {
+  const pet = await findPetById(petId);
+  if (pet?.share_id) {
+    await cacheDelete(`pet:${pet.share_id}`);
+  }
 }
 
 // GET /pets - List all pets user has access to
@@ -270,6 +279,7 @@ router.post('/:id/conditions', authenticate, async (req: AuthRequest, res: Respo
       return;
     }
     const condition = await createPetCondition(parseInt(req.params.id), req.body);
+    await invalidateCardCache(parseInt(req.params.id));
     res.status(201).json(condition);
   } catch (error) {
     res.status(500).json({ error: 'Failed to add condition' });
@@ -288,6 +298,7 @@ router.patch('/:id/conditions/:conditionId', authenticate, async (req: AuthReque
       res.status(404).json({ error: 'Condition not found' });
       return;
     }
+    await invalidateCardCache(parseInt(req.params.id));
     res.json(condition);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update condition' });
@@ -301,6 +312,7 @@ router.delete('/:id/conditions/:conditionId', authenticate, async (req: AuthRequ
       return;
     }
     await deletePetCondition(parseInt(req.params.conditionId), parseInt(req.params.id));
+    await invalidateCardCache(parseInt(req.params.id));
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete condition' });
@@ -328,6 +340,7 @@ router.post('/:id/allergies', authenticate, async (req: AuthRequest, res: Respon
       return;
     }
     const allergy = await createPetAllergy(parseInt(req.params.id), req.body);
+    await invalidateCardCache(parseInt(req.params.id));
     res.status(201).json(allergy);
   } catch (error) {
     res.status(500).json({ error: 'Failed to add allergy' });
@@ -346,6 +359,7 @@ router.patch('/:id/allergies/:allergyId', authenticate, async (req: AuthRequest,
       res.status(404).json({ error: 'Allergy not found' });
       return;
     }
+    await invalidateCardCache(parseInt(req.params.id));
     res.json(allergy);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update allergy' });
@@ -359,6 +373,7 @@ router.delete('/:id/allergies/:allergyId', authenticate, async (req: AuthRequest
       return;
     }
     await deletePetAllergy(parseInt(req.params.allergyId), parseInt(req.params.id));
+    await invalidateCardCache(parseInt(req.params.id));
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete allergy' });
@@ -386,6 +401,7 @@ router.post('/:id/medications', authenticate, async (req: AuthRequest, res: Resp
       return;
     }
     const medication = await createPetMedication(parseInt(req.params.id), req.body);
+    await invalidateCardCache(parseInt(req.params.id));
     res.status(201).json(medication);
   } catch (error) {
     res.status(500).json({ error: 'Failed to add medication' });
@@ -403,6 +419,7 @@ router.patch('/:id/medications/:medId', authenticate, async (req: AuthRequest, r
       res.status(404).json({ error: 'Medication not found' });
       return;
     }
+    await invalidateCardCache(parseInt(req.params.id));
     res.json(medication);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update medication' });
@@ -416,6 +433,7 @@ router.delete('/:id/medications/:medId', authenticate, async (req: AuthRequest, 
       return;
     }
     await deletePetMedication(parseInt(req.params.medId), parseInt(req.params.id));
+    await invalidateCardCache(parseInt(req.params.id));
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete medication' });
@@ -443,6 +461,7 @@ router.post('/:id/vaccinations', authenticate, async (req: AuthRequest, res: Res
       return;
     }
     const vaccination = await createPetVaccination(parseInt(req.params.id), req.body);
+    await invalidateCardCache(parseInt(req.params.id));
     res.status(201).json(vaccination);
   } catch (error) {
     res.status(500).json({ error: 'Failed to add vaccination' });
@@ -461,6 +480,7 @@ router.patch('/:id/vaccinations/:vacId', authenticate, async (req: AuthRequest, 
       res.status(404).json({ error: 'Vaccination not found' });
       return;
     }
+    await invalidateCardCache(parseInt(req.params.id));
     res.json(vaccination);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update vaccination' });
@@ -474,6 +494,7 @@ router.delete('/:id/vaccinations/:vacId', authenticate, async (req: AuthRequest,
       return;
     }
     await deletePetVaccination(parseInt(req.params.vacId), parseInt(req.params.id));
+    await invalidateCardCache(parseInt(req.params.id));
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete vaccination' });
@@ -501,6 +522,7 @@ router.post('/:id/emergency-contacts', authenticate, async (req: AuthRequest, re
       return;
     }
     const contact = await createPetEmergencyContact(parseInt(req.params.id), req.body);
+    await invalidateCardCache(parseInt(req.params.id));
     res.status(201).json(contact);
   } catch (error) {
     res.status(500).json({ error: 'Failed to add emergency contact' });
@@ -519,6 +541,7 @@ router.patch('/:id/emergency-contacts/:contactId', authenticate, async (req: Aut
       res.status(404).json({ error: 'Emergency contact not found' });
       return;
     }
+    await invalidateCardCache(parseInt(req.params.id));
     res.json(contact);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update emergency contact' });
@@ -532,6 +555,7 @@ router.delete('/:id/emergency-contacts/:contactId', authenticate, async (req: Au
       return;
     }
     await deletePetEmergencyContact(parseInt(req.params.contactId), parseInt(req.params.id));
+    await invalidateCardCache(parseInt(req.params.id));
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete emergency contact' });
@@ -643,6 +667,7 @@ router.post('/:id/alerts', authenticate, async (req: AuthRequest, res: Response)
     }
     const audit = { userId: req.userId!, source: 'manual' as const, ipAddress: req.ip, userAgent: req.headers['user-agent'] };
     const alert = await createPetAlert(parseInt(req.params.id), req.body, audit);
+    await invalidateCardCache(parseInt(req.params.id));
     res.status(201).json(alert);
   } catch (error) {
     res.status(500).json({ error: 'Failed to add alert' });
@@ -661,6 +686,7 @@ router.patch('/:id/alerts/:alertId', authenticate, async (req: AuthRequest, res:
       res.status(404).json({ error: 'Alert not found' });
       return;
     }
+    await invalidateCardCache(parseInt(req.params.id));
     res.json(alert);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update alert' });
@@ -674,6 +700,7 @@ router.delete('/:id/alerts/:alertId', authenticate, async (req: AuthRequest, res
       return;
     }
     await deletePetAlert(parseInt(req.params.alertId), parseInt(req.params.id));
+    await invalidateCardCache(parseInt(req.params.id));
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete alert' });
