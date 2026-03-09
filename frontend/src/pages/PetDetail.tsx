@@ -144,7 +144,7 @@ export default function PetDetail() {
     { id: 'vaccinations', label: 'Vaccinations', count: vaccinations.length },
     { id: 'vets', label: 'Veterinarians', count: vets.length },
     { id: 'contacts', label: 'Emergency Contacts', count: emergencyContacts.length },
-    { id: 'alerts', label: 'Alerts', count: alerts.filter(a => a.is_active).length + conditions.filter(c => c.show_on_card && c.is_active).length + allergies.filter(a => a.show_on_card).length + medications.filter(m => m.show_on_card && m.is_active).length || undefined },
+    { id: 'alerts', label: 'Alerts', count: alerts.filter(a => a.is_active).length + conditions.filter(c => c.show_on_card && c.is_active).length + allergies.filter(a => a.show_on_card).length + medications.filter(m => m.show_on_card && m.is_active).length + vaccinations.filter(v => v.show_on_card).length || undefined },
     { id: 'images', label: 'Images', count: imageUploads.length || undefined },
     { id: 'documents', label: 'Import Documents' },
     { id: 'history', label: 'History' },
@@ -272,7 +272,7 @@ export default function PetDetail() {
           <ContactsTab petId={petId} token={token!} contacts={emergencyContacts} setContacts={setEmergencyContacts} />
         )}
         {activeTab === 'alerts' && (
-          <AlertsTab petId={petId} token={token!} alerts={alerts} setAlerts={setAlerts} conditions={conditions} setConditions={setConditions} allergies={allergies} setAllergies={setAllergies} medications={medications} setMedications={setMedications} />
+          <AlertsTab petId={petId} token={token!} alerts={alerts} setAlerts={setAlerts} conditions={conditions} setConditions={setConditions} allergies={allergies} setAllergies={setAllergies} medications={medications} setMedications={setMedications} vaccinations={vaccinations} setVaccinations={setVaccinations} />
         )}
         {activeTab === 'images' && (
           <ImagesTab petId={petId} images={imageUploads} />
@@ -635,13 +635,23 @@ function ConditionsTab({ petId, token, conditions, setConditions, onNavigateToDo
   };
 
   const handleToggleActive = async (c: PetCondition) => {
-    const updated = await petsApi.updateCondition(petId, c.id, { is_active: !c.is_active }, token);
-    setConditions(conditions.map(x => x.id === c.id ? updated : x));
+    const newValue = !c.is_active;
+    setConditions(conditions.map(x => x.id === c.id ? { ...x, is_active: newValue } : x));
+    try {
+      await petsApi.updateCondition(petId, c.id, { is_active: newValue }, token);
+    } catch {
+      setConditions(conditions.map(x => x.id === c.id ? { ...x, is_active: c.is_active } : x));
+    }
   };
 
   const handleToggleShowOnCard = async (c: PetCondition) => {
-    const updated = await petsApi.updateCondition(petId, c.id, { show_on_card: !c.show_on_card }, token);
-    setConditions(conditions.map(x => x.id === c.id ? updated : x));
+    const newValue = !c.show_on_card;
+    setConditions(conditions.map(x => x.id === c.id ? { ...x, show_on_card: newValue } : x));
+    try {
+      await petsApi.updateCondition(petId, c.id, { show_on_card: newValue }, token);
+    } catch {
+      setConditions(conditions.map(x => x.id === c.id ? { ...x, show_on_card: c.show_on_card } : x));
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -779,8 +789,13 @@ function AllergiesTab({ petId, token, allergies, setAllergies, onNavigateToDocum
   };
 
   const handleToggleShowOnCard = async (a: PetAllergy) => {
-    const updated = await petsApi.updateAllergy(petId, a.id, { show_on_card: !a.show_on_card }, token);
-    setAllergies(allergies.map(x => x.id === a.id ? updated : x));
+    const newValue = !a.show_on_card;
+    setAllergies(allergies.map(x => x.id === a.id ? { ...x, show_on_card: newValue } : x));
+    try {
+      await petsApi.updateAllergy(petId, a.id, { show_on_card: newValue }, token);
+    } catch {
+      setAllergies(allergies.map(x => x.id === a.id ? { ...x, show_on_card: a.show_on_card } : x));
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -902,13 +917,23 @@ function MedicationsTab({ petId, token, medications, setMedications, onNavigateT
   };
 
   const handleToggleActive = async (med: PetMedication) => {
-    const updated = await petsApi.updateMedication(petId, med.id, { is_active: !med.is_active }, token);
-    setMedications(medications.map(m => m.id === med.id ? updated : m));
+    const newValue = !med.is_active;
+    setMedications(medications.map(m => m.id === med.id ? { ...m, is_active: newValue } : m));
+    try {
+      await petsApi.updateMedication(petId, med.id, { is_active: newValue }, token);
+    } catch {
+      setMedications(medications.map(m => m.id === med.id ? { ...m, is_active: med.is_active } : m));
+    }
   };
 
   const handleToggleShowOnCard = async (med: PetMedication) => {
-    const updated = await petsApi.updateMedication(petId, med.id, { show_on_card: !med.show_on_card }, token);
-    setMedications(medications.map(m => m.id === med.id ? updated : m));
+    const newValue = !med.show_on_card;
+    setMedications(medications.map(m => m.id === med.id ? { ...m, show_on_card: newValue } : m));
+    try {
+      await petsApi.updateMedication(petId, med.id, { show_on_card: newValue }, token);
+    } catch {
+      setMedications(medications.map(m => m.id === med.id ? { ...m, show_on_card: med.show_on_card } : m));
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -1029,6 +1054,16 @@ function VaccinationsTab({ petId, token, vaccinations, setVaccinations, onNaviga
 
   const toDateInput = (d: string | null) => d ? d.split('T')[0] : '';
 
+  const handleToggleShowOnCard = async (v: PetVaccination) => {
+    const newValue = !v.show_on_card;
+    setVaccinations(vaccinations.map(x => x.id === v.id ? { ...x, show_on_card: newValue } : x));
+    try {
+      await petsApi.updateVaccination(petId, v.id, { show_on_card: newValue }, token);
+    } catch {
+      setVaccinations(vaccinations.map(x => x.id === v.id ? { ...x, show_on_card: v.show_on_card } : x));
+    }
+  };
+
   const handleAdd = async (values: Record<string, string | boolean>) => {
     if (!(values.name as string).trim() || !values.administered_date) return;
     const vac = await petsApi.addVaccination(petId, {
@@ -1036,7 +1071,7 @@ function VaccinationsTab({ petId, token, vaccinations, setVaccinations, onNaviga
       administered_date_precision: (values.administered_date_precision as string as any) || 'day',
       expiration_date: (values.expiration_date as string) || null,
       expiration_date_precision: (values.expiration_date_precision as string as any) || 'day',
-      administered_by: null, lot_number: null
+      administered_by: null, lot_number: null, show_on_card: false
     }, token);
     setVaccinations([vac, ...vaccinations]);
     setShowForm(false);
@@ -1100,7 +1135,12 @@ function VaccinationsTab({ petId, token, vaccinations, setVaccinations, onNaviga
               ) : (
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="font-medium">{v.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{v.name}</p>
+                      {v.show_on_card && (
+                        <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-semibold">ALERT</span>
+                      )}
+                    </div>
                     <p className="text-sm text-gray-500">
                       Administered: {formatFlexibleDate(v.administered_date, v.administered_date_precision)}
                     </p>
@@ -1112,6 +1152,9 @@ function VaccinationsTab({ petId, token, vaccinations, setVaccinations, onNaviga
                     <SourceDocumentLink petId={petId} recordType="pet_vaccinations" recordId={v.id} onNavigateToDocuments={onNavigateToDocuments} />
                   </div>
                   <div className="flex gap-2">
+                    <button onClick={() => handleToggleShowOnCard(v)} className={`text-sm ${v.show_on_card ? 'text-red-600 hover:text-red-800' : 'text-gray-400 hover:text-gray-600'}`} title={v.show_on_card ? 'Remove from card' : 'Show on card'}>
+                      {v.show_on_card ? '🔔' : '🔕'}
+                    </button>
                     <button onClick={() => setEditingId(v.id)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
                     {deletingId === v.id ? (
                       <>
@@ -1356,7 +1399,7 @@ const ALERT_SUGGESTIONS = [
 ];
 
 // Alerts Tab
-function AlertsTab({ petId, token, alerts, setAlerts, conditions, setConditions, allergies, setAllergies, medications, setMedications }: {
+function AlertsTab({ petId, token, alerts, setAlerts, conditions, setConditions, allergies, setAllergies, medications, setMedications, vaccinations, setVaccinations }: {
   petId: number;
   token: string;
   alerts: PetAlert[];
@@ -1367,6 +1410,8 @@ function AlertsTab({ petId, token, alerts, setAlerts, conditions, setConditions,
   setAllergies: (a: PetAllergy[]) => void;
   medications: PetMedication[];
   setMedications: (m: PetMedication[]) => void;
+  vaccinations: PetVaccination[];
+  setVaccinations: (v: PetVaccination[]) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [newAlertText, setNewAlertText] = useState('');
@@ -1374,6 +1419,7 @@ function AlertsTab({ petId, token, alerts, setAlerts, conditions, setConditions,
   const conditionAlerts = conditions.filter(c => c.show_on_card && c.is_active);
   const allergyAlerts = allergies.filter(a => a.show_on_card);
   const medicationAlerts = medications.filter(m => m.show_on_card && m.is_active);
+  const vaccinationAlerts = vaccinations.filter(v => v.show_on_card);
   const customAlerts = alerts.filter(a => a.is_active);
 
   const handleAddAlert = async () => {
@@ -1390,21 +1436,42 @@ function AlertsTab({ petId, token, alerts, setAlerts, conditions, setConditions,
   };
 
   const handleRemoveConditionAlert = async (c: PetCondition) => {
-    const updated = await petsApi.updateCondition(petId, c.id, { show_on_card: false }, token);
-    setConditions(conditions.map(x => x.id === c.id ? updated : x));
+    setConditions(conditions.map(x => x.id === c.id ? { ...x, show_on_card: false } : x));
+    try {
+      await petsApi.updateCondition(petId, c.id, { show_on_card: false }, token);
+    } catch {
+      setConditions(conditions.map(x => x.id === c.id ? { ...x, show_on_card: true } : x));
+    }
   };
 
   const handleRemoveAllergyAlert = async (a: PetAllergy) => {
-    const updated = await petsApi.updateAllergy(petId, a.id, { show_on_card: false }, token);
-    setAllergies(allergies.map(x => x.id === a.id ? updated : x));
+    setAllergies(allergies.map(x => x.id === a.id ? { ...x, show_on_card: false } : x));
+    try {
+      await petsApi.updateAllergy(petId, a.id, { show_on_card: false }, token);
+    } catch {
+      setAllergies(allergies.map(x => x.id === a.id ? { ...x, show_on_card: true } : x));
+    }
   };
 
   const handleRemoveMedicationAlert = async (m: PetMedication) => {
-    const updated = await petsApi.updateMedication(petId, m.id, { show_on_card: false }, token);
-    setMedications(medications.map(x => x.id === m.id ? updated : x));
+    setMedications(medications.map(x => x.id === m.id ? { ...x, show_on_card: false } : x));
+    try {
+      await petsApi.updateMedication(petId, m.id, { show_on_card: false }, token);
+    } catch {
+      setMedications(medications.map(x => x.id === m.id ? { ...x, show_on_card: true } : x));
+    }
   };
 
-  const totalAlerts = conditionAlerts.length + allergyAlerts.length + medicationAlerts.length + customAlerts.length;
+  const handleRemoveVaccinationAlert = async (v: PetVaccination) => {
+    setVaccinations(vaccinations.map(x => x.id === v.id ? { ...x, show_on_card: false } : x));
+    try {
+      await petsApi.updateVaccination(petId, v.id, { show_on_card: false }, token);
+    } catch {
+      setVaccinations(vaccinations.map(x => x.id === v.id ? { ...x, show_on_card: true } : x));
+    }
+  };
+
+  const totalAlerts = conditionAlerts.length + allergyAlerts.length + medicationAlerts.length + vaccinationAlerts.length + customAlerts.length;
 
   return (
     <div>
@@ -1492,6 +1559,24 @@ function AlertsTab({ petId, token, alerts, setAlerts, conditions, setConditions,
                       {m.dosage && <span className="text-xs text-gray-500">{m.dosage}</span>}
                     </div>
                     <button onClick={() => handleRemoveMedicationAlert(m)} className="text-gray-400 hover:text-red-600 text-sm" title="Remove from alerts">✕</button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Vaccination Alerts */}
+          {vaccinationAlerts.length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium text-green-700 mb-2">From Vaccinations</h4>
+              <ul className="divide-y border rounded-lg">
+                {vaccinationAlerts.map(v => (
+                  <li key={v.id} className="p-3 flex justify-between items-center">
+                    <div>
+                      <p className="font-medium text-sm">{v.name}</p>
+                      <span className="text-xs text-gray-500">{formatFlexibleDate(v.administered_date, v.administered_date_precision)}</span>
+                    </div>
+                    <button onClick={() => handleRemoveVaccinationAlert(v)} className="text-gray-400 hover:text-red-600 text-sm" title="Remove from alerts">✕</button>
                   </li>
                 ))}
               </ul>

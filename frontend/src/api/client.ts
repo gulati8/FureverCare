@@ -302,6 +302,7 @@ export interface PetVaccination {
   expiration_date_precision: DatePrecision;
   administered_by: string | null;
   lot_number: string | null;
+  show_on_card: boolean;
   created_at: string;
 }
 
@@ -344,9 +345,9 @@ export interface EmergencyCard {
     phone: string | null;
     email: string;
   } | null;
-  conditions: Array<{ name: string; severity: string | null; notes: string | null; show_on_card?: boolean }>;
-  allergies: Array<{ allergen: string; reaction: string | null; severity: string | null; show_on_card?: boolean }>;
-  medications: Array<{ name: string; dosage: string | null; frequency: string | null; notes: string | null; show_on_card?: boolean }>;
+  conditions: Array<{ name: string; severity: string | null; notes: string | null }>;
+  allergies: Array<{ allergen: string; reaction: string | null; severity: string | null }>;
+  medications: Array<{ name: string; dosage: string | null; frequency: string | null; notes: string | null }>;
   vaccinations: Array<{ name: string; administered_date: string; expiration_date: string | null }>;
   veterinarians: Array<{ clinic_name: string; vet_name: string | null; phone: string | null; is_primary: boolean }>;
   emergency_contacts: Array<{ name: string; relationship: string | null; phone: string; is_primary: boolean }>;

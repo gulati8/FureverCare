@@ -110,32 +110,29 @@ async function buildEmergencyCard(pet: any) {
       email: owner.email,
     } : null,
 
-    // Medical information — only active conditions, severity omitted from card (#63)
-    conditions: conditions.filter(c => c.is_active).map(c => ({
+    // Medical information — only show_on_card items appear on the emergency card
+    conditions: conditions.filter(c => c.is_active && c.show_on_card).map(c => ({
       name: c.name,
       severity: null,
       notes: c.notes,
-      show_on_card: c.show_on_card,
     })),
 
-    allergies: allergies.map(a => ({
+    allergies: allergies.filter(a => a.show_on_card).map(a => ({
       allergen: a.allergen,
       reaction: a.reaction,
       severity: a.severity,
-      show_on_card: a.show_on_card,
     })),
 
     medications: medications
-      .filter(m => m.is_active)
+      .filter(m => m.is_active && m.show_on_card)
       .map(m => ({
         name: m.name,
         dosage: m.dosage,
         frequency: m.frequency,
         notes: m.notes,
-        show_on_card: m.show_on_card,
       })),
 
-    vaccinations: vaccinations.map(v => ({
+    vaccinations: vaccinations.filter(v => (v as any).show_on_card).map(v => ({
       name: v.name,
       administered_date: v.administered_date,
       expiration_date: v.expiration_date,
