@@ -84,10 +84,12 @@ export default function FlexibleDateInput({ value, precision, onChange, label, r
   };
 
   const handleYearChange = (val: string) => {
-    // Only allow digits, max 4 chars
-    const cleaned = val.replace(/\D/g, '').slice(0, 4);
-    setYear(cleaned);
-    emitChange(cleaned, month, day);
+    setYear(val);
+    if (!val) {
+      setMonth('');
+      setDay('');
+    }
+    emitChange(val, val ? month : '', val ? day : '');
   };
 
   const handleMonthChange = (val: string) => {
@@ -124,20 +126,26 @@ export default function FlexibleDateInput({ value, precision, onChange, label, r
     dayOptions.push({ value: d.toString().padStart(2, '0'), label: d.toString() });
   }
 
+  const currentYear = new Date().getFullYear();
+  const yearOptions = [{ value: '', label: '-- Year --' }];
+  for (let y = currentYear; y >= 1990; y--) {
+    yearOptions.push({ value: y.toString(), label: y.toString() });
+  }
+
   return (
     <div>
       {label && <label className="text-sm text-gray-600">{label}{required && ' *'}</label>}
       <div className="grid grid-cols-3 gap-2">
         <div>
-          <input
-            type="text"
-            inputMode="numeric"
-            placeholder="Year"
+          <select
             value={year}
             onChange={(e) => handleYearChange(e.target.value)}
             className="input text-sm"
-            maxLength={4}
-          />
+          >
+            {yearOptions.map(y => (
+              <option key={y.value} value={y.value}>{y.label}</option>
+            ))}
+          </select>
         </div>
         <div>
           <select

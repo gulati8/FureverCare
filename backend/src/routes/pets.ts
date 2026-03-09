@@ -574,7 +574,7 @@ router.get('/:id/records/:recordType/:recordId/source', authenticate, async (req
 
     // Look up in document_extraction_items first (new system)
     const docResult = await dbQuery<any>(
-      `SELECT dei.id, du.id as upload_id, du.original_filename, du.file_type
+      `SELECT dei.id, du.id as upload_id, du.original_filename, du.mime_type as file_type
        FROM document_extraction_items dei
        JOIN document_extractions de ON de.id = dei.extraction_id
        JOIN document_uploads du ON du.id = de.document_upload_id
@@ -641,6 +641,7 @@ router.get('/:id/records/:recordType/:recordId/source', authenticate, async (req
 
     res.json({ source: 'manual', upload_id: null, filename: null, file_type: null });
   } catch (error) {
+    console.error('Error looking up record source:', error);
     res.status(500).json({ error: 'Failed to look up record source' });
   }
 });
