@@ -64,8 +64,9 @@ class LocalStorageProvider implements StorageProvider {
   }
 
   async delete(key: string, type: StorageType): Promise<void> {
+    const cleaned = key.startsWith(`${type}/`) ? key.slice(type.length + 1) : key;
     const dir = this.getDir(type);
-    const filePath = path.join(dir, key);
+    const filePath = path.join(dir, cleaned);
     if (fs.existsSync(filePath)) {
       await fs.promises.unlink(filePath);
     }
@@ -76,9 +77,10 @@ class LocalStorageProvider implements StorageProvider {
     if (path.isAbsolute(keyOrPath)) {
       return fs.promises.readFile(keyOrPath);
     }
-    // Otherwise construct path from key
+    // Strip type prefix if present (S3-style keys like "documents/3/abc.jpg")
+    const cleaned = keyOrPath.startsWith(`${type}/`) ? keyOrPath.slice(type.length + 1) : keyOrPath;
     const dir = this.getDir(type);
-    const filePath = path.join(dir, keyOrPath);
+    const filePath = path.join(dir, cleaned);
     return fs.promises.readFile(filePath);
   }
 
