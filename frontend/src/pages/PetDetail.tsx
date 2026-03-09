@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, SetStateAction } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import {
@@ -26,6 +26,7 @@ import { AuditLogViewer } from '../components/audit/AuditLogViewer';
 import { MedicalTimeline } from '../components/MedicalTimeline';
 import UpgradeBanner from '../components/UpgradeBanner';
 import SourceDocumentLink from '../components/SourceDocumentLink';
+import { useFieldToggle, useFieldSet } from '../hooks/useFieldToggle';
 
 type TabType = 'overview' | 'timeline' | 'conditions' | 'allergies' | 'medications' | 'vaccinations' | 'contacts' | 'vets' | 'alerts' | 'images' | 'documents' | 'history';
 
@@ -609,7 +610,7 @@ function ConditionsTab({ petId, token, conditions, setConditions, onNavigateToRe
   petId: number;
   token: string;
   conditions: PetCondition[];
-  setConditions: (c: PetCondition[]) => void;
+  setConditions: (value: SetStateAction<PetCondition[]>) => void;
   onNavigateToReview: (uploadId: number, highlightItemId: number) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
@@ -646,25 +647,8 @@ function ConditionsTab({ petId, token, conditions, setConditions, onNavigateToRe
     setEditingId(null);
   };
 
-  const handleToggleActive = async (c: PetCondition) => {
-    const newValue = !c.is_active;
-    setConditions(conditions.map(x => x.id === c.id ? { ...x, is_active: newValue } : x));
-    try {
-      await petsApi.updateCondition(petId, c.id, { is_active: newValue }, token);
-    } catch {
-      setConditions(conditions.map(x => x.id === c.id ? { ...x, is_active: c.is_active } : x));
-    }
-  };
-
-  const handleToggleShowOnCard = async (c: PetCondition) => {
-    const newValue = !c.show_on_card;
-    setConditions(conditions.map(x => x.id === c.id ? { ...x, show_on_card: newValue } : x));
-    try {
-      await petsApi.updateCondition(petId, c.id, { show_on_card: newValue }, token);
-    } catch {
-      setConditions(conditions.map(x => x.id === c.id ? { ...x, show_on_card: c.show_on_card } : x));
-    }
-  };
+  const handleToggleActive = useFieldToggle(setConditions, (c, val) => petsApi.updateCondition(petId, c.id, { is_active: val }, token), 'is_active');
+  const handleToggleShowOnCard = useFieldToggle(setConditions, (c, val) => petsApi.updateCondition(petId, c.id, { show_on_card: val }, token), 'show_on_card');
 
   const handleDelete = async (id: number) => {
     await petsApi.deleteCondition(petId, id, token);
@@ -776,7 +760,7 @@ function AllergiesTab({ petId, token, allergies, setAllergies, onNavigateToRevie
   petId: number;
   token: string;
   allergies: PetAllergy[];
-  setAllergies: (a: PetAllergy[]) => void;
+  setAllergies: (value: SetStateAction<PetAllergy[]>) => void;
   onNavigateToReview: (uploadId: number, highlightItemId: number) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
@@ -800,15 +784,7 @@ function AllergiesTab({ petId, token, allergies, setAllergies, onNavigateToRevie
     setEditingId(null);
   };
 
-  const handleToggleShowOnCard = async (a: PetAllergy) => {
-    const newValue = !a.show_on_card;
-    setAllergies(allergies.map(x => x.id === a.id ? { ...x, show_on_card: newValue } : x));
-    try {
-      await petsApi.updateAllergy(petId, a.id, { show_on_card: newValue }, token);
-    } catch {
-      setAllergies(allergies.map(x => x.id === a.id ? { ...x, show_on_card: a.show_on_card } : x));
-    }
-  };
+  const handleToggleShowOnCard = useFieldToggle(setAllergies, (a, val) => petsApi.updateAllergy(petId, a.id, { show_on_card: val }, token), 'show_on_card');
 
   const handleDelete = async (id: number) => {
     await petsApi.deleteAllergy(petId, id, token);
@@ -896,7 +872,7 @@ function MedicationsTab({ petId, token, medications, setMedications, onNavigateT
   petId: number;
   token: string;
   medications: PetMedication[];
-  setMedications: (m: PetMedication[]) => void;
+  setMedications: (value: SetStateAction<PetMedication[]>) => void;
   onNavigateToReview: (uploadId: number, highlightItemId: number) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
@@ -928,25 +904,8 @@ function MedicationsTab({ petId, token, medications, setMedications, onNavigateT
     setEditingId(null);
   };
 
-  const handleToggleActive = async (med: PetMedication) => {
-    const newValue = !med.is_active;
-    setMedications(medications.map(m => m.id === med.id ? { ...m, is_active: newValue } : m));
-    try {
-      await petsApi.updateMedication(petId, med.id, { is_active: newValue }, token);
-    } catch {
-      setMedications(medications.map(m => m.id === med.id ? { ...m, is_active: med.is_active } : m));
-    }
-  };
-
-  const handleToggleShowOnCard = async (med: PetMedication) => {
-    const newValue = !med.show_on_card;
-    setMedications(medications.map(m => m.id === med.id ? { ...m, show_on_card: newValue } : m));
-    try {
-      await petsApi.updateMedication(petId, med.id, { show_on_card: newValue }, token);
-    } catch {
-      setMedications(medications.map(m => m.id === med.id ? { ...m, show_on_card: med.show_on_card } : m));
-    }
-  };
+  const handleToggleActive = useFieldToggle(setMedications, (m, val) => petsApi.updateMedication(petId, m.id, { is_active: val }, token), 'is_active');
+  const handleToggleShowOnCard = useFieldToggle(setMedications, (m, val) => petsApi.updateMedication(petId, m.id, { show_on_card: val }, token), 'show_on_card');
 
   const handleDelete = async (id: number) => {
     await petsApi.deleteMedication(petId, id, token);
@@ -1056,7 +1015,7 @@ function VaccinationsTab({ petId, token, vaccinations, setVaccinations, onNaviga
   petId: number;
   token: string;
   vaccinations: PetVaccination[];
-  setVaccinations: (v: PetVaccination[]) => void;
+  setVaccinations: (value: SetStateAction<PetVaccination[]>) => void;
   onNavigateToReview: (uploadId: number, highlightItemId: number) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
@@ -1066,15 +1025,7 @@ function VaccinationsTab({ petId, token, vaccinations, setVaccinations, onNaviga
 
   const toDateInput = (d: string | null) => d ? d.split('T')[0] : '';
 
-  const handleToggleShowOnCard = async (v: PetVaccination) => {
-    const newValue = !v.show_on_card;
-    setVaccinations(vaccinations.map(x => x.id === v.id ? { ...x, show_on_card: newValue } : x));
-    try {
-      await petsApi.updateVaccination(petId, v.id, { show_on_card: newValue }, token);
-    } catch {
-      setVaccinations(vaccinations.map(x => x.id === v.id ? { ...x, show_on_card: v.show_on_card } : x));
-    }
-  };
+  const handleToggleShowOnCard = useFieldToggle(setVaccinations, (v, val) => petsApi.updateVaccination(petId, v.id, { show_on_card: val }, token), 'show_on_card');
 
   const handleAdd = async (values: Record<string, string | boolean>) => {
     if (!(values.name as string).trim() || !values.administered_date) return;
@@ -1417,13 +1368,13 @@ function AlertsTab({ petId, token, alerts, setAlerts, conditions, setConditions,
   alerts: PetAlert[];
   setAlerts: (a: PetAlert[]) => void;
   conditions: PetCondition[];
-  setConditions: (c: PetCondition[]) => void;
+  setConditions: (value: SetStateAction<PetCondition[]>) => void;
   allergies: PetAllergy[];
-  setAllergies: (a: PetAllergy[]) => void;
+  setAllergies: (value: SetStateAction<PetAllergy[]>) => void;
   medications: PetMedication[];
-  setMedications: (m: PetMedication[]) => void;
+  setMedications: (value: SetStateAction<PetMedication[]>) => void;
   vaccinations: PetVaccination[];
-  setVaccinations: (v: PetVaccination[]) => void;
+  setVaccinations: (value: SetStateAction<PetVaccination[]>) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [newAlertText, setNewAlertText] = useState('');
@@ -1447,41 +1398,10 @@ function AlertsTab({ petId, token, alerts, setAlerts, conditions, setConditions,
     setAlerts(alerts.filter(a => a.id !== id));
   };
 
-  const handleRemoveConditionAlert = async (c: PetCondition) => {
-    setConditions(conditions.map(x => x.id === c.id ? { ...x, show_on_card: false } : x));
-    try {
-      await petsApi.updateCondition(petId, c.id, { show_on_card: false }, token);
-    } catch {
-      setConditions(conditions.map(x => x.id === c.id ? { ...x, show_on_card: true } : x));
-    }
-  };
-
-  const handleRemoveAllergyAlert = async (a: PetAllergy) => {
-    setAllergies(allergies.map(x => x.id === a.id ? { ...x, show_on_card: false } : x));
-    try {
-      await petsApi.updateAllergy(petId, a.id, { show_on_card: false }, token);
-    } catch {
-      setAllergies(allergies.map(x => x.id === a.id ? { ...x, show_on_card: true } : x));
-    }
-  };
-
-  const handleRemoveMedicationAlert = async (m: PetMedication) => {
-    setMedications(medications.map(x => x.id === m.id ? { ...x, show_on_card: false } : x));
-    try {
-      await petsApi.updateMedication(petId, m.id, { show_on_card: false }, token);
-    } catch {
-      setMedications(medications.map(x => x.id === m.id ? { ...x, show_on_card: true } : x));
-    }
-  };
-
-  const handleRemoveVaccinationAlert = async (v: PetVaccination) => {
-    setVaccinations(vaccinations.map(x => x.id === v.id ? { ...x, show_on_card: false } : x));
-    try {
-      await petsApi.updateVaccination(petId, v.id, { show_on_card: false }, token);
-    } catch {
-      setVaccinations(vaccinations.map(x => x.id === v.id ? { ...x, show_on_card: true } : x));
-    }
-  };
+  const handleRemoveConditionAlert = useFieldSet(setConditions, (c, val) => petsApi.updateCondition(petId, c.id, { show_on_card: val }, token), 'show_on_card', false);
+  const handleRemoveAllergyAlert = useFieldSet(setAllergies, (a, val) => petsApi.updateAllergy(petId, a.id, { show_on_card: val }, token), 'show_on_card', false);
+  const handleRemoveMedicationAlert = useFieldSet(setMedications, (m, val) => petsApi.updateMedication(petId, m.id, { show_on_card: val }, token), 'show_on_card', false);
+  const handleRemoveVaccinationAlert = useFieldSet(setVaccinations, (v, val) => petsApi.updateVaccination(petId, v.id, { show_on_card: val }, token), 'show_on_card', false);
 
   const totalAlerts = conditionAlerts.length + allergyAlerts.length + medicationAlerts.length + vaccinationAlerts.length + customAlerts.length;
 
