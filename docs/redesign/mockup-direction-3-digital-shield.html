@@ -1,0 +1,2643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FureverCare — Direction 3: Digital Shield Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================
+   RESET & BASE
+   ============================================ */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg-main: #0D1117;
+  --bg-card: #161B22;
+  --bg-elevated: #1C2128;
+  --border: #30363D;
+  --border-subtle: rgba(255,255,255,0.06);
+  --violet: #7C3AED;
+  --violet-dim: rgba(124,58,237,0.15);
+  --violet-glow: rgba(124,58,237,0.25);
+  --green: #10B981;
+  --green-dim: rgba(16,185,129,0.15);
+  --amber: #F59E0B;
+  --amber-dim: rgba(245,158,11,0.15);
+  --red: #EF4444;
+  --red-dim: rgba(239,68,68,0.15);
+  --text-primary: #F0F6FC;
+  --text-secondary: #8B949E;
+  --text-tertiary: #6E7681;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'Space Mono', 'SF Mono', 'Fira Code', monospace;
+  --glass-bg: rgba(255,255,255,0.04);
+  --glass-border: rgba(255,255,255,0.08);
+  --glass-bg-hover: rgba(255,255,255,0.07);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-main);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.01em;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-main); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+
+/* ============================================
+   KEYFRAMES
+   ============================================ */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 8px var(--violet-dim); }
+  50% { box-shadow: 0 0 20px var(--violet-glow), 0 0 40px var(--violet-dim); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in-right {
+  from { opacity: 0; transform: translateX(8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-in {
+  animation: fade-in 0.5s ease-out both;
+}
+
+.shimmer-overlay {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.03) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+.mono { font-family: var(--font-mono); }
+.text-muted { color: var(--text-secondary); }
+.text-dim { color: var(--text-tertiary); }
+.text-xs { font-size: 11px; }
+.text-sm { font-size: 13px; }
+.text-base { font-size: 15px; }
+.text-lg { font-size: 18px; }
+.text-xl { font-size: 22px; }
+.text-2xl { font-size: 28px; }
+.text-3xl { font-size: 36px; }
+.text-4xl { font-size: 48px; }
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
+.tracking-tight { letter-spacing: -0.02em; }
+.tracking-wide { letter-spacing: 0.05em; }
+.uppercase { text-transform: uppercase; }
+
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.items-start { align-items: flex-start; }
+.justify-between { justify-content: space-between; }
+.justify-center { justify-content: center; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+.gap-4 { gap: 16px; }
+.gap-5 { gap: 20px; }
+.gap-6 { gap: 24px; }
+.gap-8 { gap: 32px; }
+.grid { display: grid; }
+.w-full { width: 100%; }
+
+/* ============================================
+   GLASS CARD
+   ============================================ */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+}
+
+.glass-hover {
+  transition: all var(--transition);
+}
+
+.glass-hover:hover {
+  background: var(--glass-bg-hover);
+  border-color: rgba(255,255,255,0.12);
+  transform: scale(1.01);
+}
+
+.glass-violet:hover {
+  border-color: rgba(124,58,237,0.3);
+  box-shadow: 0 0 20px var(--violet-dim);
+}
+
+/* ============================================
+   STATUS DOTS
+   ============================================ */
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.dot-green { background: var(--green); }
+.dot-amber { background: var(--amber); }
+.dot-red { background: var(--red); }
+.dot-violet { background: var(--violet); }
+
+.dot-pulse {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.dot-lg {
+  width: 10px;
+  height: 10px;
+}
+
+/* ============================================
+   BADGES
+   ============================================ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+.badge-red { color: var(--red); border-color: rgba(239,68,68,0.3); background: var(--red-dim); }
+.badge-amber { color: var(--amber); border-color: rgba(245,158,11,0.3); background: var(--amber-dim); }
+.badge-green { color: var(--green); border-color: rgba(16,185,129,0.3); background: var(--green-dim); }
+.badge-violet { color: var(--violet); border-color: rgba(124,58,237,0.3); background: var(--violet-dim); }
+.badge-gray { color: var(--text-secondary); border-color: var(--border); background: rgba(139,148,158,0.08); }
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  border: none;
+  transition: all var(--transition);
+  min-height: 44px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btn-violet {
+  background: var(--violet);
+  color: white;
+  box-shadow: 0 0 20px var(--violet-dim), 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.btn-violet:hover {
+  background: #6D28D9;
+  box-shadow: 0 0 30px var(--violet-glow), 0 2px 8px rgba(0,0,0,0.4);
+  transform: translateY(-1px);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.btn-ghost:hover {
+  border-color: var(--text-secondary);
+  background: rgba(255,255,255,0.04);
+}
+
+.btn-green {
+  background: var(--green);
+  color: white;
+  font-weight: 600;
+}
+
+.btn-green:hover {
+  background: #059669;
+}
+
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 13px;
+  min-height: 36px;
+}
+
+/* ============================================
+   CONTAINERS
+   ============================================ */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.container-wide {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ============================================
+   SECTION DIVIDERS
+   ============================================ */
+.screen-divider {
+  padding: 48px 24px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--bg-main) 0%, var(--bg-card) 50%, var(--bg-main) 100%);
+  position: relative;
+}
+
+.screen-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, var(--violet-dim) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.screen-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--violet);
+  position: relative;
+  display: inline-block;
+}
+
+.screen-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: 8px;
+  letter-spacing: -0.02em;
+}
+
+/* ============================================
+   FLOATING NAV
+   ============================================ */
+.floating-nav {
+  position: fixed;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(13,17,23,0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: 8px;
+}
+
+.floating-nav a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+
+.floating-nav a:hover {
+  color: var(--text-primary);
+  background: rgba(255,255,255,0.06);
+}
+
+.floating-nav .nav-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+  flex-shrink: 0;
+  transition: all var(--transition);
+}
+
+.floating-nav a:hover .nav-dot {
+  background: var(--violet);
+  box-shadow: 0 0 6px var(--violet-dim);
+}
+
+/* ============================================
+   NAVBAR
+   ============================================ */
+.navbar {
+  width: 100%;
+  background: var(--bg-main);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 10;
+}
+
+.navbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--text-primary);
+}
+
+.logo-icon {
+  width: 28px;
+  height: 28px;
+  background: var(--violet);
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.logo-icon svg {
+  width: 16px;
+  height: 16px;
+  color: white;
+}
+
+.logo-text {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.navbar-links {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.navbar-links a {
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+.navbar-links a:hover {
+  color: var(--text-primary);
+}
+
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ============================================
+   BREADCRUMB
+   ============================================ */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.breadcrumb a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+.breadcrumb a:hover { color: var(--text-primary); }
+
+.breadcrumb .sep {
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.breadcrumb .current {
+  color: var(--text-primary);
+}
+
+/* ============================================
+   TAB NAV
+   ============================================ */
+.tab-nav {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-main);
+  padding: 0 24px;
+  overflow-x: auto;
+}
+
+.tab-item {
+  padding: 14px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-bottom: 3px solid transparent;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tab-item:hover {
+  color: var(--text-primary);
+}
+
+.tab-item.active {
+  color: var(--text-primary);
+  border-bottom-color: var(--violet);
+}
+
+.tab-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-tertiary);
+  background: rgba(255,255,255,0.06);
+  padding: 2px 7px;
+  border-radius: 10px;
+}
+
+/* ============================================
+   SCREEN 1: HERO
+   ============================================ */
+.hero-section {
+  min-height: 90vh;
+  background: linear-gradient(180deg, var(--bg-main) 0%, #0F141C 60%, var(--bg-main) 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-section::before {
+  content: '';
+  position: absolute;
+  top: -200px;
+  right: -100px;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(124,58,237,0.08) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.hero-section::after {
+  content: '';
+  position: absolute;
+  bottom: -100px;
+  left: -100px;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(16,185,129,0.05) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.hero-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 80px 24px 120px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-text {
+  animation: fade-in 0.6s ease-out both;
+}
+
+.hero-headline {
+  font-size: 56px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+}
+
+.hero-sub {
+  font-size: 18px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  max-width: 460px;
+  margin-bottom: 36px;
+}
+
+.hero-ctas {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+/* Pet ID Card */
+.hero-card-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  animation: fade-in 0.8s ease-out 0.2s both;
+}
+
+.hero-card-wrapper::before {
+  content: '';
+  position: absolute;
+  inset: -30px;
+  background: radial-gradient(ellipse at center, var(--violet-dim) 0%, transparent 70%);
+  border-radius: 30px;
+  pointer-events: none;
+}
+
+.pet-id-card {
+  width: 380px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 28px;
+  position: relative;
+  box-shadow: 0 0 60px var(--violet-dim), 0 8px 32px rgba(0,0,0,0.4);
+  animation: pulse-glow 4s ease-in-out infinite;
+}
+
+.pet-id-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.pet-id-status .status-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--green);
+}
+
+.pet-id-photo {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, #2D1B69 0%, #1a1a2e 100%);
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  margin-bottom: 16px;
+  overflow: hidden;
+  position: relative;
+}
+
+.pet-id-photo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 40%, rgba(124,58,237,0.1) 100%);
+}
+
+.pet-id-photo-icon {
+  color: var(--text-tertiary);
+  font-size: 30px;
+  z-index: 1;
+}
+
+.pet-id-name {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+
+.pet-id-breed {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+.pet-id-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: rgba(0,0,0,0.2);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255,255,255,0.04);
+}
+
+.pet-id-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.pet-id-field .label {
+  color: var(--text-tertiary);
+  letter-spacing: 0.05em;
+}
+
+.pet-id-field .value {
+  color: var(--text-primary);
+}
+
+.pet-id-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.pet-id-qr {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid rgba(124,58,237,0.2);
+  border-radius: var(--radius-md);
+  background: rgba(124,58,237,0.05);
+}
+
+.qr-placeholder {
+  width: 64px;
+  height: 64px;
+  background: white;
+  border-radius: 6px;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  gap: 1px;
+  padding: 4px;
+  flex-shrink: 0;
+}
+
+.qr-cell {
+  background: var(--bg-main);
+  border-radius: 1px;
+}
+
+.qr-cell.white { background: white; }
+
+.qr-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.qr-label strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 13px;
+  margin-bottom: 2px;
+  font-family: var(--font-sans);
+}
+
+/* ============================================
+   SCREEN 2: DASHBOARD
+   ============================================ */
+.dashboard-section {
+  padding-bottom: 60px;
+  background: var(--bg-main);
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28px 0 24px;
+}
+
+.dashboard-title {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.dashboard-title h1 {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.dashboard-title .count {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* Status Bar */
+.status-bar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.status-block {
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.status-block .status-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.status-block .status-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+  letter-spacing: -0.01em;
+}
+
+.status-block .status-value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+/* Pet Cards */
+.pet-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.pet-card {
+  padding: 24px;
+  cursor: pointer;
+}
+
+.pet-card-top {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.pet-card-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, #2D1B69 0%, #1a1a2e 100%);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.pet-card-info h3 {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-bottom: 2px;
+}
+
+.pet-card-info .breed {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.pet-card-health {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.health-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.pet-card-meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+/* Activity Feed */
+.activity-section h2 {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-bottom: 16px;
+}
+
+.filter-pills {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.pill {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  min-height: 36px;
+}
+
+.pill.active {
+  background: rgba(255,255,255,0.08);
+  color: var(--text-primary);
+  border-color: var(--glass-border);
+}
+
+.pill:hover:not(.active) {
+  color: var(--text-primary);
+}
+
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 14px 16px;
+  border-left: 3px solid transparent;
+  transition: background var(--transition);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.activity-item:hover {
+  background: rgba(255,255,255,0.02);
+}
+
+.activity-item.border-red { border-left-color: var(--red); }
+.activity-item.border-violet { border-left-color: var(--violet); }
+.activity-item.border-green { border-left-color: var(--green); }
+
+.activity-time {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-tertiary);
+  min-width: 70px;
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+
+.activity-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* ============================================
+   SCREEN 3: PET PROFILE OVERVIEW
+   ============================================ */
+.profile-section {
+  padding-bottom: 60px;
+  background: var(--bg-main);
+}
+
+.profile-two-col {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 24px;
+  padding: 28px 0;
+}
+
+/* Left Panel: Pet Data */
+.pet-data-panel {
+  padding: 28px;
+}
+
+.pet-data-photo {
+  width: 120px;
+  height: 120px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, #2D1B69 0%, #1a1a2e 100%);
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 44px;
+  margin-bottom: 20px;
+}
+
+.pet-data-name {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+
+.pet-data-sub {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+.data-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.data-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.data-row:last-child { border-bottom: none; }
+
+.data-row .label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.data-row .value {
+  font-size: 14px;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.special-instructions {
+  margin-top: 20px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: rgba(245,158,11,0.06);
+  border: 1px solid rgba(245,158,11,0.15);
+}
+
+.special-instructions .si-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--amber);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+.special-instructions .si-text {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* Right Panel: Emergency Card Preview */
+.card-preview-panel {
+  padding: 28px;
+}
+
+.card-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.card-preview-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.card-preview-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition);
+  font-size: 16px;
+}
+
+.icon-btn:hover {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+}
+
+/* Emergency Card in Preview */
+.emergency-card-preview {
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.ecp-top-bar {
+  background: linear-gradient(90deg, #DC2626, #B91C1C);
+  padding: 10px 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ecp-alerts-count {
+  font-size: 11px;
+  background: rgba(0,0,0,0.2);
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.ecp-body {
+  padding: 16px;
+}
+
+.ecp-pet-info {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.ecp-mini-photo {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.ecp-pet-name {
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+}
+
+.ecp-pet-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.ecp-meds {
+  margin-top: 12px;
+}
+
+.ecp-meds-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.ecp-med-item {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 4px 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--violet);
+  margin-bottom: 4px;
+}
+
+.ecp-contacts {
+  margin-top: 12px;
+}
+
+.ecp-contact-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 12px;
+}
+
+.ecp-contact-name { color: var(--text-secondary); }
+.ecp-contact-phone { font-family: var(--font-mono); color: var(--text-primary); font-size: 11px; }
+
+.ecp-qr-area {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+  margin-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.ecp-qr-small {
+  width: 48px;
+  height: 48px;
+  background: white;
+  border-radius: 4px;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: repeat(6, 1fr);
+  gap: 1px;
+  padding: 3px;
+}
+
+.card-preview-stats {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+/* Stat Blocks */
+.stat-blocks {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  padding: 0 0 28px;
+}
+
+.stat-block {
+  padding: 20px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-block::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+
+.stat-block.accent-amber::before { background: var(--amber); }
+.stat-block.accent-red::before { background: var(--red); }
+.stat-block.accent-violet::before { background: var(--violet); }
+.stat-block.accent-green::before { background: var(--green); }
+
+.stat-number {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ============================================
+   SCREEN 4: HEALTH RECORDS
+   ============================================ */
+.health-section {
+  padding-bottom: 60px;
+  background: var(--bg-main);
+}
+
+.health-two-col {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 24px;
+  padding: 28px 0;
+}
+
+.health-side-nav {
+  padding: 8px;
+}
+
+.side-nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition);
+  border-left: 3px solid transparent;
+  margin-bottom: 2px;
+}
+
+.side-nav-item:hover {
+  color: var(--text-primary);
+  background: rgba(255,255,255,0.03);
+}
+
+.side-nav-item.active {
+  color: var(--text-primary);
+  border-left-color: var(--violet);
+  background: rgba(124,58,237,0.06);
+}
+
+.side-nav-count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+/* Health Content */
+.health-content {
+  padding: 28px;
+}
+
+.health-content-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.health-content-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.health-content-title h2 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* Records Table */
+.records-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.record-row {
+  display: grid;
+  grid-template-columns: 28px 1fr auto auto auto auto;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition);
+  cursor: pointer;
+}
+
+.record-row:hover {
+  background: rgba(255,255,255,0.03);
+}
+
+.record-name {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.record-date {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.on-card-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--violet);
+}
+
+.on-card-check {
+  color: var(--violet);
+  font-size: 14px;
+}
+
+/* Section Separator */
+.health-separator {
+  height: 1px;
+  background: var(--border);
+  margin: 32px 0;
+}
+
+/* ============================================
+   SCREEN 5: EMERGENCY CARD (PUBLIC VIEW)
+   ============================================ */
+.emergency-section {
+  background: var(--bg-main);
+  padding-bottom: 60px;
+}
+
+.emergency-top-bar {
+  background: var(--bg-main);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.emergency-top-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.emergency-top-label {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: white;
+}
+
+.live-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--green);
+  letter-spacing: 0.1em;
+}
+
+.emergency-body {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* Alert Section */
+.alert-banner {
+  background: linear-gradient(135deg, #991B1B, #7F1D1D);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.alert-banner-title {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: white;
+  margin-bottom: 16px;
+}
+
+.alert-card {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 10px;
+  backdrop-filter: blur(4px);
+}
+
+.alert-card:last-child { margin-bottom: 0; }
+
+.alert-type {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.alert-detail {
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+  line-height: 1.4;
+}
+
+.alert-sub {
+  font-size: 13px;
+  color: rgba(255,255,255,0.6);
+  margin-top: 2px;
+}
+
+/* Emergency Pet Info */
+.emergency-pet-card {
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.emergency-pet-top {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.emergency-pet-photo {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, #2D1B69 0%, #1a1a2e 100%);
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.emergency-pet-name {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+
+.emergency-pet-meta {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.emergency-data-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.emergency-data-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.emergency-data-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.emergency-data-value {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.emergency-data-value.copyable {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.copy-icon {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  transition: color var(--transition);
+}
+
+.copyable:hover .copy-icon { color: var(--violet); }
+
+/* Medications */
+.emergency-meds {
+  margin-bottom: 24px;
+}
+
+.emergency-meds-title {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.emergency-med-card {
+  padding: 16px 18px;
+  margin-bottom: 8px;
+  border-left: 3px solid var(--violet);
+}
+
+.emergency-med-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.emergency-med-dosage {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* Emergency Contacts */
+.emergency-contacts {
+  margin-bottom: 24px;
+}
+
+.emergency-contacts-title {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.emergency-contact-card {
+  padding: 18px 20px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.contact-info { flex: 1; }
+
+.contact-role {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.contact-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.contact-phone {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.call-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  min-height: 48px;
+  min-width: 100px;
+  background: var(--green);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.call-btn:hover {
+  background: #059669;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16,185,129,0.3);
+}
+
+/* Emergency Footer */
+.emergency-footer {
+  text-align: center;
+  padding: 24px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-tertiary);
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
+}
+
+/* ============================================
+   PET SWITCHER
+   ============================================ */
+.pet-switcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.03);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  min-height: 36px;
+}
+
+.pet-switcher:hover {
+  border-color: var(--text-secondary);
+}
+
+.pet-switcher .arrow {
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--violet), #4F46E5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+}
+
+.settings-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color var(--transition);
+  font-size: 18px;
+}
+
+.settings-icon:hover { color: var(--text-primary); }
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 1024px) {
+  .hero-content {
+    grid-template-columns: 1fr;
+    gap: 48px;
+    text-align: center;
+    padding: 60px 24px 80px;
+  }
+
+  .hero-headline { font-size: 40px; }
+  .hero-sub { margin: 0 auto 36px; }
+  .hero-ctas { justify-content: center; }
+
+  .profile-two-col {
+    grid-template-columns: 1fr;
+  }
+
+  .health-two-col {
+    grid-template-columns: 1fr;
+  }
+
+  .health-side-nav {
+    display: flex;
+    overflow-x: auto;
+    gap: 4px;
+    padding: 4px;
+  }
+
+  .side-nav-item {
+    border-left: none;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+  }
+
+  .side-nav-item.active {
+    border-left-color: transparent;
+    border-bottom-color: var(--violet);
+  }
+
+  .stat-blocks {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .floating-nav { display: none; }
+}
+
+@media (max-width: 768px) {
+  .status-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .pet-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-blocks {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .navbar-links { display: none; }
+
+  .record-row {
+    grid-template-columns: 28px 1fr auto;
+  }
+
+  .record-row .badge { display: none; }
+  .record-row .record-date { display: none; }
+
+  .emergency-contact-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .call-btn { width: 100%; }
+}
+
+@media (max-width: 480px) {
+  .hero-headline { font-size: 32px; }
+  .hero-sub { font-size: 16px; }
+
+  .pet-id-card {
+    width: 100%;
+    max-width: 340px;
+  }
+
+  .hero-ctas {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .hero-ctas .btn { width: 100%; }
+
+  .stat-blocks {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .emergency-data-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tab-item { padding: 12px 14px; font-size: 13px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================
+     FLOATING NAVIGATION
+     ============================================ -->
+<nav class="floating-nav">
+  <a href="#screen-1"><span class="nav-dot"></span>Hero</a>
+  <a href="#screen-2"><span class="nav-dot"></span>Dashboard</a>
+  <a href="#screen-3"><span class="nav-dot"></span>Profile</a>
+  <a href="#screen-4"><span class="nav-dot"></span>Health Records</a>
+  <a href="#screen-5"><span class="nav-dot"></span>Emergency Card</a>
+</nav>
+
+<!-- ============================================
+     SCREEN 1: HOMEPAGE HERO
+     ============================================ -->
+<div class="screen-divider" id="screen-1">
+  <span class="screen-label">Screen 01</span>
+  <div class="screen-title">Homepage Hero</div>
+</div>
+
+<section class="hero-section">
+  <!-- Nav -->
+  <nav class="navbar">
+    <a href="#" class="navbar-logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </div>
+      <span class="logo-text">FureverCare</span>
+    </a>
+    <div class="navbar-links">
+      <a href="#">Features</a>
+      <a href="#">How It Works</a>
+    </div>
+    <div class="navbar-actions">
+      <a href="#" class="btn btn-ghost btn-sm">Log In</a>
+      <a href="#" class="btn btn-violet btn-sm">Get Started</a>
+    </div>
+  </nav>
+
+  <!-- Hero Content -->
+  <div class="hero-content">
+    <div class="hero-text">
+      <h1 class="hero-headline">Your Pet's Safety,<br>Always On</h1>
+      <p class="hero-sub">Store your pet's critical health data. Generate a scannable emergency card. Give any vet instant access when it matters most.</p>
+      <div class="hero-ctas">
+        <a href="#" class="btn btn-violet" style="padding: 14px 28px; font-size: 15px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Start Protecting
+        </a>
+        <a href="#" class="btn btn-ghost" style="padding: 14px 28px; font-size: 15px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Watch Demo
+        </a>
+      </div>
+    </div>
+
+    <div class="hero-card-wrapper">
+      <div class="pet-id-card shimmer-overlay">
+        <!-- Status -->
+        <div class="pet-id-status">
+          <span class="dot dot-green dot-pulse"></span>
+          <span class="status-text">ACTIVE</span>
+        </div>
+
+        <!-- Photo -->
+        <div class="pet-id-photo">
+          <span class="pet-id-photo-icon">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-tertiary)">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+              <path d="M4.93 4.93l4.24 4.24M14.83 14.83l4.24 4.24M14.83 9.17l4.24-4.24M4.93 19.07l4.24-4.24"/>
+            </svg>
+          </span>
+        </div>
+
+        <!-- Name -->
+        <div class="pet-id-name">MAX</div>
+        <div class="pet-id-breed">Golden Retriever &bull; Male</div>
+
+        <!-- Fields -->
+        <div class="pet-id-fields">
+          <div class="pet-id-field">
+            <span class="label">DOB</span>
+            <span class="value">2022-03-15</span>
+          </div>
+          <div class="pet-id-field">
+            <span class="label">CHIP</span>
+            <span class="value">985121033456789</span>
+          </div>
+          <div class="pet-id-field">
+            <span class="label">WEIGHT</span>
+            <span class="value">32.0 kg</span>
+          </div>
+        </div>
+
+        <!-- Badges -->
+        <div class="pet-id-badges">
+          <span class="badge badge-red">ALLERGY: Chicken</span>
+          <span class="badge badge-amber">CONDITION: Hip Dysplasia</span>
+          <span class="badge badge-violet">MED: Carprofen</span>
+        </div>
+
+        <!-- QR -->
+        <div class="pet-id-qr">
+          <div class="qr-placeholder">
+            <div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell white"></div><div class="qr-cell"></div><div class="qr-cell white"></div><div class="qr-cell"></div><div class="qr-cell"></div>
+            <div class="qr-cell"></div><div class="qr-cell white"></div><div class="qr-cell white"></div><div class="qr-cell white"></div><div class="qr-cell white"></div><div class="qr-cell white"></div><div class="qr-cell white"></div><div class="qr-cell"></div>
+            <div class="qr-cell"></div><div class="qr-cell white"></div><div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell white"></div><div class="qr-cell"></div>
+            <div class="qr-cell white"></div><div class="qr-cell white"></div><div class="qr-cell"></div><div class="qr-cell white"></div><div class="qr-cell white"></div><div class="qr-cell"></div><div class="qr-cell white"></div><div class="qr-cell white"></div>
+            <div class="qr-cell"></div><div class="qr-cell white"></div><div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell white"></div><div class="qr-cell"></div>
+            <div class="qr-cell"></div><div class="qr-cell white"></div><div class="qr-cell white"></div><div class="qr-cell white"></div><div class="qr-cell white"></div><div class="qr-cell white"></div><div class="qr-cell white"></div><div class="qr-cell"></div>
+            <div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell white"></div><div class="qr-cell"></div><div class="qr-cell white"></div><div class="qr-cell"></div><div class="qr-cell"></div>
+            <div class="qr-cell white"></div><div class="qr-cell"></div><div class="qr-cell white"></div><div class="qr-cell"></div><div class="qr-cell white"></div><div class="qr-cell"></div><div class="qr-cell white"></div><div class="qr-cell"></div>
+          </div>
+          <div class="qr-label">
+            <strong>Scan for full profile</strong>
+            furevercare.app/e/max-a7k2
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================
+     SCREEN 2: DASHBOARD
+     ============================================ -->
+<div class="screen-divider" id="screen-2">
+  <span class="screen-label">Screen 02</span>
+  <div class="screen-title">Dashboard</div>
+</div>
+
+<section class="dashboard-section">
+  <!-- Nav -->
+  <nav class="navbar">
+    <a href="#" class="navbar-logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <span class="logo-text">FureverCare</span>
+    </a>
+    <div class="breadcrumb">
+      <span class="current">Dashboard</span>
+    </div>
+    <div class="navbar-actions">
+      <div class="pet-switcher">
+        Max
+        <span class="arrow">&#9660;</span>
+      </div>
+      <div class="user-avatar">AG</div>
+      <div class="settings-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <!-- Header -->
+    <div class="dashboard-header">
+      <div class="dashboard-title">
+        <h1>Pets</h1>
+        <span class="count mono text-muted">2 monitored</span>
+      </div>
+      <a href="#" class="btn btn-violet btn-sm">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Pet
+      </a>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <div class="glass status-block shimmer-overlay">
+        <span class="dot dot-green dot-lg"></span>
+        <div class="status-info">
+          <span class="status-label">All Systems</span>
+          <span class="status-value">2/2 pets healthy</span>
+        </div>
+      </div>
+      <div class="glass status-block shimmer-overlay">
+        <span class="dot dot-amber dot-lg dot-pulse"></span>
+        <div class="status-info">
+          <span class="status-label">Vaccines</span>
+          <span class="status-value">1 expiring</span>
+        </div>
+      </div>
+      <div class="glass status-block shimmer-overlay">
+        <span class="dot dot-green dot-lg"></span>
+        <div class="status-info">
+          <span class="status-label">Last Sync</span>
+          <span class="status-value">2 hours ago</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pet Cards -->
+    <div class="pet-cards-grid">
+      <!-- Card 1: Max -->
+      <div class="glass glass-hover glass-violet pet-card animate-in">
+        <div class="pet-card-top">
+          <div class="pet-card-avatar">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--violet)">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+              <circle cx="8" cy="9" r="1.5" fill="currentColor"/>
+              <circle cx="16" cy="9" r="1.5" fill="currentColor"/>
+              <path d="M9 15c.83.67 2 1 3 1s2.17-.33 3-1"/>
+            </svg>
+          </div>
+          <div class="pet-card-info">
+            <h3>MAX</h3>
+            <span class="breed">Golden Retriever &bull; Male &bull; 4 yrs</span>
+          </div>
+        </div>
+        <div class="pet-card-health">
+          <div class="health-row">
+            <span class="dot dot-green"></span>
+            Vaccines Current
+          </div>
+          <div class="health-row">
+            <span class="dot dot-amber dot-pulse"></span>
+            1 Active Condition
+          </div>
+          <div class="health-row">
+            <span class="dot dot-violet"></span>
+            3 Card Alerts
+          </div>
+        </div>
+        <div class="pet-card-meta">Last updated 2d ago</div>
+      </div>
+
+      <!-- Card 2: Bella -->
+      <div class="glass glass-hover glass-violet pet-card animate-in" style="animation-delay: 0.1s">
+        <div class="pet-card-top">
+          <div class="pet-card-avatar">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--green)">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+              <circle cx="8" cy="9" r="1.5" fill="currentColor"/>
+              <circle cx="16" cy="9" r="1.5" fill="currentColor"/>
+              <path d="M9 15c.83.67 2 1 3 1s2.17-.33 3-1"/>
+            </svg>
+          </div>
+          <div class="pet-card-info">
+            <h3>BELLA</h3>
+            <span class="breed">Siamese Cat &bull; Female &bull; 3 yrs</span>
+          </div>
+        </div>
+        <div class="pet-card-health">
+          <div class="health-row">
+            <span class="dot dot-red dot-pulse"></span>
+            1 Vaccine Expired
+          </div>
+          <div class="health-row">
+            <span class="dot dot-green"></span>
+            No Conditions
+          </div>
+        </div>
+        <div class="pet-card-meta">Last updated 7d ago</div>
+      </div>
+    </div>
+
+    <!-- Activity Feed -->
+    <div class="activity-section">
+      <h2>Recent Activity</h2>
+      <div class="filter-pills">
+        <button class="pill active">All</button>
+        <button class="pill">Alerts</button>
+        <button class="pill">Updates</button>
+      </div>
+      <div class="glass" style="border-radius: var(--radius-lg); overflow: hidden;">
+        <div class="activity-list">
+          <div class="activity-item border-red">
+            <span class="activity-time">3d ago</span>
+            <span class="activity-text">Bella's rabies vaccine expired</span>
+          </div>
+          <div class="activity-item border-violet">
+            <span class="activity-time">5d ago</span>
+            <span class="activity-text">2 documents uploaded for Max</span>
+          </div>
+          <div class="activity-item border-green">
+            <span class="activity-time">1w ago</span>
+            <span class="activity-text">Max's weight updated to 32.0 kg</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================
+     SCREEN 3: PET PROFILE — OVERVIEW
+     ============================================ -->
+<div class="screen-divider" id="screen-3">
+  <span class="screen-label">Screen 03</span>
+  <div class="screen-title">Pet Profile — Overview</div>
+</div>
+
+<section class="profile-section">
+  <!-- Nav -->
+  <nav class="navbar">
+    <a href="#" class="navbar-logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <span class="logo-text">FureverCare</span>
+    </a>
+    <div class="breadcrumb">
+      <a href="#">Dashboard</a>
+      <span class="sep">/</span>
+      <span class="current">Max</span>
+    </div>
+    <div class="navbar-actions">
+      <div class="pet-switcher">Max <span class="arrow">&#9660;</span></div>
+      <div class="user-avatar">AG</div>
+      <div class="settings-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Tabs -->
+  <div class="tab-nav">
+    <a class="tab-item active">Overview</a>
+    <a class="tab-item">Health Records <span class="tab-count">11</span></a>
+    <a class="tab-item">Care Team <span class="tab-count">3</span></a>
+    <a class="tab-item">Documents <span class="tab-count">4</span></a>
+    <a class="tab-item">Activity <span class="tab-count">8</span></a>
+  </div>
+
+  <div class="container">
+    <!-- Two Column -->
+    <div class="profile-two-col">
+      <!-- Left: Pet Data -->
+      <div class="glass pet-data-panel animate-in">
+        <div class="pet-data-photo">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-tertiary)">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+            <circle cx="8" cy="9" r="1.5" fill="currentColor"/>
+            <circle cx="16" cy="9" r="1.5" fill="currentColor"/>
+            <path d="M9 15c.83.67 2 1 3 1s2.17-.33 3-1"/>
+          </svg>
+        </div>
+        <div class="pet-data-name">MAX</div>
+        <div class="pet-data-sub">Golden Retriever &bull; 4 years old</div>
+        <div class="data-rows">
+          <div class="data-row">
+            <span class="label">SPECIES</span>
+            <span class="value">Dog</span>
+          </div>
+          <div class="data-row">
+            <span class="label">BREED</span>
+            <span class="value">Golden Retriever</span>
+          </div>
+          <div class="data-row">
+            <span class="label">SEX</span>
+            <span class="value">Male (Neutered)</span>
+          </div>
+          <div class="data-row">
+            <span class="label">DOB</span>
+            <span class="value mono">2022-03-15</span>
+          </div>
+          <div class="data-row">
+            <span class="label">WEIGHT</span>
+            <span class="value mono">32.0 kg</span>
+          </div>
+          <div class="data-row">
+            <span class="label">MICROCHIP</span>
+            <span class="value mono" style="font-size: 12px;">985121033456789</span>
+          </div>
+        </div>
+        <div class="special-instructions">
+          <div class="si-label">Special Instructions</div>
+          <div class="si-text">Anxious during vet visits. Responds well to treats. Prefers left side for injections. Do not use acepromazine for sedation.</div>
+        </div>
+      </div>
+
+      <!-- Right: Emergency Card Preview -->
+      <div class="glass card-preview-panel animate-in" style="animation-delay: 0.15s">
+        <div class="card-preview-header">
+          <div class="card-preview-title">
+            Emergency Card
+            <span class="dot dot-green dot-pulse" style="margin-left: 4px;"></span>
+            <span class="mono text-xs" style="color: var(--green); font-weight: 700; letter-spacing: 0.06em;">LIVE</span>
+          </div>
+          <div class="card-preview-actions">
+            <a href="#" class="btn btn-violet btn-sm">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+              Share
+            </a>
+            <button class="icon-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="emergency-card-preview">
+          <div class="ecp-top-bar">
+            EMERGENCY PET CARD
+            <span class="ecp-alerts-count">3 ALERTS</span>
+          </div>
+          <div class="ecp-body">
+            <div class="ecp-pet-info">
+              <div class="ecp-mini-photo">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><circle cx="8" cy="9" r="1" fill="var(--text-tertiary)"/><circle cx="16" cy="9" r="1" fill="var(--text-tertiary)"/></svg>
+              </div>
+              <div>
+                <div class="ecp-pet-name">MAX</div>
+                <div class="ecp-pet-meta">Golden Retriever &bull; Male &bull; 32.0 kg</div>
+              </div>
+            </div>
+            <div class="ecp-meds">
+              <div class="ecp-meds-title">MEDICATIONS</div>
+              <div class="ecp-med-item">Carprofen 75mg — Twice daily</div>
+              <div class="ecp-med-item">Glucosamine 500mg — Once daily</div>
+              <div class="ecp-med-item">Apoquel 16mg — Once daily</div>
+            </div>
+            <div class="ecp-contacts">
+              <div class="ecp-meds-title" style="margin-top: 12px;">EMERGENCY CONTACTS</div>
+              <div class="ecp-contact-row">
+                <span class="ecp-contact-name">Amit Gulati — Owner</span>
+                <span class="ecp-contact-phone">(555) 123-4567</span>
+              </div>
+              <div class="ecp-contact-row">
+                <span class="ecp-contact-name">Sarah Chen — Emergency</span>
+                <span class="ecp-contact-phone">(555) 987-6543</span>
+              </div>
+            </div>
+            <div class="ecp-qr-area">
+              <div class="ecp-qr-small">
+                <div class="qr-cell"></div><div class="qr-cell white"></div><div class="qr-cell"></div><div class="qr-cell white"></div><div class="qr-cell"></div><div class="qr-cell white"></div>
+                <div class="qr-cell white"></div><div class="qr-cell"></div><div class="qr-cell white"></div><div class="qr-cell"></div><div class="qr-cell white"></div><div class="qr-cell"></div>
+                <div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell white"></div><div class="qr-cell white"></div><div class="qr-cell"></div>
+                <div class="qr-cell white"></div><div class="qr-cell white"></div><div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell white"></div>
+                <div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell white"></div><div class="qr-cell white"></div><div class="qr-cell"></div><div class="qr-cell"></div>
+                <div class="qr-cell white"></div><div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell"></div><div class="qr-cell white"></div><div class="qr-cell white"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-preview-stats">
+          Shared 3 times &bull; 12 views &bull; Last viewed 1d ago
+        </div>
+      </div>
+    </div>
+
+    <!-- Stat Blocks -->
+    <div class="stat-blocks">
+      <div class="glass stat-block accent-amber animate-in" style="animation-delay: 0.05s">
+        <div class="stat-number">2</div>
+        <div class="stat-label">CONDITIONS</div>
+      </div>
+      <div class="glass stat-block accent-red animate-in" style="animation-delay: 0.1s">
+        <div class="stat-number">1</div>
+        <div class="stat-label">ALLERGY</div>
+      </div>
+      <div class="glass stat-block accent-violet animate-in" style="animation-delay: 0.15s">
+        <div class="stat-number">3</div>
+        <div class="stat-label">MEDICATIONS</div>
+      </div>
+      <div class="glass stat-block accent-green animate-in" style="animation-delay: 0.2s">
+        <div class="stat-number">5</div>
+        <div class="stat-label">VACCINATIONS</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================
+     SCREEN 4: HEALTH RECORDS
+     ============================================ -->
+<div class="screen-divider" id="screen-4">
+  <span class="screen-label">Screen 04</span>
+  <div class="screen-title">Health Records</div>
+</div>
+
+<section class="health-section">
+  <!-- Nav -->
+  <nav class="navbar">
+    <a href="#" class="navbar-logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <span class="logo-text">FureverCare</span>
+    </a>
+    <div class="breadcrumb">
+      <a href="#">Dashboard</a>
+      <span class="sep">/</span>
+      <a href="#">Max</a>
+      <span class="sep">/</span>
+      <span class="current">Health Records</span>
+    </div>
+    <div class="navbar-actions">
+      <div class="pet-switcher">Max <span class="arrow">&#9660;</span></div>
+      <div class="user-avatar">AG</div>
+    </div>
+  </nav>
+
+  <!-- Tabs -->
+  <div class="tab-nav">
+    <a class="tab-item">Overview</a>
+    <a class="tab-item active">Health Records <span class="tab-count">11</span></a>
+    <a class="tab-item">Care Team <span class="tab-count">3</span></a>
+    <a class="tab-item">Documents <span class="tab-count">4</span></a>
+    <a class="tab-item">Activity <span class="tab-count">8</span></a>
+  </div>
+
+  <div class="container">
+    <div class="health-two-col">
+      <!-- Side Nav -->
+      <div class="glass health-side-nav animate-in">
+        <div class="side-nav-item active">
+          Conditions
+          <span class="side-nav-count">2</span>
+        </div>
+        <div class="side-nav-item">
+          Allergies
+          <span class="side-nav-count">1</span>
+        </div>
+        <div class="side-nav-item">
+          Medications
+          <span class="side-nav-count">3</span>
+        </div>
+        <div class="side-nav-item">
+          Vaccinations
+          <span class="side-nav-count">5</span>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div class="glass health-content animate-in" style="animation-delay: 0.1s">
+        <!-- Conditions -->
+        <div class="health-content-header">
+          <div class="health-content-title">
+            <h2>Conditions</h2>
+            <span class="tab-count">2</span>
+          </div>
+          <a href="#" class="btn btn-violet btn-sm">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add
+          </a>
+        </div>
+
+        <div class="records-list">
+          <div class="record-row">
+            <span class="dot dot-amber dot-pulse dot-lg"></span>
+            <span class="record-name">Hip Dysplasia</span>
+            <span class="badge badge-amber">MODERATE</span>
+            <span class="badge badge-green">Active</span>
+            <span class="record-date">Diagnosed 2024-01-15</span>
+            <span class="on-card-indicator"><span class="on-card-check">&#10003;</span> On Card</span>
+          </div>
+          <div class="record-row">
+            <span class="dot dot-green dot-lg"></span>
+            <span class="record-name">Ear Infection</span>
+            <span class="badge badge-green">MILD</span>
+            <span class="badge badge-gray">Resolved</span>
+            <span class="record-date">2023-06-10</span>
+            <span class="on-card-indicator" style="visibility: hidden;"><span class="on-card-check">&#10003;</span> On Card</span>
+          </div>
+        </div>
+
+        <div class="health-separator"></div>
+
+        <!-- Allergies -->
+        <div class="health-content-header">
+          <div class="health-content-title">
+            <h2>Allergies</h2>
+            <span class="tab-count">1</span>
+          </div>
+          <a href="#" class="btn btn-violet btn-sm">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add
+          </a>
+        </div>
+
+        <div class="records-list">
+          <div class="record-row">
+            <span class="dot dot-red dot-pulse dot-lg"></span>
+            <span class="record-name">Chicken</span>
+            <span class="badge badge-red">SEVERE</span>
+            <span style="color: var(--red); font-size: 14px; font-weight: 500;">Anaphylaxis</span>
+            <span class="record-date">Identified 2023-08-20</span>
+            <span class="on-card-indicator"><span class="on-card-check">&#10003;</span> On Card</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================
+     SCREEN 5: EMERGENCY CARD (PUBLIC VIEW)
+     ============================================ -->
+<div class="screen-divider" id="screen-5">
+  <span class="screen-label">Screen 05</span>
+  <div class="screen-title">Emergency Card — Public View</div>
+</div>
+
+<section class="emergency-section">
+  <!-- Top Bar -->
+  <div class="emergency-top-bar">
+    <div class="emergency-top-left">
+      <div class="logo-icon" style="width: 24px; height: 24px; border-radius: 6px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <span class="emergency-top-label">EMERGENCY PET CARD</span>
+    </div>
+    <div class="live-indicator">
+      <span class="dot dot-green dot-pulse"></span>
+      LIVE
+    </div>
+  </div>
+
+  <div class="emergency-body">
+    <!-- Alert Banner -->
+    <div class="alert-banner animate-in">
+      <div class="alert-banner-title">2 CRITICAL ALERTS</div>
+      <div class="alert-card">
+        <div class="alert-type">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          SEVERE ALLERGY
+        </div>
+        <div class="alert-detail">Chicken</div>
+        <div class="alert-sub">Anaphylaxis risk</div>
+      </div>
+      <div class="alert-card">
+        <div class="alert-type">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          ACTIVE CONDITION
+        </div>
+        <div class="alert-detail">Hip Dysplasia</div>
+        <div class="alert-sub">Requires joint support</div>
+      </div>
+    </div>
+
+    <!-- Pet Info -->
+    <div class="glass emergency-pet-card animate-in" style="animation-delay: 0.1s">
+      <div class="emergency-pet-top">
+        <div class="emergency-pet-photo">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+            <circle cx="8" cy="9" r="1.5" fill="var(--text-tertiary)"/>
+            <circle cx="16" cy="9" r="1.5" fill="var(--text-tertiary)"/>
+            <path d="M9 15c.83.67 2 1 3 1s2.17-.33 3-1"/>
+          </svg>
+        </div>
+        <div>
+          <div class="emergency-pet-name">MAX</div>
+          <div class="emergency-pet-meta">Golden Retriever &bull; Male &bull; 4 years old</div>
+        </div>
+      </div>
+      <div class="emergency-data-grid">
+        <div class="emergency-data-item">
+          <span class="emergency-data-label">Microchip</span>
+          <span class="emergency-data-value copyable mono">985121033456789 <span class="copy-icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </span></span>
+        </div>
+        <div class="emergency-data-item">
+          <span class="emergency-data-label">Weight</span>
+          <span class="emergency-data-value mono">32.0 kg / 70.5 lbs</span>
+        </div>
+        <div class="emergency-data-item">
+          <span class="emergency-data-label">Date of Birth</span>
+          <span class="emergency-data-value mono">2022-03-15</span>
+        </div>
+        <div class="emergency-data-item">
+          <span class="emergency-data-label">Sex</span>
+          <span class="emergency-data-value">Male (Neutered)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Medications -->
+    <div class="emergency-meds animate-in" style="animation-delay: 0.15s">
+      <div class="emergency-meds-title">MEDICATIONS</div>
+      <div class="glass emergency-med-card">
+        <div class="emergency-med-name">Carprofen 75mg</div>
+        <div class="emergency-med-dosage">Twice daily — Anti-inflammatory</div>
+      </div>
+      <div class="glass emergency-med-card">
+        <div class="emergency-med-name">Glucosamine 500mg</div>
+        <div class="emergency-med-dosage">Once daily — Joint supplement</div>
+      </div>
+      <div class="glass emergency-med-card">
+        <div class="emergency-med-name">Apoquel 16mg</div>
+        <div class="emergency-med-dosage">Once daily — Allergy management</div>
+      </div>
+    </div>
+
+    <!-- Emergency Contacts -->
+    <div class="emergency-contacts animate-in" style="animation-delay: 0.2s">
+      <div class="emergency-contacts-title">EMERGENCY CONTACTS</div>
+      <div class="glass emergency-contact-card">
+        <div class="contact-info">
+          <div class="contact-role">Owner</div>
+          <div class="contact-name">Amit Gulati</div>
+          <div class="contact-phone">(555) 123-4567</div>
+        </div>
+        <a href="tel:+15551234567" class="call-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          CALL
+        </a>
+      </div>
+      <div class="glass emergency-contact-card">
+        <div class="contact-info">
+          <div class="contact-role">Emergency Contact</div>
+          <div class="contact-name">Sarah Chen</div>
+          <div class="contact-phone">(555) 987-6543</div>
+        </div>
+        <a href="tel:+15559876543" class="call-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          CALL
+        </a>
+      </div>
+    </div>
+
+    <!-- Veterinarian -->
+    <div class="emergency-contacts animate-in" style="animation-delay: 0.25s">
+      <div class="emergency-contacts-title">VETERINARIAN</div>
+      <div class="glass emergency-contact-card">
+        <div class="contact-info">
+          <div class="contact-role">Primary Veterinarian</div>
+          <div class="contact-name">Happy Paws Veterinary Clinic</div>
+          <div class="contact-phone" style="color: var(--text-tertiary); font-size: 12px;">Dr. Smith &bull; (555) 456-7890</div>
+        </div>
+        <a href="tel:+15554567890" class="call-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          CALL
+        </a>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="emergency-footer">
+      Last synced March 7, 2026 &bull; Powered by FureverCare
+    </div>
+  </div>
+</section>
+
+<!-- End spacer -->
+<div style="height: 80px; background: var(--bg-main);"></div>
+
+</body>
+</html>
