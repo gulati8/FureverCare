@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import FlexibleDateInput from './FlexibleDateInput';
 import { DatePrecision } from '../api/client';
 
@@ -24,6 +24,109 @@ interface InlineEditFormProps {
   onSave: (values: Record<string, string | boolean>) => void;
   onCancel: () => void;
   className?: string;
+}
+
+function AutocompleteSelect({ field, value, onChange }: { field: EditField; value: string; onChange: (v: string) => void }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const options = field.options || [];
+  const filtered = value.trim()
+    ? options.filter(o => o.label.toLowerCase().includes(value.toLowerCase()))
+    : options;
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current && !dropdownRef.current.contains(event.target as Node) &&
+        inputRef.current && !inputRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (highlightedIndex >= 0 && dropdownRef.current) {
+      const el = dropdownRef.current.children[highlightedIndex] as HTMLElement;
+      el?.scrollIntoView({ block: 'nearest' });
+    }
+  }, [highlightedIndex]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!isOpen) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        setIsOpen(true);
+        e.preventDefault();
+      }
+      return;
+    }
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setHighlightedIndex(prev => prev < filtered.length - 1 ? prev + 1 : prev);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setHighlightedIndex(prev => prev > 0 ? prev - 1 : -1);
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (highlightedIndex >= 0 && highlightedIndex < filtered.length) {
+          onChange(filtered[highlightedIndex].value);
+          setIsOpen(false);
+          setHighlightedIndex(-1);
+        }
+        break;
+      case 'Escape':
+        setIsOpen(false);
+        setHighlightedIndex(-1);
+        break;
+      case 'Tab':
+        setIsOpen(false);
+        break;
+    }
+  };
+
+  return (
+    <div key={field.key}>
+      {field.label && <label className="text-sm text-gray-600">{field.label}</label>}
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={(e) => { onChange(e.target.value); setIsOpen(true); setHighlightedIndex(-1); }}
+          onFocus={() => setIsOpen(true)}
+          onKeyDown={handleKeyDown}
+          placeholder={field.placeholder}
+          className="input"
+          autoComplete="off"
+        />
+        {isOpen && filtered.length > 0 && (
+          <div ref={dropdownRef} className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
+            {filtered.map((o, index) => (
+              <button
+                key={o.value}
+                type="button"
+                onClick={() => { onChange(o.value); setIsOpen(false); setHighlightedIndex(-1); inputRef.current?.focus(); }}
+                onMouseEnter={() => setHighlightedIndex(index)}
+                className={`w-full text-left px-3 py-2 hover:bg-primary-50 transition-colors ${
+                  index === highlightedIndex ? 'bg-primary-50 text-primary-900' : 'text-gray-900'
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function InlineEditForm({ fields, values: initialValues, onSave, onCancel, className = '' }: InlineEditFormProps) {
@@ -63,18 +166,12 @@ export default function InlineEditForm({ fields, values: initialValues, onSave, 
 
     if (field.type === 'select') {
       return (
-        <div key={field.key}>
-          {field.label && <label className="text-sm text-gray-600">{field.label}</label>}
-          <select
-            value={val as string}
-            onChange={(e) => setValue(field.key, e.target.value)}
-            className="input"
-          >
-            {field.options?.map(o => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-        </div>
+        <AutocompleteSelect
+          key={field.key}
+          field={field}
+          value={val as string}
+          onChange={(v) => setValue(field.key, v)}
+        />
       );
     }
 

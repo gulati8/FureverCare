@@ -27,6 +27,7 @@ import { MedicalTimeline } from '../components/MedicalTimeline';
 import UpgradeBanner from '../components/UpgradeBanner';
 import SourceDocumentLink from '../components/SourceDocumentLink';
 import { useFieldToggle, useFieldSet } from '../hooks/useFieldToggle';
+import { TOP_MEDICATIONS } from '../constants/medications';
 
 type TabType = 'overview' | 'timeline' | 'conditions' | 'allergies' | 'medications' | 'vaccinations' | 'contacts' | 'vets' | 'alerts' | 'images' | 'documents' | 'history';
 
@@ -862,7 +863,7 @@ function AllergiesTab({ petId, token, allergies, setAllergies, onNavigateToRevie
 
 // Medications Tab
 const MEDICATION_FIELDS: EditField[] = [
-  { key: 'name', placeholder: 'Medication name *', required: true },
+  { key: 'name', placeholder: 'Medication name *', required: true, type: 'select', options: TOP_MEDICATIONS.map(m => ({ value: m, label: m })) },
   { key: 'dosage', placeholder: 'Dosage (e.g., 10mg)' },
   { key: 'frequency', placeholder: 'Frequency (e.g., twice daily)' },
   { key: 'start_date', placeholder: 'Start date', type: 'flexible_date', label: 'Start date', precisionKey: 'start_date_precision' },
