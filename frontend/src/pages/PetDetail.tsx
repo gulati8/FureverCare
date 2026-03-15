@@ -135,7 +135,7 @@ export default function PetDetail() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: 'var(--color-navy)' }}></div>
       </div>
     );
   }
@@ -160,10 +160,19 @@ export default function PetDetail() {
 
   return (
     <div>
+      {/* Breadcrumb */}
+      <div className="breadcrumb">
+        <a href="/dashboard">Dashboard</a>
+        <span className="sep">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+        </span>
+        <span className="current">{pet.name}</span>
+      </div>
+
       {/* Header */}
       <div className="card mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center gap-4">
             <PhotoUpload
               petId={petId}
               currentPhotoUrl={pet.photo_url}
@@ -172,41 +181,33 @@ export default function PetDetail() {
               species={pet.species}
             />
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">{pet.name}</h1>
-              <p className="text-gray-500 capitalize">
+              <h1 className="text-2xl" style={{ color: 'var(--color-navy)', fontWeight: 700 }}>{pet.name}</h1>
+              <p className="capitalize" style={{ color: 'var(--color-surface-500)' }}>
                 {pet.breed ? `${pet.breed} ${pet.species}` : pet.species}
-                {pet.sex && ` • ${pet.sex}${pet.is_fixed ? ' (Fixed)' : ''}`}
+                {pet.sex && ` \u2022 ${pet.sex}${pet.is_fixed ? ' (Fixed)' : ''}`}
               </p>
-              {pet.weight_kg && <p className="text-sm text-gray-400">{formatWeight(pet.weight_kg, pet.weight_unit)}</p>}
+              {pet.weight_kg && <p className="text-sm" style={{ color: 'var(--color-surface-400)' }}>{formatWeight(pet.weight_kg, pet.weight_unit)}</p>}
             </div>
           </div>
 
-          <div className="flex space-x-3">
-            {isPremium ? (
-              <button
-                onClick={() => setShowAccessModal(true)}
-                className="btn-secondary"
-              >
-                Access
-              </button>
-            ) : (
-              <button
-                onClick={() => setShowAccessModal(true)}
-                className="btn-secondary opacity-50"
-                title="Premium feature - Upgrade to share pet access with others"
-              >
-                Access
-              </button>
-            )}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowAccessModal(true)}
+              className={`btn btn-ghost btn-sm ${!isPremium ? 'opacity-50' : ''}`}
+              title={!isPremium ? 'Premium feature - Upgrade to share pet access with others' : undefined}
+              style={{ border: '1px solid var(--color-surface-200)' }}
+            >
+              Access
+            </button>
             <button
               onClick={() => setShowShareModal(true)}
-              className="btn-primary"
+              className="btn btn-accent btn-sm"
             >
               Share Card
             </button>
             <button
               onClick={handleDeletePet}
-              className="btn-danger"
+              className="btn btn-danger btn-sm"
             >
               Delete
             </button>
@@ -215,21 +216,35 @@ export default function PetDetail() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="flex space-x-8 overflow-x-auto">
+      <div style={{ borderBottom: '1px solid var(--color-surface-200)', marginBottom: '24px' }}>
+        <nav className="flex gap-1 overflow-x-auto pb-px">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                activeTab === tab.id
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              className="whitespace-nowrap transition-colors"
+              style={{
+                padding: '10px 16px',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                borderBottom: activeTab === tab.id ? '2px solid var(--color-navy)' : '2px solid transparent',
+                color: activeTab === tab.id ? 'var(--color-navy)' : 'var(--color-surface-500)',
+                background: 'none',
+                border: 'none',
+                borderBottomWidth: '2px',
+                borderBottomStyle: 'solid',
+                borderBottomColor: activeTab === tab.id ? 'var(--color-navy)' : 'transparent',
+                cursor: 'pointer',
+                fontFamily: 'var(--font-body)',
+              }}
             >
               {tab.label}
               {tab.count !== undefined && tab.count > 0 && (
-                <span className="ml-2 bg-gray-100 text-gray-600 py-0.5 px-2 rounded-full text-xs">
+                <span style={{
+                  marginLeft: '6px', background: 'var(--color-steel-light)',
+                  color: 'var(--color-steel)', padding: '1px 8px', borderRadius: '10px',
+                  fontSize: '0.6875rem', fontWeight: 600,
+                }}>
                   {tab.count}
                 </span>
               )}
@@ -689,8 +704,8 @@ function ConditionsTab({ petId, token, conditions, setConditions, onNavigateToRe
             <button onClick={() => handleToggleShowOnCard(c)} className={`text-sm ${c.show_on_card ? 'text-red-600 hover:text-red-800' : 'text-gray-400 hover:text-gray-600'}`} title={c.show_on_card ? 'Remove from card' : 'Show on card'}>
               {c.show_on_card ? '🔔' : '🔕'}
             </button>
-            <button onClick={() => setEditingId(c.id)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
-            <button onClick={() => handleToggleActive(c)} className={`text-sm ${isInactive ? 'text-primary-600 hover:text-primary-800' : 'text-gray-600 hover:text-gray-800'}`}>
+            <button onClick={() => setEditingId(c.id)} className="text-navy hover:text-primary-800 text-sm">Edit</button>
+            <button onClick={() => handleToggleActive(c)} className={`text-sm ${isInactive ? 'text-navy hover:text-primary-800' : 'text-gray-600 hover:text-gray-800'}`}>
               {isInactive ? 'Reactivate' : 'Discontinue'}
             </button>
             {deletingId === c.id ? (
@@ -840,7 +855,7 @@ function AllergiesTab({ petId, token, allergies, setAllergies, onNavigateToRevie
                     <button onClick={() => handleToggleShowOnCard(a)} className={`text-sm ${a.show_on_card ? 'text-red-600 hover:text-red-800' : 'text-gray-400 hover:text-gray-600'}`} title={a.show_on_card ? 'Remove from card' : 'Show on card'}>
                       {a.show_on_card ? '🔔' : '🔕'}
                     </button>
-                    <button onClick={() => setEditingId(a.id)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
+                    <button onClick={() => setEditingId(a.id)} className="text-navy hover:text-primary-800 text-sm">Edit</button>
                     {deletingId === a.id ? (
                       <>
                         <span className="text-sm text-gray-500">Sure?</span>
@@ -944,8 +959,8 @@ function MedicationsTab({ petId, token, medications, setMedications, onNavigateT
             <button onClick={() => handleToggleShowOnCard(m)} className={`text-sm ${m.show_on_card ? 'text-red-600 hover:text-red-800' : 'text-gray-400 hover:text-gray-600'}`} title={m.show_on_card ? 'Remove from card' : 'Show on card'}>
               {m.show_on_card ? '🔔' : '🔕'}
             </button>
-            <button onClick={() => setEditingId(m.id)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
-            <button onClick={() => handleToggleActive(m)} className={`text-sm ${isInactive ? 'text-primary-600 hover:text-primary-800' : 'text-gray-600 hover:text-gray-800'}`}>
+            <button onClick={() => setEditingId(m.id)} className="text-navy hover:text-primary-800 text-sm">Edit</button>
+            <button onClick={() => handleToggleActive(m)} className={`text-sm ${isInactive ? 'text-navy hover:text-primary-800' : 'text-gray-600 hover:text-gray-800'}`}>
               {isInactive ? 'Reactivate' : 'Discontinue'}
             </button>
             {deletingId === m.id ? (
@@ -1119,7 +1134,7 @@ function VaccinationsTab({ petId, token, vaccinations, setVaccinations, onNaviga
                     <button onClick={() => handleToggleShowOnCard(v)} className={`text-sm ${v.show_on_card ? 'text-red-600 hover:text-red-800' : 'text-gray-400 hover:text-gray-600'}`} title={v.show_on_card ? 'Remove from card' : 'Show on card'}>
                       {v.show_on_card ? '🔔' : '🔕'}
                     </button>
-                    <button onClick={() => setEditingId(v.id)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
+                    <button onClick={() => setEditingId(v.id)} className="text-navy hover:text-primary-800 text-sm">Edit</button>
                     {deletingId === v.id ? (
                       <>
                         <span className="text-sm text-gray-500">Sure?</span>
@@ -1220,14 +1235,14 @@ function VetsTab({ petId, token, vets, setVets }: {
               ) : (
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="font-medium">{v.clinic_name} {v.is_primary && <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded">Primary</span>}</p>
+                    <p className="font-medium">{v.clinic_name} {v.is_primary && <span className="text-xs bg-navy-50 text-primary-700 px-2 py-0.5 rounded">Primary</span>}</p>
                     {v.vet_name && <p className="text-sm text-gray-600">Dr. {v.vet_name}</p>}
                     {v.phone && <p className="text-sm text-gray-500">{v.phone}</p>}
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => setEditingId(v.id)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
+                    <button onClick={() => setEditingId(v.id)} className="text-navy hover:text-primary-800 text-sm">Edit</button>
                     {!v.is_primary && (
-                      <button onClick={() => handleSetPrimary(v.id)} className="text-primary-600 hover:text-primary-800 text-sm">Set as Primary</button>
+                      <button onClick={() => handleSetPrimary(v.id)} className="text-navy hover:text-primary-800 text-sm">Set as Primary</button>
                     )}
                     {deletingId === v.id ? (
                       <>
@@ -1323,12 +1338,12 @@ function ContactsTab({ petId, token, contacts, setContacts }: {
               ) : (
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="font-medium">{c.name} {c.is_primary && <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded">Primary</span>}</p>
+                    <p className="font-medium">{c.name} {c.is_primary && <span className="text-xs bg-navy-50 text-primary-700 px-2 py-0.5 rounded">Primary</span>}</p>
                     {c.relationship && <p className="text-sm text-gray-600">{c.relationship}</p>}
                     <p className="text-sm text-gray-500">{c.phone}</p>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => setEditingId(c.id)} className="text-primary-600 hover:text-primary-800 text-sm">Edit</button>
+                    <button onClick={() => setEditingId(c.id)} className="text-navy hover:text-primary-800 text-sm">Edit</button>
                     {deletingId === c.id ? (
                       <>
                         <span className="text-sm text-gray-500">Sure?</span>

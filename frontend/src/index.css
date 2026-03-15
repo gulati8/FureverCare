@@ -2,50 +2,249 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ========== Design Tokens (CSS Custom Properties) ========== */
+:root {
+  /* Brand */
+  --color-navy: #1B2A4A;
+  --color-navy-light: #2D4A7A;
+  --color-navy-50: #E8EDF4;
+  --color-steel: #4A7FB5;
+  --color-steel-light: #E8F0F8;
+  --color-steel-dark: #3A6A9A;
+  --color-coral: #E07A5F;
+  --color-coral-light: #FDF0EC;
+
+  /* Semantic */
+  --color-danger: #C0392B;
+  --color-danger-dark: #922B21;
+  --color-danger-light: #FDECEB;
+  --color-warning: #E6A817;
+  --color-warning-light: #FFF8E1;
+  --color-success: #27AE60;
+  --color-success-light: #EAFAF1;
+  --color-info: #2E86DE;
+  --color-info-light: #EBF5FB;
+
+  /* Surfaces */
+  --color-white: #FFFFFF;
+  --color-surface: #F8F9FA;
+  --color-surface-100: #F1F3F5;
+  --color-surface-200: #E2E5E9;
+  --color-surface-300: #CED4DA;
+  --color-surface-400: #ADB5BD;
+  --color-surface-500: #868E96;
+  --color-surface-600: #5A6270;
+  --color-surface-700: #3D4551;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(27,42,74,0.05);
+  --shadow-md: 0 2px 8px rgba(27,42,74,0.08);
+  --shadow-lg: 0 4px 16px rgba(27,42,74,0.1);
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+
+  /* Typography */
+  --font-heading: 'Fraunces', Georgia, serif;
+  --font-body: 'Source Sans 3', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-body);
+  color: var(--color-navy);
+  background: var(--color-surface);
+  -webkit-font-smoothing: antialiased;
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  line-height: 1.25;
 }
 
+/* ========== Component Classes ========== */
 @layer components {
   .btn {
-    @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 font-semibold transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    padding: 12px 24px;
+    border-radius: var(--radius-sm);
+    border: none;
+    cursor: pointer;
+    min-height: 44px;
+    min-width: 44px;
   }
 
-  /* Primary button - sage green (brand color) */
   .btn-primary {
-    @apply btn bg-primary-500 text-white hover:bg-primary-600;
+    @apply btn text-white;
+    background: var(--color-navy);
   }
-
-  /* Accent button - coral (for CTAs that need to stand out) */
-  .btn-accent {
-    @apply btn bg-accent-400 text-white hover:bg-accent-500;
+  .btn-primary:hover {
+    background: var(--color-navy-light);
   }
 
   .btn-secondary {
-    @apply btn bg-gray-200 text-gray-800 hover:bg-gray-300;
+    @apply btn;
+    background: var(--color-white);
+    color: var(--color-navy);
+    border: 1.5px solid var(--color-navy);
+  }
+  .btn-secondary:hover {
+    background: var(--color-navy-50);
+  }
+
+  .btn-accent {
+    @apply btn text-white;
+    background: var(--color-steel);
+  }
+  .btn-accent:hover {
+    background: var(--color-steel-dark);
+  }
+
+  .btn-coral {
+    @apply btn text-white;
+    background: var(--color-coral);
+  }
+  .btn-coral:hover {
+    background: #c86a50;
   }
 
   .btn-danger {
-    @apply btn bg-red-600 text-white hover:bg-red-700;
+    @apply btn text-white;
+    background: var(--color-danger);
+  }
+  .btn-danger:hover {
+    background: var(--color-danger-dark);
+  }
+
+  .btn-ghost {
+    @apply btn;
+    background: transparent;
+    color: var(--color-surface-600);
+  }
+  .btn-ghost:hover {
+    background: var(--color-surface-100);
+    color: var(--color-navy);
+  }
+
+  .btn-sm {
+    padding: 8px 16px;
+    font-size: 0.8125rem;
+    min-height: 36px;
   }
 
   .input {
-    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+    @apply w-full border focus:outline-none focus:ring-2 focus:border-transparent;
+    font-family: var(--font-body);
+    padding: 10px 14px;
+    border-color: var(--color-surface-200);
+    border-radius: var(--radius-sm);
+    font-size: 0.9375rem;
+    min-height: 44px;
+    --tw-ring-color: var(--color-navy);
   }
 
   .label {
-    @apply block text-sm font-medium text-gray-700 mb-1;
+    @apply block text-sm font-medium mb-1;
+    color: var(--color-surface-700);
   }
 
   .card {
-    @apply bg-white rounded-xl shadow-md p-6;
+    background: var(--color-white);
+    border: 1px solid var(--color-surface-200);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    transition: box-shadow 0.15s ease;
+  }
+  .card:hover {
+    box-shadow: var(--shadow-md);
   }
 
   .error-text {
-    @apply text-red-600 text-sm mt-1;
+    @apply text-sm mt-1;
+    color: var(--color-danger);
+  }
+
+  /* Badge system */
+  .badge {
+    @apply inline-flex items-center gap-1 whitespace-nowrap;
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .badge-danger { background: var(--color-danger-light); color: var(--color-danger); }
+  .badge-warning { background: var(--color-warning-light); color: #8B6914; }
+  .badge-success { background: var(--color-success-light); color: #1E8449; }
+  .badge-info { background: var(--color-info-light); color: var(--color-info); }
+  .badge-navy { background: var(--color-navy-50); color: var(--color-navy); }
+
+  /* Status dots */
+  .status-dot {
+    @apply inline-flex items-center gap-1.5 text-sm;
+  }
+  .status-dot::before {
+    content: '';
+    @apply inline-block w-2 h-2 rounded-full flex-shrink-0;
+  }
+  .status-dot-success::before { background: var(--color-success); }
+  .status-dot-warning::before { background: var(--color-warning); }
+  .status-dot-danger::before { background: var(--color-danger); }
+  .status-dot-info::before { background: var(--color-info); }
+
+  /* Breadcrumb */
+  .breadcrumb {
+    @apply flex items-center gap-2 text-sm py-4;
+    color: var(--color-surface-500);
+  }
+  .breadcrumb a {
+    color: var(--color-surface-500);
+    text-decoration: none;
+  }
+  .breadcrumb a:hover {
+    color: var(--color-navy);
+  }
+  .breadcrumb .sep {
+    color: var(--color-surface-300);
+  }
+  .breadcrumb .current {
+    color: var(--color-navy);
+    font-weight: 500;
+  }
+
+  /* Data tables */
+  .data-table {
+    @apply w-full;
+    border-collapse: collapse;
+  }
+  .data-table th {
+    @apply text-left text-xs font-semibold uppercase tracking-wider;
+    padding: 10px 16px;
+    color: var(--color-surface-500);
+    border-bottom: 2px solid var(--color-surface-200);
+    background: var(--color-surface);
+  }
+  .data-table td {
+    @apply text-sm;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--color-surface-100);
+  }
+  .data-table tr:hover td {
+    background: var(--color-surface);
   }
 }
+
+/* ========== Animations ========== */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.fade-in-up { animation: fadeInUp 0.5s ease both; }
+.fade-in { animation: fadeIn 0.4s ease both; }
