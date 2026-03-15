@@ -120,6 +120,43 @@ test.describe('Health Records', () => {
       await expect(page.locator('.line-through').filter({ hasText: medName })).not.toBeVisible();
       await expect(page.getByText(medName)).toBeVisible();
     });
+
+    test('should show autocomplete suggestions for common medications', async ({ page }) => {
+      await petDetailPage.goToMedicationsTab();
+      await page.getByRole('button', { name: '+ Add Medication' }).click();
+
+      // Type partial medication name
+      const input = page.getByPlaceholder('Medication name *');
+      await input.fill('Apo');
+
+      // Verify autocomplete dropdown appears with suggestion
+      await expect(page.getByRole('button', { name: 'Apoquel' })).toBeVisible();
+
+      // Click the suggestion
+      await page.getByRole('button', { name: 'Apoquel' }).click();
+
+      // Verify the input was filled with the selected medication
+      await expect(input).toHaveValue('Apoquel');
+
+      // Complete the medication entry
+      await page.getByPlaceholder('Dosage (e.g., 10mg)').fill('16mg');
+      await page.getByRole('button', { name: 'Save' }).click();
+
+      // Verify medication was added
+      await expect(page.getByText('Apoquel')).toBeVisible();
+      await expect(page.getByText('16mg')).toBeVisible();
+    });
+
+    test('should allow custom medication names not in the suggestion list', async ({ page }) => {
+      const customMedName = `CustomMed_${Date.now()}`;
+
+      await petDetailPage.addMedication(customMedName, '5ml', 'three times daily');
+
+      // Verify custom medication was added successfully
+      await expect(page.getByText(customMedName)).toBeVisible();
+      await expect(page.getByText('5ml')).toBeVisible();
+      await expect(page.getByText('three times daily')).toBeVisible();
+    });
   });
 
   test.describe('Vaccinations', () => {
