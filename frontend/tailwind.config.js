@@ -7,36 +7,92 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
-        heading: ['Nunito', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        sans: ['"Source Sans 3"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        heading: ['Fraunces', 'Georgia', 'serif'],
       },
       colors: {
-        // Sage green - main brand color
+        // Navy - primary brand color (Direction A: Refined Authority)
+        navy: {
+          DEFAULT: '#1B2A4A',
+          light: '#2D4A7A',
+          50: '#E8EDF4',
+        },
+        // Steel blue - secondary interactive color
+        steel: {
+          DEFAULT: '#4A7FB5',
+          light: '#E8F0F8',
+          dark: '#3A6A9A',
+        },
+        // Coral - warm accent for CTAs
+        coral: {
+          DEFAULT: '#E07A5F',
+          light: '#FDF0EC',
+        },
+        // Semantic colors
+        danger: {
+          DEFAULT: '#C0392B',
+          dark: '#922B21',
+          light: '#FDECEB',
+        },
+        warning: {
+          DEFAULT: '#E6A817',
+          light: '#FFF8E1',
+        },
+        success: {
+          DEFAULT: '#27AE60',
+          light: '#EAFAF1',
+        },
+        info: {
+          DEFAULT: '#2E86DE',
+          light: '#EBF5FB',
+        },
+        // Surface grays
+        surface: {
+          DEFAULT: '#F8F9FA',
+          50: '#F8F9FA',
+          100: '#F1F3F5',
+          200: '#E2E5E9',
+          300: '#CED4DA',
+          400: '#ADB5BD',
+          500: '#868E96',
+          600: '#5A6270',
+          700: '#3D4551',
+        },
+        // Keep backward compatibility with existing primary/accent references
         primary: {
-          50: '#f6f7f6',
-          100: '#e3e7e3',
-          200: '#c7d0c7',
-          300: '#a3b2a3',
-          400: '#7d917d',
-          500: '#6B9080',  // Main sage (from mockup)
-          600: '#5a7a6d',
-          700: '#4A7766',
-          800: '#3d5f52',
-          900: '#334d43',
+          50: '#E8EDF4',
+          100: '#D1DBE9',
+          200: '#A3B7D3',
+          300: '#7593BD',
+          400: '#4A7FB5',
+          500: '#1B2A4A',
+          600: '#162240',
+          700: '#111A36',
+          800: '#0C122C',
+          900: '#070A22',
         },
-        // Coral - accent color for CTAs
         accent: {
-          50: '#fef4f2',
-          100: '#fde7e3',
-          200: '#fcd3cb',
-          300: '#f9b4a6',
-          400: '#E07A5F',  // Main coral (from mockup)
-          500: '#d4694f',
-          600: '#c45a41',
-          700: '#a34835',
-          800: '#873d2e',
-          900: '#6f3428',
+          50: '#FDF0EC',
+          100: '#FBE1D9',
+          200: '#F7C3B3',
+          300: '#F3A58D',
+          400: '#E07A5F',
+          500: '#D4694F',
+          600: '#C45A41',
+          700: '#A34835',
+          800: '#873D2E',
+          900: '#6F3428',
         },
+      },
+      borderRadius: {
+        sm: '8px',
+        DEFAULT: '10px',
+        lg: '12px',
+      },
+      boxShadow: {
+        'token-sm': '0 1px 2px rgba(27,42,74,0.05)',
+        'token-md': '0 2px 8px rgba(27,42,74,0.08)',
+        'token-lg': '0 4px 16px rgba(27,42,74,0.1)',
       },
     },
   },

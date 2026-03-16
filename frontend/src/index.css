@@ -2,50 +2,605 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ========== Design Tokens (CSS Custom Properties) ========== */
+:root {
+  /* Brand */
+  --color-navy: #1B2A4A;
+  --color-navy-light: #2D4A7A;
+  --color-navy-50: #E8EDF4;
+  --color-steel: #4A7FB5;
+  --color-steel-light: #E8F0F8;
+  --color-steel-dark: #3A6A9A;
+  --color-coral: #E07A5F;
+  --color-coral-light: #FDF0EC;
+
+  /* Semantic */
+  --color-danger: #C0392B;
+  --color-danger-dark: #922B21;
+  --color-danger-light: #FDECEB;
+  --color-warning: #E6A817;
+  --color-warning-light: #FFF8E1;
+  --color-success: #27AE60;
+  --color-success-light: #EAFAF1;
+  --color-info: #2E86DE;
+  --color-info-light: #EBF5FB;
+
+  /* Surfaces */
+  --color-white: #FFFFFF;
+  --color-surface: #F8F9FA;
+  --color-surface-100: #F1F3F5;
+  --color-surface-200: #E2E5E9;
+  --color-surface-300: #CED4DA;
+  --color-surface-400: #ADB5BD;
+  --color-surface-500: #868E96;
+  --color-surface-600: #5A6270;
+  --color-surface-700: #3D4551;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(27,42,74,0.05);
+  --shadow-md: 0 2px 8px rgba(27,42,74,0.08);
+  --shadow-lg: 0 4px 16px rgba(27,42,74,0.1);
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+
+  /* Typography */
+  --font-heading: 'Fraunces', Georgia, serif;
+  --font-body: 'Source Sans 3', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-body);
+  color: var(--color-navy);
+  background: var(--color-surface);
+  -webkit-font-smoothing: antialiased;
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  line-height: 1.25;
 }
 
+/* ========== Component Classes ========== */
 @layer components {
   .btn {
-    @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 font-semibold transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    padding: 12px 24px;
+    border-radius: var(--radius-sm);
+    border: none;
+    cursor: pointer;
+    min-height: 44px;
+    min-width: 44px;
   }
 
-  /* Primary button - sage green (brand color) */
   .btn-primary {
-    @apply btn bg-primary-500 text-white hover:bg-primary-600;
+    @apply btn text-white;
+    background: var(--color-navy);
   }
-
-  /* Accent button - coral (for CTAs that need to stand out) */
-  .btn-accent {
-    @apply btn bg-accent-400 text-white hover:bg-accent-500;
+  .btn-primary:hover {
+    background: var(--color-navy-light);
   }
 
   .btn-secondary {
-    @apply btn bg-gray-200 text-gray-800 hover:bg-gray-300;
+    @apply btn;
+    background: var(--color-white);
+    color: var(--color-navy);
+    border: 1.5px solid var(--color-navy);
+  }
+  .btn-secondary:hover {
+    background: var(--color-navy-50);
+  }
+
+  .btn-accent {
+    @apply btn text-white;
+    background: var(--color-steel);
+  }
+  .btn-accent:hover {
+    background: var(--color-steel-dark);
+  }
+
+  .btn-coral {
+    @apply btn text-white;
+    background: var(--color-coral);
+  }
+  .btn-coral:hover {
+    background: #c86a50;
   }
 
   .btn-danger {
-    @apply btn bg-red-600 text-white hover:bg-red-700;
+    @apply btn text-white;
+    background: var(--color-danger);
+  }
+  .btn-danger:hover {
+    background: var(--color-danger-dark);
+  }
+
+  .btn-ghost {
+    @apply btn;
+    background: transparent;
+    color: var(--color-surface-600);
+  }
+  .btn-ghost:hover {
+    background: var(--color-surface-100);
+    color: var(--color-navy);
+  }
+
+  .btn-sm {
+    padding: 8px 16px;
+    font-size: 0.8125rem;
+    min-height: 36px;
   }
 
   .input {
-    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+    @apply w-full border focus:outline-none focus:ring-2 focus:border-transparent;
+    font-family: var(--font-body);
+    padding: 10px 14px;
+    border-color: var(--color-surface-200);
+    border-radius: var(--radius-sm);
+    font-size: 0.9375rem;
+    min-height: 44px;
+    --tw-ring-color: var(--color-navy);
   }
 
   .label {
-    @apply block text-sm font-medium text-gray-700 mb-1;
+    @apply block text-sm font-medium mb-1;
+    color: var(--color-surface-700);
   }
 
   .card {
-    @apply bg-white rounded-xl shadow-md p-6;
+    background: var(--color-white);
+    border: 1px solid var(--color-surface-200);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    transition: box-shadow 0.15s ease;
+  }
+  .card:hover {
+    box-shadow: var(--shadow-md);
   }
 
   .error-text {
-    @apply text-red-600 text-sm mt-1;
+    @apply text-sm mt-1;
+    color: var(--color-danger);
   }
+
+  /* Badge system */
+  .badge {
+    @apply inline-flex items-center gap-1 whitespace-nowrap;
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .badge-danger { background: var(--color-danger-light); color: var(--color-danger); }
+  .badge-warning { background: var(--color-warning-light); color: #8B6914; }
+  .badge-success { background: var(--color-success-light); color: #1E8449; }
+  .badge-info { background: var(--color-info-light); color: var(--color-info); }
+  .badge-navy { background: var(--color-navy-50); color: var(--color-navy); }
+
+  /* Status dots */
+  .status-dot {
+    @apply inline-flex items-center gap-1.5 text-sm;
+  }
+  .status-dot::before {
+    content: '';
+    @apply inline-block w-2 h-2 rounded-full flex-shrink-0;
+  }
+  .status-dot-success::before { background: var(--color-success); }
+  .status-dot-warning::before { background: var(--color-warning); }
+  .status-dot-danger::before { background: var(--color-danger); }
+  .status-dot-info::before { background: var(--color-info); }
+
+  /* Breadcrumb */
+  .breadcrumb {
+    @apply flex items-center gap-2 text-sm py-4;
+    color: var(--color-surface-500);
+  }
+  .breadcrumb a {
+    color: var(--color-surface-500);
+    text-decoration: none;
+  }
+  .breadcrumb a:hover {
+    color: var(--color-navy);
+  }
+  .breadcrumb .sep {
+    color: var(--color-surface-300);
+  }
+  .breadcrumb .current {
+    color: var(--color-navy);
+    font-weight: 500;
+  }
+
+  /* Data tables */
+  .data-table {
+    @apply w-full;
+    border-collapse: collapse;
+  }
+  .data-table th {
+    @apply text-left text-xs font-semibold uppercase tracking-wider;
+    padding: 10px 16px;
+    color: var(--color-surface-500);
+    border-bottom: 2px solid var(--color-surface-200);
+    background: var(--color-surface);
+  }
+  .data-table td {
+    @apply text-sm;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--color-surface-100);
+  }
+  .data-table tr:hover td {
+    background: var(--color-surface);
+  }
+}
+
+/* ========== Animations ========== */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.fade-in-up { animation: fadeInUp 0.5s ease both; }
+.fade-in { animation: fadeIn 0.4s ease both; }
+
+/* ========== Pet Profile Layout ========== */
+
+/* Sidebar + content grid */
+.pet-profile-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+@media (min-width: 1024px) {
+  .pet-profile-layout {
+    flex-direction: row;
+  }
+}
+
+/* Desktop sidebar */
+.pet-profile-sidebar {
+  display: none;
+  width: 220px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 24px;
+  align-self: flex-start;
+  background: var(--color-white);
+  border: 1px solid var(--color-surface-200);
+  border-radius: var(--radius-lg);
+  padding: 8px;
+}
+
+@media (min-width: 1024px) {
+  .pet-profile-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+}
+
+.pet-profile-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-surface-600);
+  text-decoration: none;
+  transition: all 0.15s ease;
+  font-family: var(--font-body);
+}
+
+.pet-profile-nav-item:hover {
+  background: var(--color-surface-100);
+  color: var(--color-navy);
+}
+
+.pet-profile-nav-item.active {
+  background: var(--color-navy);
+  color: white;
+}
+
+.pet-profile-nav-item.active .pet-profile-nav-icon {
+  color: white;
+}
+
+.pet-profile-nav-icon {
+  flex-shrink: 0;
+  color: var(--color-surface-400);
+}
+
+.pet-profile-nav-item.active .pet-profile-nav-count {
+  background: rgba(255,255,255,0.2);
+  color: white;
+}
+
+.pet-profile-nav-label {
+  flex: 1;
+}
+
+.pet-profile-nav-count {
+  background: var(--color-steel-light);
+  color: var(--color-steel);
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+/* Mobile pill row — wrapped for fade affordance */
+.pet-profile-pills-wrapper {
+  position: relative;
+}
+
+@media (min-width: 1024px) {
+  .pet-profile-pills-wrapper {
+    display: none !important;
+  }
+}
+
+.pet-profile-pills-wrapper::after {
+  content: '\203A'; /* single right chevron */
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 72px;
+  height: 36px; /* match pill height */
+  background: linear-gradient(to right, transparent 0%, var(--color-surface) 60%);
+  pointer-events: none;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 4px;
+  font-size: 1.25rem;
+  color: var(--color-surface-400);
+}
+
+.pet-profile-pills {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  padding-right: 48px; /* space so last pill isn't under the fade */
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.pet-profile-pills::-webkit-scrollbar {
+  display: none;
+}
+
+.pet-profile-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 16px;
+  border-radius: 100px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+  color: var(--color-surface-600);
+  background: var(--color-white);
+  border: 1px solid var(--color-surface-200);
+  transition: all 0.15s ease;
+  font-family: var(--font-body);
+}
+
+.pet-profile-pill:hover {
+  border-color: var(--color-navy);
+  color: var(--color-navy);
+}
+
+.pet-profile-pill.active {
+  background: var(--color-navy);
+  color: white;
+  border-color: var(--color-navy);
+}
+
+.pet-profile-pill-count {
+  background: rgba(255,255,255,0.2);
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 0.6875rem;
+}
+
+.pet-profile-pill:not(.active) .pet-profile-pill-count {
+  background: var(--color-steel-light);
+  color: var(--color-steel);
+}
+
+/* Content area */
+.pet-profile-content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Overview two-column grid */
+.pet-profile-overview-grid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+  .pet-profile-overview-grid {
+    grid-template-columns: 1fr 340px;
+  }
+}
+
+/* Stat blocks */
+.pet-profile-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .pet-profile-stats {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.pet-profile-stat {
+  background: var(--color-white);
+  border: 1px solid var(--color-surface-200);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pet-profile-stat:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-surface-300);
+}
+
+.pet-profile-stat-value {
+  font-family: var(--font-heading);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.pet-profile-stat-label {
+  font-size: 0.8125rem;
+  color: var(--color-surface-500);
+  margin-top: 4px;
+}
+
+/* ========== Health Accordion ========== */
+.health-accordion {
+  background: var(--color-white);
+  border: 1px solid var(--color-surface-200);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: box-shadow 0.15s ease;
+}
+
+.health-accordion:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.health-accordion-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  font-family: var(--font-body);
+}
+
+.health-accordion-summary::-webkit-details-marker {
+  display: none;
+}
+
+.health-accordion-summary::marker {
+  display: none;
+  content: '';
+}
+
+.health-accordion-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--color-navy);
+}
+
+.health-accordion-chevron {
+  color: var(--color-surface-400);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.health-accordion[open] > .health-accordion-summary .health-accordion-chevron {
+  transform: rotate(180deg);
+}
+
+.health-accordion-content {
+  padding: 0 20px 20px;
+  border-top: 1px solid var(--color-surface-100);
+}
+
+/* ========== Emergency Card Preview ========== */
+.emergency-card-preview {
+  background: var(--color-white);
+  border: 2px solid var(--color-danger);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.emergency-card-preview-header {
+  background: var(--color-danger);
+  color: white;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  letter-spacing: 0.05em;
+  font-family: var(--font-body);
+}
+
+.emergency-card-preview-body {
+  padding: 16px;
+}
+
+.emergency-card-preview-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-surface-200);
+  background: var(--color-surface);
+}
+
+/* ========== Dashboard Health Context ========== */
+.dashboard-pet-health {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.dashboard-action-items {
+  margin-top: 32px;
+}
+
+.dashboard-action-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  border-left: 4px solid;
+  background: var(--color-white);
+  margin-bottom: 8px;
+  font-size: 0.875rem;
+}
+
+.dashboard-action-item-danger {
+  border-left-color: var(--color-danger);
+  background: var(--color-danger-light);
+}
+
+.dashboard-action-item-warning {
+  border-left-color: var(--color-warning);
+  background: var(--color-warning-light);
 }

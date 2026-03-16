@@ -8,6 +8,11 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import PetDetail from './pages/PetDetail';
+import OverviewSection from './pages/pet-profile/sections/OverviewSection';
+import HealthRecordsSection from './pages/pet-profile/sections/HealthRecordsSection';
+import CareTeamSection from './pages/pet-profile/sections/CareTeamSection';
+import DocumentsSection from './pages/pet-profile/sections/DocumentsSection';
+import ActivitySection from './pages/pet-profile/sections/ActivitySection';
 import PublicCard from './pages/PublicCard';
 import TokenCard from './pages/TokenCard';
 import AcceptInvite from './pages/AcceptInvite';
@@ -48,7 +53,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-navy"></div>
       </div>
     );
   }
@@ -66,7 +71,7 @@ function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-navy"></div>
       </div>
     );
   }
@@ -98,7 +103,13 @@ export default function App() {
       {/* Private app routes with Layout */}
       <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/pets/:id" element={<PetDetail />} />
+        <Route path="/pets/:id" element={<PetDetail />}>
+          <Route index element={<OverviewSection />} />
+          <Route path="health" element={<HealthRecordsSection />} />
+          <Route path="care-team" element={<CareTeamSection />} />
+          <Route path="documents" element={<DocumentsSection />} />
+          <Route path="activity" element={<ActivitySection />} />
+        </Route>
         <Route path="/settings" element={<AccountSettings />} />
         <Route path="/billing" element={<BillingSettings />} />
         <Route path="/pricing" element={<Pricing />} />
