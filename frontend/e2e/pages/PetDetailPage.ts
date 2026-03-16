@@ -3,47 +3,30 @@ import { Page, Locator, expect } from '@playwright/test';
 export class PetDetailPage {
   readonly page: Page;
   readonly petName: Locator;
-  readonly editButton: Locator;
   readonly accessButton: Locator;
   readonly shareCardButton: Locator;
   readonly deleteButton: Locator;
 
-  // Tabs
-  readonly overviewTab: Locator;
-  readonly timelineTab: Locator;
-  readonly conditionsTab: Locator;
-  readonly allergiesTab: Locator;
-  readonly medicationsTab: Locator;
-  readonly vaccinationsTab: Locator;
-  readonly vetsTab: Locator;
-  readonly contactsTab: Locator;
-  readonly documentsTab: Locator;
-  readonly historyTab: Locator;
-
-  // Tab content area
-  readonly tabContent: Locator;
+  // Sidebar nav items (desktop) or pills (mobile)
+  readonly overviewNav: Locator;
+  readonly healthRecordsNav: Locator;
+  readonly careTeamNav: Locator;
+  readonly documentsNav: Locator;
+  readonly activityNav: Locator;
 
   constructor(page: Page) {
     this.page = page;
     this.petName = page.locator('h1');
-    this.editButton = page.getByRole('button', { name: 'Edit' });
     this.accessButton = page.getByRole('button', { name: 'Access' });
     this.shareCardButton = page.getByRole('button', { name: 'Share Card' });
     this.deleteButton = page.getByRole('button', { name: 'Delete' });
 
-    // Tab navigation
-    this.overviewTab = page.getByRole('button', { name: /^Overview/ });
-    this.timelineTab = page.getByRole('button', { name: /^Timeline/ });
-    this.conditionsTab = page.getByRole('button', { name: /^Conditions/ });
-    this.allergiesTab = page.getByRole('button', { name: /^Allergies/ });
-    this.medicationsTab = page.getByRole('button', { name: /^Medications/ });
-    this.vaccinationsTab = page.getByRole('button', { name: /^Vaccinations/ });
-    this.vetsTab = page.getByRole('button', { name: /^Veterinarians/ });
-    this.contactsTab = page.getByRole('button', { name: /^Emergency Contacts/ });
-    this.documentsTab = page.getByRole('button', { name: /^Import Documents/ });
-    this.historyTab = page.getByRole('button', { name: /^History/ });
-
-    this.tabContent = page.locator('.card').last();
+    // Nav items work for both sidebar links and mobile pills
+    this.overviewNav = page.getByRole('link', { name: /^Overview/ });
+    this.healthRecordsNav = page.getByRole('link', { name: /^Health Records/ });
+    this.careTeamNav = page.getByRole('link', { name: /^Care Team/ });
+    this.documentsNav = page.getByRole('link', { name: /^Documents/ });
+    this.activityNav = page.getByRole('link', { name: /^Activity/ });
   }
 
   async goto(petId: number) {
@@ -58,29 +41,62 @@ export class PetDetailPage {
     return this.petName.textContent();
   }
 
-  // Tab navigation
+  // Section navigation
+  async goToHealthRecords() {
+    await this.healthRecordsNav.first().click();
+    // Wait for health accordion to appear
+    await expect(this.page.locator('.health-accordion').first()).toBeVisible();
+  }
+
+  async goToCareTeam() {
+    await this.careTeamNav.first().click();
+  }
+
+  async goToDocuments() {
+    await this.documentsNav.first().click();
+  }
+
+  async goToActivity() {
+    await this.activityNav.first().click();
+  }
+
+  // Open a specific health accordion by name
+  private async openAccordion(name: string) {
+    const accordion = this.page.locator('.health-accordion').filter({ hasText: name });
+    // Click summary to open if not already open
+    const isOpen = await accordion.evaluate(el => el.hasAttribute('open'));
+    if (!isOpen) {
+      await accordion.locator('.health-accordion-summary').click();
+    }
+  }
+
+  // Tab navigation (now navigates to health section + opens accordion)
   async goToConditionsTab() {
-    await this.conditionsTab.click();
+    await this.goToHealthRecords();
+    await this.openAccordion('Conditions');
   }
 
   async goToAllergiesTab() {
-    await this.allergiesTab.click();
+    await this.goToHealthRecords();
+    await this.openAccordion('Allergies');
   }
 
   async goToMedicationsTab() {
-    await this.medicationsTab.click();
+    await this.goToHealthRecords();
+    await this.openAccordion('Medications');
   }
 
   async goToVaccinationsTab() {
-    await this.vaccinationsTab.click();
+    await this.goToHealthRecords();
+    await this.openAccordion('Vaccinations');
   }
 
   async goToVetsTab() {
-    await this.vetsTab.click();
+    await this.goToCareTeam();
   }
 
   async goToContactsTab() {
-    await this.contactsTab.click();
+    await this.goToCareTeam();
   }
 
   // Add Condition

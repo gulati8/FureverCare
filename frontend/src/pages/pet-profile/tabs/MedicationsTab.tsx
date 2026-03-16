@@ -1,0 +1,143 @@
+import { useState, SetStateAction } from 'react';
+import { petsApi, PetMedication } from '../../../api/client';
+import InlineEditForm from '../../../components/InlineEditForm';
+import { formatFlexibleDate } from '../../../components/FlexibleDateInput';
+import SourceDocumentLink from '../../../components/SourceDocumentLink';
+import { useFieldToggle } from '../../../hooks/useFieldToggle';
+import { MEDICATION_FIELDS } from '../constants';
+
+export default function MedicationsTab({ petId, token, medications, setMedications, onNavigateToReview }: {
+  petId: number;
+  token: string;
+  medications: PetMedication[];
+  setMedications: (value: SetStateAction<PetMedication[]>) => void;
+  onNavigateToReview: (uploadId: number, highlightItemId: number) => void;
+}) {
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [addValues, setAddValues] = useState<Record<string, string | boolean>>({ name: '', dosage: '', frequency: '', start_date: '', start_date_precision: 'day' });
+
+  const handleAdd = async (values: Record<string, string | boolean>) => {
+    if (!(values.name as string).trim()) return;
+    const med = await petsApi.addMedication(petId, {
+      name: values.name as string, dosage: (values.dosage as string) || null, frequency: (values.frequency as string) || null,
+      start_date: (values.start_date as string) || null,
+      start_date_precision: (values.start_date_precision as string as any) || 'day',
+      end_date: null, end_date_precision: 'day', prescribing_vet: null, notes: null, is_active: true, show_on_card: false
+    }, token);
+    setMedications([med, ...medications]);
+    setShowForm(false);
+    setAddValues({ name: '', dosage: '', frequency: '', start_date: '', start_date_precision: 'day' });
+  };
+
+  const handleSaveEdit = async (values: Record<string, string | boolean>) => {
+    if (!editingId || !(values.name as string).trim()) return;
+    const updated = await petsApi.updateMedication(petId, editingId, {
+      name: values.name as string, dosage: (values.dosage as string) || null, frequency: (values.frequency as string) || null,
+      start_date: (values.start_date as string) || null,
+      start_date_precision: (values.start_date_precision as string as any) || 'day',
+    }, token);
+    setMedications(medications.map(m => m.id === editingId ? updated : m));
+    setEditingId(null);
+  };
+
+  const handleToggleActive = useFieldToggle(setMedications, (m, val) => petsApi.updateMedication(petId, m.id, { is_active: val }, token), 'is_active');
+  const handleToggleShowOnCard = useFieldToggle(setMedications, (m, val) => petsApi.updateMedication(petId, m.id, { show_on_card: val }, token), 'show_on_card');
+
+  const handleDelete = async (id: number) => {
+    await petsApi.deleteMedication(petId, id, token);
+    setMedications(medications.filter(m => m.id !== id));
+    setDeletingId(null);
+  };
+
+  const active = medications.filter(m => m.is_active);
+  const inactive = medications.filter(m => !m.is_active);
+
+  const renderMedRow = (m: PetMedication, isInactive?: boolean) => (
+    <li key={m.id} className="p-3">
+      {editingId === m.id ? (
+        <InlineEditForm
+          fields={MEDICATION_FIELDS}
+          values={{ name: m.name, dosage: m.dosage || '', frequency: m.frequency || '', start_date: m.start_date ? m.start_date.split('T')[0] : '', start_date_precision: m.start_date_precision || 'day' }}
+          onSave={handleSaveEdit}
+          onCancel={() => setEditingId(null)}
+        />
+      ) : (
+        <div className="flex justify-between items-start">
+          <div>
+            <div className="flex items-center gap-2">
+              <p className={`font-medium ${isInactive ? 'line-through' : ''}`}>{m.name}</p>
+              {m.show_on_card && (
+                <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-semibold">ALERT</span>
+              )}
+            </div>
+            {m.dosage && <span className="text-sm text-gray-500">{m.dosage}</span>}
+            {m.frequency && <span className="text-sm text-gray-500"> - {m.frequency}</span>}
+            {m.start_date && <p className="text-sm text-gray-500">Started: {formatFlexibleDate(m.start_date, m.start_date_precision)}</p>}
+            <SourceDocumentLink petId={petId} recordType="pet_medications" recordId={m.id} onNavigateToReview={onNavigateToReview} />
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => handleToggleShowOnCard(m)} className={`text-sm ${m.show_on_card ? 'text-red-600 hover:text-red-800' : 'text-gray-400 hover:text-gray-600'}`} title={m.show_on_card ? 'Remove from card' : 'Show on card'}>
+              {m.show_on_card ? '\u{1F514}' : '\u{1F515}'}
+            </button>
+            <button onClick={() => setEditingId(m.id)} className="text-navy hover:text-primary-800 text-sm">Edit</button>
+            <button onClick={() => handleToggleActive(m)} className={`text-sm ${isInactive ? 'text-navy hover:text-primary-800' : 'text-gray-600 hover:text-gray-800'}`}>
+              {isInactive ? 'Reactivate' : 'Discontinue'}
+            </button>
+            {deletingId === m.id ? (
+              <>
+                <span className="text-sm text-gray-500">Sure?</span>
+                <button onClick={() => handleDelete(m.id)} className="text-red-600 hover:text-red-800 text-sm font-semibold">Yes</button>
+                <button onClick={() => setDeletingId(null)} className="text-gray-600 hover:text-gray-800 text-sm">No</button>
+              </>
+            ) : (
+              <button onClick={() => setDeletingId(m.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
+            )}
+          </div>
+        </div>
+      )}
+    </li>
+  );
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-semibold">Medications</h3>
+        <button onClick={() => setShowForm(!showForm)} className="btn-primary text-sm">+ Add Medication</button>
+      </div>
+
+      {showForm && (
+        <InlineEditForm
+          fields={MEDICATION_FIELDS}
+          values={addValues}
+          onSave={handleAdd}
+          onCancel={() => setShowForm(false)}
+          className="mb-4"
+        />
+      )}
+
+      {active.length > 0 && (
+        <div className="mb-6">
+          <h4 className="text-sm font-medium text-gray-500 mb-2">Active Medications</h4>
+          <ul className="divide-y border rounded-lg">
+            {active.map(m => renderMedRow(m))}
+          </ul>
+        </div>
+      )}
+
+      {inactive.length > 0 && (
+        <div>
+          <h4 className="text-sm font-medium text-gray-500 mb-2">Past Medications</h4>
+          <ul className="divide-y border rounded-lg opacity-60">
+            {inactive.map(m => renderMedRow(m, true))}
+          </ul>
+        </div>
+      )}
+
+      {medications.length === 0 && (
+        <p className="text-gray-500 text-center py-8">No medications recorded</p>
+      )}
+    </div>
+  );
+}
