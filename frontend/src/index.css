@@ -340,13 +340,30 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
 }
 
-/* Mobile pill row */
+/* Mobile pill row — wrapped for fade affordance */
+.pet-profile-pills-wrapper {
+  position: relative;
+}
+
+.pet-profile-pills-wrapper::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 48px;
+  height: calc(100% - 16px); /* exclude padding-bottom */
+  background: linear-gradient(to right, transparent, var(--color-surface));
+  pointer-events: none;
+  z-index: 1;
+}
+
 .pet-profile-pills {
   display: flex;
   gap: 8px;
   overflow-x: auto;
   padding-bottom: 16px;
   margin-bottom: 16px;
+  padding-right: 32px; /* space so last pill isn't under the fade */
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }

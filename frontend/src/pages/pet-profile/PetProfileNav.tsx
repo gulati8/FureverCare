@@ -104,6 +104,7 @@ export default function PetProfileNav({ basePath, counts }: {
       </nav>
 
       {/* Mobile pill row */}
+      <div className="pet-profile-pills-wrapper">
       <nav className="pet-profile-pills" aria-label="Pet profile navigation">
         {navItems.map(item => (
           <Link
@@ -118,6 +119,7 @@ export default function PetProfileNav({ basePath, counts }: {
           </Link>
         ))}
       </nav>
+      </div>
     </>
   );
 }
