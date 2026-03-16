@@ -354,7 +354,7 @@ h1, h2, h3, h4, h5, h6 {
   top: 0;
   right: 0;
   width: 72px;
-  height: calc(100% - 16px); /* exclude padding-bottom */
+  height: 36px; /* match pill height */
   background: linear-gradient(to right, transparent 0%, var(--color-surface) 60%);
   pointer-events: none;
   z-index: 1;
