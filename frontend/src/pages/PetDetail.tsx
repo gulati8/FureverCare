@@ -24,7 +24,6 @@ import { PetProfileContext } from './pet-profile/context';
 import { formatWeight } from './pet-profile/utils';
 
 const SECTION_LABELS: Record<string, string> = {
-  '': 'Overview',
   'health': 'Health Records',
   'care-team': 'Care Team',
   'documents': 'Documents',

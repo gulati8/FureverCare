@@ -254,7 +254,14 @@ h1, h2, h3, h4, h5, h6 {
 /* Sidebar + content grid */
 .pet-profile-layout {
   display: flex;
+  flex-direction: column;
   gap: 24px;
+}
+
+@media (min-width: 1024px) {
+  .pet-profile-layout {
+    flex-direction: row;
+  }
 }
 
 /* Desktop sidebar */
