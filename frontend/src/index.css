@@ -284,9 +284,6 @@ h1, h2, h3, h4, h5, h6 {
     flex-direction: column;
     gap: 2px;
   }
-  .pet-profile-pills {
-    display: none !important;
-  }
 }
 
 .pet-profile-nav-item {
@@ -345,16 +342,28 @@ h1, h2, h3, h4, h5, h6 {
   position: relative;
 }
 
+@media (min-width: 1024px) {
+  .pet-profile-pills-wrapper {
+    display: none !important;
+  }
+}
+
 .pet-profile-pills-wrapper::after {
-  content: '';
+  content: '\203A'; /* single right chevron */
   position: absolute;
   top: 0;
   right: 0;
-  width: 48px;
+  width: 72px;
   height: calc(100% - 16px); /* exclude padding-bottom */
-  background: linear-gradient(to right, transparent, var(--color-surface));
+  background: linear-gradient(to right, transparent 0%, var(--color-surface) 60%);
   pointer-events: none;
   z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 4px;
+  font-size: 1.25rem;
+  color: var(--color-surface-400);
 }
 
 .pet-profile-pills {
@@ -363,7 +372,7 @@ h1, h2, h3, h4, h5, h6 {
   overflow-x: auto;
   padding-bottom: 16px;
   margin-bottom: 16px;
-  padding-right: 32px; /* space so last pill isn't under the fade */
+  padding-right: 48px; /* space so last pill isn't under the fade */
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
