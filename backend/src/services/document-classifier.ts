@@ -91,6 +91,15 @@ For each extracted item, provide a confidence score from 0.0 to 1.0:
 - 0.5-0.7: Information is inferred or partially legible
 - Below 0.5: Information is unclear or guessed
 
+IMPORTANT — Receipts and invoices:
+When processing veterinary invoices, receipts, or billing statements:
+- Distinguish between medications ADMINISTERED IN-CLINIC during the visit (e.g., anesthesia drugs, surgical injections, IV fluids given during a procedure) and PRESCRIBED/TAKE-HOME medications.
+- For in-clinic administered medications: set is_active to false and add a note like "Administered in-clinic during [procedure name]" so the owner knows this is not a current prescription.
+- For take-home/prescribed medications (e.g., oral tablets, refills): set is_active to true.
+- Common in-clinic-only medications include: anesthesia agents (propofol, alfaxan, ketamine, isoflurane), surgical analgesics given IV/IM (methadone, fentanyl, hydromorphone, torbugesic/butorphanol), pre-anesthetic sedatives (acepromazine, dexmedetomidine), surgical antibiotics given IV (cefazolin), muscle relaxants, and IV fluids (Lactated Ringers, saline). These are almost never sent home.
+- Surgical procedures (e.g., "Exploratory Laparotomy", "Mass Removal", "Dental Cleaning") should be extracted as condition records with the procedure name, the visit date as diagnosed_date, and a note describing it as a procedure.
+- Extract each unique vet name as a separate vet record tied to the same clinic.
+
 Respond with a JSON object:
 {
   "pet_name": "Name of pet if visible",
@@ -137,11 +146,11 @@ Field formats:
 - Dates should be in YYYY-MM-DD format when possible, or null if not available
 - severity should be: "mild", "moderate", or "severe" for conditions
 - severity for allergies: "mild", "moderate", "severe", or "life-threatening"
-- is_active for medications should be true for current prescriptions
+- is_active for medications should be true for current prescriptions, false for medications administered in-clinic during a procedure
 - show_on_card indicates whether this item should appear as an alert on the pet's emergency card:
   - For allergies: true if severity is "life-threatening" or "severe"
-  - For conditions: true if the condition is clinically significant and would affect emergency treatment (e.g., epilepsy, heart disease, diabetes). False for minor/resolved conditions.
-  - For medications: true if the medication has critical drug interactions or the pet must not miss doses (e.g., insulin, anti-seizure, heart medication). False for routine supplements or topicals.
+  - For conditions: true if the condition is clinically significant and would affect emergency treatment (e.g., epilepsy, heart disease, diabetes). False for minor/resolved conditions and past surgical procedures.
+  - For medications: true if the medication has critical drug interactions or the pet must not miss doses (e.g., insulin, anti-seizure, heart medication). False for routine supplements, topicals, or in-clinic administered medications.
   - For vaccinations: true if the vaccination is expired or critically overdue (e.g., rabies). False for routine up-to-date vaccinations.
 
 Only extract information that is actually present in the document.

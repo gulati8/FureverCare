@@ -112,90 +112,168 @@ router.post('/:petId/documents/upload', authenticate, requireFeature('upload'), 
 
     const mediaType = getMediaTypeFromMime(fileMimeType);
 
+    // Extract EXIF metadata for images (date taken, dimensions)
+    let imageMeta: { dateTaken: string | null; width: number | null; height: number | null } | null = null;
     if (mediaType === 'image') {
-      // Images: extract EXIF metadata, set status to pending_review, skip AI
-      const imageMeta = await extractImageMetadata(fileBuffer);
-      await updateDocumentUploadStatus(documentUpload.id, 'pending_review');
-      const updatedUpload = await getDocumentUploadById(documentUpload.id);
+      imageMeta = await extractImageMetadata(fileBuffer);
+    }
 
-      res.status(201).json({
-        upload: updatedUpload,
-        media_type: 'image',
+    // Process through AI classification + extraction for all document types
+    const result = await processDocumentUpload(documentUpload.id);
+
+    if (result.error) {
+      res.status(500).json({
+        error: result.error,
+        upload: result.upload,
+        media_type: mediaType,
+        detected_type: result.classification?.detectedType || null,
+        confidence: result.classification?.confidence || 0,
+        explanation: result.classification?.explanation || result.error,
+        ...(imageMeta && {
+          exif_date_taken: imageMeta.dateTaken,
+          image_width: imageMeta.width,
+          image_height: imageMeta.height,
+        }),
+      });
+      return;
+    }
+
+    const extractedItems = result.items?.map((item) => ({
+      id: item.id,
+      record_type: item.record_type,
+      data: item.extracted_data,
+      confidence: item.confidence_score,
+      status: item.status,
+    })) || [];
+
+    const byCategory: Record<string, number> = {
+      medications: 0,
+      vaccinations: 0,
+      conditions: 0,
+      allergies: 0,
+      vets: 0,
+      emergency_contacts: 0,
+    };
+
+    for (const item of extractedItems) {
+      switch (item.record_type) {
+        case 'medication':
+          byCategory.medications++;
+          break;
+        case 'vaccination':
+          byCategory.vaccinations++;
+          break;
+        case 'condition':
+          byCategory.conditions++;
+          break;
+        case 'allergy':
+          byCategory.allergies++;
+          break;
+        case 'vet':
+          byCategory.vets++;
+          break;
+        case 'emergency_contact':
+          byCategory.emergency_contacts++;
+          break;
+      }
+    }
+
+    res.status(201).json({
+      upload: result.upload,
+      media_type: mediaType,
+      upload_id: result.upload.id,
+      detected_type: result.classification?.detectedType || 'other',
+      confidence: result.classification?.confidence || 0,
+      explanation: result.classification?.explanation || '',
+      extracted_items: extractedItems,
+      summary: generateExtractedItemsSummary(byCategory),
+      extraction_id: result.extraction?.id,
+      ...(imageMeta && {
         exif_date_taken: imageMeta.dateTaken,
         image_width: imageMeta.width,
         image_height: imageMeta.height,
-      });
-    } else {
-      // PDFs: existing processDocumentUpload flow
-      const result = await processDocumentUpload(documentUpload.id);
-
-      if (result.error) {
-        res.status(500).json({
-          error: result.error,
-          upload: result.upload,
-          media_type: 'pdf',
-          detected_type: result.classification?.detectedType || null,
-          confidence: result.classification?.confidence || 0,
-          explanation: result.classification?.explanation || result.error,
-        });
-        return;
-      }
-
-      const extractedItems = result.items?.map((item) => ({
-        id: item.id,
-        record_type: item.record_type,
-        data: item.extracted_data,
-        confidence: item.confidence_score,
-        status: item.status,
-      })) || [];
-
-      const byCategory: Record<string, number> = {
-        medications: 0,
-        vaccinations: 0,
-        conditions: 0,
-        allergies: 0,
-        vets: 0,
-        emergency_contacts: 0,
-      };
-
-      for (const item of extractedItems) {
-        switch (item.record_type) {
-          case 'medication':
-            byCategory.medications++;
-            break;
-          case 'vaccination':
-            byCategory.vaccinations++;
-            break;
-          case 'condition':
-            byCategory.conditions++;
-            break;
-          case 'allergy':
-            byCategory.allergies++;
-            break;
-          case 'vet':
-            byCategory.vets++;
-            break;
-          case 'emergency_contact':
-            byCategory.emergency_contacts++;
-            break;
-        }
-      }
-
-      res.status(201).json({
-        upload: result.upload,
-        media_type: 'pdf',
-        upload_id: result.upload.id,
-        detected_type: result.classification?.detectedType || 'other',
-        confidence: result.classification?.confidence || 0,
-        explanation: result.classification?.explanation || '',
-        extracted_items: extractedItems,
-        summary: generateExtractedItemsSummary(byCategory),
-        extraction_id: result.extraction?.id,
-      });
-    }
+      }),
+    });
   } catch (error: any) {
     console.error('Document upload error:', error);
     res.status(500).json({ error: error.message || 'Upload failed' });
+  }
+});
+
+// POST /api/pets/:petId/documents/uploads/:id/process - Trigger AI processing for an existing upload
+router.post('/:petId/documents/uploads/:id/process', authenticate, requireFeature('upload'), claudeRateLimit, async (req: AuthRequest, res: Response) => {
+  try {
+    const petId = parseInt(req.params.petId);
+    const uploadId = parseInt(req.params.id);
+
+    if (!await verifyPetEditAccess(petId, req.userId!, res)) {
+      return;
+    }
+
+    const upload = await getDocumentUploadById(uploadId);
+    if (!upload || upload.pet_id !== petId) {
+      res.status(404).json({ error: 'Upload not found' });
+      return;
+    }
+
+    // Only allow processing uploads that haven't been successfully processed yet
+    const extraction = await getDocumentExtractionWithItems(uploadId);
+    if (extraction && extraction.items.length > 0) {
+      res.status(400).json({ error: 'This upload has already been processed' });
+      return;
+    }
+
+    if (!config.claude.apiKey) {
+      res.status(500).json({ error: 'AI processing is not configured' });
+      return;
+    }
+
+    const result = await processDocumentUpload(uploadId);
+
+    if (result.error) {
+      res.status(500).json({
+        error: result.error,
+        upload: result.upload,
+      });
+      return;
+    }
+
+    const extractedItems = result.items?.map((item) => ({
+      id: item.id,
+      record_type: item.record_type,
+      data: item.extracted_data,
+      confidence: item.confidence_score,
+      status: item.status,
+    })) || [];
+
+    const byCategory: Record<string, number> = {
+      medications: 0, vaccinations: 0, conditions: 0,
+      allergies: 0, vets: 0, emergency_contacts: 0,
+    };
+
+    for (const item of extractedItems) {
+      switch (item.record_type) {
+        case 'medication': byCategory.medications++; break;
+        case 'vaccination': byCategory.vaccinations++; break;
+        case 'condition': byCategory.conditions++; break;
+        case 'allergy': byCategory.allergies++; break;
+        case 'vet': byCategory.vets++; break;
+        case 'emergency_contact': byCategory.emergency_contacts++; break;
+      }
+    }
+
+    res.json({
+      upload: result.upload,
+      detected_type: result.classification?.detectedType || 'other',
+      confidence: result.classification?.confidence || 0,
+      explanation: result.classification?.explanation || '',
+      extracted_items: extractedItems,
+      summary: generateExtractedItemsSummary(byCategory),
+      extraction_id: result.extraction?.id,
+    });
+  } catch (error: any) {
+    console.error('Document process error:', error);
+    res.status(500).json({ error: error.message || 'Processing failed' });
   }
 });
 

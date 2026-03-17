@@ -45,8 +45,13 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
         setCurrentUpload(upload);
         setActiveHighlightItemId(highlightItemId ?? null);
         if (upload.file_type === 'image') {
-          setExifDateTaken(null);
-          setViewState('image_review');
+          const hasExtractionItems = (upload.pending_items || 0) + (upload.approved_items || 0) + (upload.rejected_items || 0) > 0;
+          if (hasExtractionItems) {
+            setViewState('review');
+          } else {
+            setExifDateTaken(null);
+            setViewState('image_review');
+          }
         } else {
           setViewState('review');
         }
@@ -73,15 +78,17 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
 
   const handleUploadComplete = async (result: any) => {
     setError(null);
+    setCurrentUpload(result.upload);
+    setExifDateTaken(result.exif_date_taken || null);
 
-    if (result.media_type === 'image') {
-      // Image: go to image review form
-      setCurrentUpload(result.upload);
-      setExifDateTaken(result.exif_date_taken || null);
+    // If AI found extracted items, go to extraction review regardless of media type
+    if (result.extracted_items && result.extracted_items.length > 0) {
+      setViewState('review');
+    } else if (result.media_type === 'image') {
+      // Image with no extracted items — go to image metadata form
       setViewState('image_review');
     } else {
-      // PDF: backend already processed, go straight to extraction review
-      setCurrentUpload(result.upload);
+      // PDF with no items — still show extraction review (shows "no data found" message)
       setViewState('review');
     }
   };
@@ -101,12 +108,20 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
   };
 
   const handleUploadSelect = (upload: DocumentUpload) => {
-    if (upload.file_type === 'image' && (upload.status === 'pending_review' || upload.status === 'completed')) {
-      setCurrentUpload(upload);
-      setExifDateTaken(null);
-      setViewState('image_review');
-    } else if (upload.status === 'completed' || upload.status === 'pending_review') {
-      setCurrentUpload(upload);
+    if (upload.status !== 'pending_review' && upload.status !== 'completed') return;
+
+    setCurrentUpload(upload);
+
+    if (upload.file_type === 'image') {
+      // If image has extraction items, go to extraction review; otherwise metadata form
+      const hasExtractionItems = (upload.pending_items || 0) + (upload.approved_items || 0) + (upload.rejected_items || 0) > 0;
+      if (hasExtractionItems) {
+        setViewState('review');
+      } else {
+        setExifDateTaken(null);
+        setViewState('image_review');
+      }
+    } else {
       setViewState('review');
     }
   };
@@ -124,6 +139,9 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
 
   // Image review state
   if (viewState === 'image_review' && currentUpload) {
+    // Show "Scan for Records" button only for images that haven't been processed yet
+    const hasExtractionItems = (currentUpload.pending_items || 0) + (currentUpload.approved_items || 0) + (currentUpload.rejected_items || 0) > 0;
+
     return (
       <ImageReviewForm
         petId={petId}
@@ -136,6 +154,11 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
           onImportComplete?.();
         }}
         onCancel={handleBackToUploads}
+        onScanComplete={hasExtractionItems ? undefined : (result) => {
+          // Scan found items — switch to extraction review
+          setCurrentUpload(result.upload);
+          setViewState('review');
+        }}
       />
     );
   }
