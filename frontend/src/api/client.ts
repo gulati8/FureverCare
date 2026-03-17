@@ -837,6 +837,10 @@ export const documentsApi = {
   renameUpload: (petId: number, uploadId: number, newFilename: string, token: string) =>
     api.patch<DocumentUpload>(`/api/pets/${petId}/documents/uploads/${uploadId}/rename`, { filename: newFilename }, token),
 
+  // Trigger AI processing for an existing upload (e.g., scan image for records)
+  processUpload: (petId: number, uploadId: number, token: string) =>
+    api.post<any>(`/api/pets/${petId}/documents/uploads/${uploadId}/process`, {}, token),
+
   // Save image metadata (tag, description, date, body area)
   saveImageMetadata: (
     petId: number,

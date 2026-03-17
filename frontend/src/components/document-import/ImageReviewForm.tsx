@@ -21,9 +21,10 @@ interface ImageReviewFormProps {
   exifDateTaken?: string | null;
   onSave: () => void;
   onCancel: () => void;
+  onScanComplete?: (result: any) => void;
 }
 
-export function ImageReviewForm({ petId, upload, exifDateTaken, onSave, onCancel }: ImageReviewFormProps) {
+export function ImageReviewForm({ petId, upload, exifDateTaken, onSave, onCancel, onScanComplete }: ImageReviewFormProps) {
   const { token } = useAuth();
   const [tag, setTag] = useState(upload.user_tag || '');
   const [description, setDescription] = useState(upload.user_description || '');
@@ -39,7 +40,28 @@ export function ImageReviewForm({ petId, upload, exifDateTaken, onSave, onCancel
   });
   const [bodyArea, setBodyArea] = useState(upload.body_area || '');
   const [isSaving, setIsSaving] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleScan = async () => {
+    if (!token) return;
+
+    setIsScanning(true);
+    setError(null);
+
+    try {
+      const result = await documentsApi.processUpload(petId, upload.id, token);
+      if (result.extracted_items && result.extracted_items.length > 0) {
+        onScanComplete?.(result);
+      } else {
+        setError('No health records found in this image. You can still save it with a tag.');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Scan failed');
+    } finally {
+      setIsScanning(false);
+    }
+  };
 
   const imageUrl = `${API_URL}/api/pets/${petId}/documents/uploads/${upload.id}/file`;
 
@@ -97,6 +119,37 @@ export function ImageReviewForm({ petId, upload, exifDateTaken, onSave, onCancel
       </div>
 
       <p className="text-sm text-gray-500 text-center">{upload.original_filename}</p>
+
+      {/* Scan for records button — shown for images that haven't been processed */}
+      {onScanComplete && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <p className="text-sm text-amber-800 mb-3">
+            Is this a photo of a veterinary document, receipt, or record? Scan it to automatically extract medications, conditions, and other health data.
+          </p>
+          <button
+            onClick={handleScan}
+            disabled={isScanning}
+            className="w-full bg-amber-600 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {isScanning ? (
+              <>
+                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Scanning...
+              </>
+            ) : (
+              <>
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+                Scan for Health Records
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Form fields */}
       <div className="space-y-4">
