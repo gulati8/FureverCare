@@ -14,7 +14,7 @@ import AddPetModal from '../components/AddPetModal';
 import UpgradeBanner from '../components/UpgradeBanner';
 
 // Pet limits by tier
-const FREE_TIER_PET_LIMIT = 1;
+const FREE_TIER_PET_LIMIT = Infinity; // Beta: unlimited pets for all users
 
 interface PetHealthData {
   conditions: PetCondition[];

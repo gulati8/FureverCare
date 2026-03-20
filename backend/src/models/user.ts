@@ -247,7 +247,7 @@ export async function getUserSubscriptionInfo(userId: number): Promise<Subscript
   return result;
 }
 
-const FREE_TIER_PET_LIMIT = 1;
+const FREE_TIER_PET_LIMIT = Infinity; // Beta: unlimited pets for all users
 const PREMIUM_FEATURES = ['upload', 'timeline', 'shared_ownership'];
 
 export async function canUserAddPet(userId: number): Promise<{allowed: boolean, reason?: string, petCount: number, limit: number}> {
@@ -296,6 +296,6 @@ export async function canUserUseFeature(userId: number, feature: string): Promis
     return false;
   }
 
-  // Premium tier users can use all features
-  return user.subscription_tier === 'premium';
+  // Beta: all features available to all users
+  return true;
 }
