@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { config } from './config/index.js';
+import { createRedisStore, getClientIp } from './middleware/rate-limit-store.js';
 import authRoutes from './routes/auth.js';
 import petRoutes from './routes/pets.js';
 import publicRoutes from './routes/public.js';
@@ -34,10 +35,12 @@ app.use(cors({
   credentials: true,
 }));
 
-// Rate limiting
+// Rate limiting — Redis-backed, keyed by real client IP
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: config.isProduction ? 500 : 10000, // higher limit in dev
+  max: config.isProduction ? 500 : 10000,
+  keyGenerator: getClientIp,
+  store: createRedisStore('global'),
   message: { error: 'Too many requests, please try again later.' },
 });
 app.use(limiter);
