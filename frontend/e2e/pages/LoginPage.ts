@@ -11,16 +11,18 @@ export class LoginPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.emailInput = page.locator('#email');
-    this.passwordInput = page.locator('#password');
-    this.submitButton = page.getByRole('button', { name: /sign in/i });
+    this.emailInput = page.getByLabel('Email address');
+    this.passwordInput = page.getByLabel('Password');
+    this.submitButton = page.getByRole('button', { name: /sign in/i }).first();
     this.errorMessage = page.locator('.bg-red-50');
     this.forgotPasswordLink = page.getByRole('link', { name: /forgot your password/i });
-    this.registerLink = page.getByRole('link', { name: /sign up/i });
+    this.registerLink = page.getByRole('button', { name: /sign up/i });
   }
 
   async goto() {
     await this.page.goto('/login');
+    // Wait for the login modal to appear
+    await this.emailInput.waitFor({ state: 'visible' });
   }
 
   async login(email: string, password: string) {

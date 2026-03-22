@@ -13,18 +13,20 @@ export class RegisterPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.nameInput = page.locator('#name');
-    this.emailInput = page.locator('#email');
-    this.phoneInput = page.locator('#phone');
-    this.passwordInput = page.locator('#password');
-    this.confirmPasswordInput = page.locator('#confirmPassword');
+    this.nameInput = page.getByLabel('Your name');
+    this.emailInput = page.getByLabel('Email address');
+    this.phoneInput = page.getByLabel('Phone number (optional)');
+    this.passwordInput = page.getByLabel('Password', { exact: true });
+    this.confirmPasswordInput = page.getByLabel('Confirm password');
     this.submitButton = page.getByRole('button', { name: /create account/i });
     this.errorMessage = page.locator('.bg-red-50');
-    this.loginLink = page.getByRole('link', { name: /sign in/i });
+    this.loginLink = page.getByRole('button', { name: /sign in/i });
   }
 
   async goto() {
     await this.page.goto('/register');
+    // Wait for the register modal to appear
+    await this.nameInput.waitFor({ state: 'visible' });
   }
 
   async register(name: string, email: string, password: string, phone?: string) {
