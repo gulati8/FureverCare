@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
+import rateLimit from 'express-rate-limit';
 import {
   createUser,
   findUserByEmail,
@@ -15,8 +16,20 @@ import { generateToken, authenticate, AuthRequest } from '../middleware/auth.js'
 import { validate } from '../middleware/validate.js';
 import { sendEmail, generatePasswordResetEmail } from '../services/email.js';
 import { config } from '../config/index.js';
+import { createRedisStore, getClientIp } from '../middleware/rate-limit-store.js';
 
 const router = Router();
+
+// Strict rate limit for auth endpoints to prevent brute force
+const authRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 15, // 15 attempts per window
+  keyGenerator: getClientIp,
+  store: createRedisStore('auth'),
+  message: { error: 'Too many login attempts, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -50,7 +63,7 @@ const changePasswordSchema = z.object({
 });
 
 // Register
-router.post('/register', validate(registerSchema), async (req, res: Response) => {
+router.post('/register', authRateLimit, validate(registerSchema), async (req, res: Response) => {
   try {
     const { email, password, name, phone } = req.body;
 
@@ -79,7 +92,7 @@ router.post('/register', validate(registerSchema), async (req, res: Response) =>
 });
 
 // Login
-router.post('/login', validate(loginSchema), async (req, res: Response) => {
+router.post('/login', authRateLimit, validate(loginSchema), async (req, res: Response) => {
   try {
     const { email, password } = req.body;
 
@@ -173,7 +186,7 @@ router.post('/change-password', authenticate, validate(changePasswordSchema), as
 });
 
 // Request password reset
-router.post('/forgot-password', validate(forgotPasswordSchema), async (req, res: Response) => {
+router.post('/forgot-password', authRateLimit, validate(forgotPasswordSchema), async (req, res: Response) => {
   try {
     const { email } = req.body;
 
