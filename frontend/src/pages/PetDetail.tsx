@@ -18,7 +18,6 @@ import ManageAccessModal from '../components/ManageAccessModal';
 import PhotoUpload from '../components/PhotoUpload';
 import ShareModal from '../components/ShareModal';
 import ShareWallet from '../components/ShareWallet';
-import UpgradeBanner from '../components/UpgradeBanner';
 import PetProfileNav from './pet-profile/PetProfileNav';
 import { PetProfileContext } from './pet-profile/context';
 import { formatWeight } from './pet-profile/utils';
@@ -32,7 +31,7 @@ const SECTION_LABELS: Record<string, string> = {
 
 export default function PetDetail() {
   const { id } = useParams<{ id: string }>();
-  const { token, isPremium } = useAuth();
+  const { token } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -137,7 +136,7 @@ export default function PetDetail() {
     pet,
     petId,
     token: token!,
-    isPremium: !!isPremium,
+    isPremium: true, // Beta: all features unlocked
     vets,
     setVets,
     conditions,
@@ -206,8 +205,7 @@ export default function PetDetail() {
           <div className="flex gap-2">
             <button
               onClick={() => setShowAccessModal(true)}
-              className={`btn btn-ghost btn-sm ${!isPremium ? 'opacity-50' : ''}`}
-              title={!isPremium ? 'Premium feature - Upgrade to share pet access with others' : undefined}
+              className="btn btn-ghost btn-sm"
               style={{ border: '1px solid var(--color-surface-200)' }}
             >
               Access
@@ -273,29 +271,11 @@ export default function PetDetail() {
 
       {/* Manage Access Modal */}
       {showAccessModal && (
-        isPremium ? (
-          <ManageAccessModal
-            petId={petId}
-            petName={pet.name}
-            onClose={() => setShowAccessModal(false)}
-          />
-        ) : (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Share Pet Access</h2>
-              <UpgradeBanner type="feature" feature="shared_ownership" />
-              <p className="text-gray-600 text-sm mt-4">
-                With premium, you can invite family members or pet sitters to view and manage your pet's health records.
-              </p>
-              <button
-                onClick={() => setShowAccessModal(false)}
-                className="mt-4 w-full btn-secondary"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        )
+        <ManageAccessModal
+          petId={petId}
+          petName={pet.name}
+          onClose={() => setShowAccessModal(false)}
+        />
       )}
     </div>
   );
