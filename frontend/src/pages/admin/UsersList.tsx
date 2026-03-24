@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { useImpersonation } from '../../hooks/useImpersonation';
 import { adminApi, AdminUser, UsersQueryOptions } from '../../api/admin';
 import UserDetailModal from './UserDetailModal';
 
 export default function UsersList() {
   const { token } = useAuth();
+  const { startImpersonation } = useImpersonation();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -257,6 +259,9 @@ export default function UsersList() {
                         <SortIcon column="created_at" />
                       </button>
                     </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -293,6 +298,24 @@ export default function UsersList() {
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-sm text-gray-600">{formatRelativeDate(user.created_at)}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {!user.is_admin && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              startImpersonation(user.id);
+                            }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors"
+                            title={`View as ${user.name}`}
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            View as
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}

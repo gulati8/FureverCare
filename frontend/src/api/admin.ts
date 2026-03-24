@@ -259,4 +259,16 @@ export const adminApi = {
 
   updateStripe: (token: string, stripe: SubscriptionStripe) =>
     api.put<SubscriptionStripe>('/api/admin/subscription/stripe', stripe, token),
+
+  // Impersonation
+  startImpersonation: (userId: number, token: string) =>
+    api.post<{ success: boolean; sessionId: number }>(`/api/admin/impersonation/${userId}`, {}, token),
+
+  stopImpersonation: (token: string) =>
+    api.post<{ success: boolean }>('/api/admin/impersonation/stop', {}, token),
+
+  getImpersonationStatus: (token: string) =>
+    api.get<{ active: boolean; targetUser?: { id: number; name: string; email: string }; sessionId?: number; startedAt?: string }>(
+      '/api/admin/impersonation/status', token
+    ),
 };

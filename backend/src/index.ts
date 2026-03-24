@@ -21,6 +21,7 @@ import adminPetsRoutes from './routes/admin-pets.js';
 import adminAnalyticsRoutes from './routes/admin-analytics.js';
 import billingRoutes from './routes/billing.js';
 import subscriptionAdminRoutes from './routes/subscription-admin.js';
+import adminImpersonationRoutes from './routes/admin-impersonation.js';
 import stripeWebhookRoutes from './routes/stripe-webhook.js';
 
 const app = express();
@@ -33,6 +34,7 @@ app.use(helmet());
 app.use(cors({
   origin: config.frontend.url,
   credentials: true,
+  exposedHeaders: ['X-Impersonating'],
 }));
 
 // Rate limiting — Redis-backed, keyed by real client IP
@@ -80,6 +82,7 @@ app.use('/api/admin/pets', adminPetsRoutes);    // Admin pets routes
 app.use('/api/admin/analytics', adminAnalyticsRoutes);  // Admin analytics routes
 app.use('/api/billing', billingRoutes);  // Billing routes under /api/billing
 app.use('/api/admin/subscription', subscriptionAdminRoutes);  // Subscription admin routes
+app.use('/api/admin/impersonation', adminImpersonationRoutes);  // Admin impersonation routes
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

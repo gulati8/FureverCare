@@ -6,6 +6,20 @@ interface RequestOptions extends RequestInit {
   token?: string;
 }
 
+// Impersonation detection callback
+export interface ImpersonationInfo {
+  userId: number;
+  name: string;
+  email: string;
+  adminId: number;
+}
+
+let onImpersonationDetected: ((data: ImpersonationInfo | null) => void) | null = null;
+
+export function setImpersonationCallback(cb: (data: ImpersonationInfo | null) => void) {
+  onImpersonationDetected = cb;
+}
+
 async function request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const { token, ...fetchOptions } = options;
 
@@ -22,6 +36,19 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
     ...fetchOptions,
     headers,
   });
+
+  // Detect impersonation from response header
+  if (onImpersonationDetected) {
+    const impersonatingHeader = response.headers.get('X-Impersonating');
+    if (impersonatingHeader) {
+      try {
+        onImpersonationDetected(JSON.parse(impersonatingHeader));
+      } catch { /* ignore parse errors */ }
+    } else if (token) {
+      // Only clear if this was an authenticated request (has token)
+      onImpersonationDetected(null);
+    }
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Request failed' }));

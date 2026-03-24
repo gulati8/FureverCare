@@ -5,7 +5,7 @@ export interface AuditLogEntry {
   entityId: number;
   action: 'create' | 'update' | 'delete';
   changedBy: number | null;
-  source?: 'manual' | 'pdf_import' | 'image_import' | 'document_import';
+  source?: 'manual' | 'pdf_import' | 'image_import' | 'document_import' | 'admin_impersonation';
   sourcePdfUploadId?: number | null;
   sourceImageUploadId?: number | null;
   sourceDocumentUploadId?: number | null;
@@ -14,6 +14,7 @@ export interface AuditLogEntry {
   changedFields?: string[];
   ipAddress?: string | null;
   userAgent?: string | null;
+  impersonatedBy?: number | null;
 }
 
 export interface AuditLog {
@@ -29,6 +30,7 @@ export interface AuditLog {
   changed_fields: string[] | null;
   ip_address: string | null;
   user_agent: string | null;
+  impersonated_by: number | null;
   created_at: Date;
 }
 
@@ -36,25 +38,27 @@ export interface AuditLog {
  * Logs an audit entry for entity changes
  */
 export async function logAudit(entry: AuditLogEntry): Promise<AuditLog> {
+  const source = entry.impersonatedBy ? 'admin_impersonation' : (entry.source || 'manual');
   const result = await query<AuditLog>(
     `INSERT INTO audit_log (
       entity_type, entity_id, action, changed_by, source,
       source_pdf_upload_id, old_values, new_values, changed_fields,
-      ip_address, user_agent
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      ip_address, user_agent, impersonated_by
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
     RETURNING *`,
     [
       entry.entityType,
       entry.entityId,
       entry.action,
       entry.changedBy,
-      entry.source || 'manual',
+      source,
       entry.sourcePdfUploadId || null,
       entry.oldValues ? JSON.stringify(entry.oldValues) : null,
       entry.newValues ? JSON.stringify(entry.newValues) : null,
       entry.changedFields || null,
       entry.ipAddress || null,
       entry.userAgent || null,
+      entry.impersonatedBy || null,
     ]
   );
   return result[0];
@@ -69,12 +73,13 @@ export async function logCreate(
   newValues: Record<string, any>,
   changedBy: number | null,
   options?: {
-    source?: 'manual' | 'pdf_import' | 'image_import' | 'document_import';
+    source?: 'manual' | 'pdf_import' | 'image_import' | 'document_import' | 'admin_impersonation';
     sourcePdfUploadId?: number;
     sourceImageUploadId?: number;
     sourceDocumentUploadId?: number;
     ipAddress?: string;
     userAgent?: string;
+    impersonatedBy?: number;
   }
 ): Promise<AuditLog> {
   return logAudit({
@@ -98,12 +103,13 @@ export async function logUpdate(
   newValues: Record<string, any>,
   changedBy: number | null,
   options?: {
-    source?: 'manual' | 'pdf_import' | 'image_import' | 'document_import';
+    source?: 'manual' | 'pdf_import' | 'image_import' | 'document_import' | 'admin_impersonation';
     sourcePdfUploadId?: number;
     sourceImageUploadId?: number;
     sourceDocumentUploadId?: number;
     ipAddress?: string;
     userAgent?: string;
+    impersonatedBy?: number;
   }
 ): Promise<AuditLog> {
   // Calculate changed fields
@@ -140,12 +146,13 @@ export async function logDelete(
   oldValues: Record<string, any>,
   changedBy: number | null,
   options?: {
-    source?: 'manual' | 'pdf_import' | 'image_import' | 'document_import';
+    source?: 'manual' | 'pdf_import' | 'image_import' | 'document_import' | 'admin_impersonation';
     sourcePdfUploadId?: number;
     sourceImageUploadId?: number;
     sourceDocumentUploadId?: number;
     ipAddress?: string;
     userAgent?: string;
+    impersonatedBy?: number;
   }
 ): Promise<AuditLog> {
   return logAudit({
@@ -170,4 +177,20 @@ export function extractRequestMetadata(req: any): {
     ipAddress: req.ip || req.headers['x-forwarded-for'] || null,
     userAgent: req.headers['user-agent'] || null,
   };
+}
+
+/**
+ * Helper to extract impersonation metadata from request
+ */
+export function extractImpersonationMetadata(req: any): {
+  impersonatedBy?: number;
+  source?: 'admin_impersonation';
+} {
+  if (req.impersonatedBy) {
+    return {
+      impersonatedBy: req.impersonatedBy,
+      source: 'admin_impersonation',
+    };
+  }
+  return {};
 }
