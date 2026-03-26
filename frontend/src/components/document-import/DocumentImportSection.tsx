@@ -124,7 +124,7 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
   // Show filter bar when 4+ documents or 2+ status categories
   const statusCategories = new Set(displayItems.map(d => getFilterCategory(d.status)));
   const showFilters = displayItems.length >= 4 || statusCategories.size >= 2;
-  const showViewToggle = displayItems.length >= 5;
+  const showViewToggle = displayItems.length > 0;
 
   const storedItems = displayItems.filter(d => d.status === 'uploaded');
 
@@ -588,11 +588,25 @@ function ListCard({
   const isFailed = upload.status === 'failed';
   const canReview = upload.status === 'pending_review';
   const canView = upload.status === 'completed';
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const isProcessing = ['pending', 'processing'].includes(upload.status);
   const isImage = upload.mime_type?.startsWith('image/');
+  const isGroup = item.type === 'group' && item.pages.length > 1;
+
   const [metadataExpanded, setMetadataExpanded] = useState(false);
+  const [pagesExpanded, setPagesExpanded] = useState(false);
+  const [lightboxPage, setLightboxPage] = useState<DocumentUpload | null>(null);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [reorderFeedback, setReorderFeedback] = useState<string | null>(null);
+
+  const handleReorder = (fromIdx: number, toIdx: number) => {
+    const newPages = [...item.pages];
+    const [moved] = newPages.splice(fromIdx, 1);
+    newPages.splice(toIdx, 0, moved);
+    onReorder(newPages.map(p => p.id));
+    setReorderFeedback(`Moved page ${fromIdx + 1} → ${toIdx + 1}`);
+    setTimeout(() => setReorderFeedback(null), 2000);
+  };
 
   return (
     <div
@@ -618,22 +632,29 @@ function ListCard({
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <a
-            href={getDocumentUrl(upload)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm font-semibold text-gray-900 truncate block hover:text-blue-700 hover:underline"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {item.groupName || upload.original_filename}
-          </a>
+          {/* For standalone docs: link to file. For groups: just a label (no single file to link to) */}
+          {isGroup ? (
+            <span className="text-sm font-semibold text-gray-900 truncate block">
+              {item.groupName || upload.original_filename}
+            </span>
+          ) : (
+            <a
+              href={getDocumentUrl(upload)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-semibold text-gray-900 truncate block hover:text-blue-700 hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {upload.original_filename}
+            </a>
+          )}
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
             <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS[upload.status]?.bg || 'bg-gray-100'} ${STATUS_COLORS[upload.status]?.text || 'text-gray-600'} ${(isProcessing || isScanning) ? 'animate-pulse' : ''}`}>
               {isScanning ? 'Processing...' : upload.status === 'pending_review' && upload.pending_items
                 ? `${upload.pending_items} pending`
                 : STATUS_LABELS[upload.status] || upload.status}
             </span>
-            {item.type === 'group' && (
+            {isGroup && (
               <span className="text-[11px] text-gray-400">{item.pages.length} pages</span>
             )}
             {upload.user_tag && (
@@ -645,8 +666,17 @@ function ListCard({
           </div>
         </div>
 
-        {/* Action button */}
-        <div className="flex-shrink-0">
+        {/* Action buttons */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {isGroup && (
+            <button
+              onClick={() => setPagesExpanded(!pagesExpanded)}
+              className="text-xs font-semibold px-3 py-1.5 rounded-md border text-gray-500 hover:bg-gray-50 transition-colors"
+              style={{ borderColor: 'var(--color-surface-200, #E2E5E9)' }}
+            >
+              {pagesExpanded ? 'Hide Pages' : 'View Pages'}
+            </button>
+          )}
           {(isStored || isFailed) && (
             <button
               onClick={onScan}
@@ -686,10 +716,17 @@ function ListCard({
         </div>
       </div>
 
-      {/* Multi-page thumbnail strip with drag-and-drop reorder */}
-      {item.type === 'group' && item.pages.length > 1 && (
-        <div className="px-3 pb-2">
-          <div className="flex items-center gap-1 overflow-x-auto pb-1">
+      {/* Expanded page viewer with drag-and-drop reorder */}
+      {isGroup && pagesExpanded && (
+        <div className="px-3 pb-3 border-t" style={{ borderColor: 'var(--color-surface-100, #F1F3F5)' }}>
+          {/* Reorder feedback */}
+          {reorderFeedback && (
+            <div className="mt-2 mb-1 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded px-2 py-1 inline-block">
+              {reorderFeedback}
+            </div>
+          )}
+
+          <div className="flex items-start gap-2 overflow-x-auto pt-3 pb-1">
             {item.pages.map((page, idx) => (
               <div
                 key={page.id}
@@ -697,7 +734,6 @@ function ListCard({
                 onDragStart={(e) => {
                   setDragIndex(idx);
                   e.dataTransfer.effectAllowed = 'move';
-                  // Use a tiny transparent image as drag ghost
                   const img = new Image();
                   img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
                   e.dataTransfer.setDragImage(img, 0, 0);
@@ -713,46 +749,135 @@ function ListCard({
                 onDrop={(e) => {
                   e.preventDefault();
                   if (dragIndex !== null && dragIndex !== idx) {
-                    const newPages = [...item.pages];
-                    const [moved] = newPages.splice(dragIndex, 1);
-                    newPages.splice(idx, 0, moved);
-                    onReorder(newPages.map(p => p.id));
+                    handleReorder(dragIndex, idx);
                   }
                   setDragIndex(null);
                   setDragOverIndex(null);
                 }}
                 onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
-                className={`flex-shrink-0 w-8 h-8 rounded border overflow-hidden transition-all relative cursor-grab active:cursor-grabbing ${
-                  dragOverIndex === idx ? 'border-blue-500 ring-2 ring-blue-200 scale-110' :
-                  dragIndex === idx ? 'opacity-40 scale-95' :
-                  'hover:border-blue-400'
+                className={`flex-shrink-0 rounded-lg border overflow-hidden transition-all cursor-grab active:cursor-grabbing ${
+                  dragOverIndex === idx ? 'border-blue-500 ring-2 ring-blue-300 scale-105' :
+                  dragIndex === idx ? 'opacity-30 scale-95' :
+                  'hover:border-blue-400 hover:shadow-md'
                 }`}
-                style={{ borderColor: dragOverIndex === idx ? undefined : 'var(--color-surface-200, #E2E5E9)' }}
-                title={`Page ${page.page_number} — drag to reorder`}
+                style={{ borderColor: dragOverIndex === idx ? undefined : 'var(--color-surface-200, #E2E5E9)', width: '120px' }}
               >
-                <img src={getDocumentUrl(page)} alt={`Page ${page.page_number}`} className="w-full h-full object-cover pointer-events-none" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                <span className="absolute bottom-0 right-0 text-[8px] bg-black/50 text-white px-0.5 rounded-tl pointer-events-none">{idx + 1}</span>
+                {/* Page thumbnail — click to view full */}
+                <div
+                  className="w-full bg-gray-100 cursor-pointer relative"
+                  style={{ height: '100px' }}
+                  onClick={() => setLightboxPage(page)}
+                >
+                  <img
+                    src={getDocumentUrl(page)}
+                    alt={`Page ${idx + 1}`}
+                    className="w-full h-full object-cover pointer-events-none"
+                    loading="lazy"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                  {/* Drag handle indicator */}
+                  <div className="absolute top-1 left-1 bg-black/40 rounded px-1 py-0.5 flex items-center gap-0.5 pointer-events-none">
+                    <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                      <circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/>
+                      <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+                      <circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/>
+                    </svg>
+                  </div>
+                </div>
+                {/* Page label */}
+                <div className="px-2 py-1.5 text-center bg-white">
+                  <span className="text-[11px] font-semibold text-gray-700">Page {idx + 1}</span>
+                </div>
               </div>
             ))}
+            {/* Add page button */}
             {isStored && (
               <button
                 onClick={onAddPage}
-                className="flex-shrink-0 w-8 h-8 rounded border-2 border-dashed flex items-center justify-center text-gray-300 hover:border-blue-400 hover:text-blue-500 transition-colors"
-                style={{ borderColor: 'var(--color-surface-300, #CED4DA)' }}
-                title="Add page"
+                className="flex-shrink-0 rounded-lg border-2 border-dashed flex flex-col items-center justify-center text-gray-300 hover:border-blue-400 hover:text-blue-500 transition-colors"
+                style={{ borderColor: 'var(--color-surface-300, #CED4DA)', width: '120px', height: '124px' }}
               >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M12 4v16m8-8H4"/></svg>
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M12 4v16m8-8H4"/></svg>
+                <span className="text-[11px] font-medium mt-1">Add Page</span>
               </button>
             )}
           </div>
-          {item.pages.length > 1 && (
-            <p className="text-[10px] text-gray-400 mt-1">Drag to reorder pages</p>
-          )}
+          <p className="text-[10px] text-gray-400 mt-1.5">Drag to reorder &middot; Click to view full size</p>
         </div>
       )}
 
-      {/* Inline metadata for stored images */}
-      {isStored && isImage && item.type === 'standalone' && (
+      {/* Page lightbox */}
+      {lightboxPage && (
+        <div
+          className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4"
+          onClick={() => setLightboxPage(null)}
+        >
+          <div
+            className="relative bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setLightboxPage(null)}
+              className="absolute top-3 right-3 z-10 bg-white/90 rounded-full p-1.5 text-gray-600 hover:text-gray-900 shadow-sm"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+
+            {/* Navigation arrows */}
+            {item.pages.length > 1 && (() => {
+              const currentIdx = item.pages.findIndex(p => p.id === lightboxPage.id);
+              return (
+                <>
+                  {currentIdx > 0 && (
+                    <button
+                      onClick={() => setLightboxPage(item.pages[currentIdx - 1])}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-white/90 rounded-full p-2 text-gray-600 hover:text-gray-900 shadow-md"
+                    >
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                    </button>
+                  )}
+                  {currentIdx < item.pages.length - 1 && (
+                    <button
+                      onClick={() => setLightboxPage(item.pages[currentIdx + 1])}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-white/90 rounded-full p-2 text-gray-600 hover:text-gray-900 shadow-md"
+                    >
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                    </button>
+                  )}
+                </>
+              );
+            })()}
+
+            {/* Image */}
+            <div className="flex items-center justify-center bg-gray-900 max-h-[75vh]">
+              <img
+                src={getDocumentUrl(lightboxPage)}
+                alt={lightboxPage.original_filename}
+                className="max-w-full max-h-[75vh] object-contain"
+              />
+            </div>
+
+            {/* Footer */}
+            <div className="p-3 border-t flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700">
+                Page {item.pages.findIndex(p => p.id === lightboxPage.id) + 1} of {item.pages.length}
+              </span>
+              <a
+                href={getDocumentUrl(lightboxPage)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-blue-600 hover:underline"
+              >
+                Open full size
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inline metadata for stored standalone images */}
+      {isStored && isImage && !isGroup && (
         <div className="px-3 pb-3">
           <button
             onClick={() => setMetadataExpanded(!metadataExpanded)}
