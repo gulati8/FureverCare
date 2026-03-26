@@ -38,7 +38,9 @@ function getFilterCategory(status: string): 'stored' | 'review' | 'imported' {
 export function DocumentImportSection({ petId, onImportComplete, navigateToUploadId, highlightItemId, onNavigationHandled }: DocumentImportSectionProps) {
   const { token } = useAuth();
   const [viewState, setViewState] = useState<ViewState>('library');
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    try { return (localStorage.getItem('fc-doc-view-mode') as ViewMode) || 'list'; } catch { return 'list'; }
+  });
   const [filter, setFilter] = useState<FilterStatus>('all');
   const [currentUpload, setCurrentUpload] = useState<DocumentUpload | null>(null);
   const [uploads, setUploads] = useState<DocumentUpload[]>([]);
@@ -236,11 +238,25 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
 
   const handleReorderPages = async (groupId: string, pageOrder: number[]) => {
     if (!token) return;
+
+    // Optimistic local update — reorder uploads in state without refetching
+    setUploads(prev => {
+      const updated = [...prev];
+      for (let i = 0; i < pageOrder.length; i++) {
+        const idx = updated.findIndex(u => u.id === pageOrder[i]);
+        if (idx !== -1) {
+          updated[idx] = { ...updated[idx], page_number: i + 1 };
+        }
+      }
+      return updated;
+    });
+
+    // Persist to backend in background
     try {
       await documentsApi.reorderGroup(petId, groupId, pageOrder, token);
-      await loadUploads();
     } catch (err: any) {
       setError(err.message || 'Failed to reorder pages');
+      await loadUploads(); // Revert on error
     }
   };
 
@@ -302,7 +318,7 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
           {showViewToggle && (
             <div className="flex rounded-lg overflow-hidden border" style={{ borderColor: 'var(--color-surface-200, #E2E5E9)' }}>
               <button
-                onClick={() => setViewMode('grid')}
+                onClick={() => { setViewMode('grid'); try { localStorage.setItem('fc-doc-view-mode', 'grid'); } catch {} }}
                 className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1 transition-colors ${
                   viewMode === 'grid' ? 'bg-white text-gray-900 shadow-sm' : 'bg-gray-50 text-gray-400 hover:text-gray-600'
                 }`}
@@ -313,7 +329,7 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
                 Grid
               </button>
               <button
-                onClick={() => setViewMode('list')}
+                onClick={() => { setViewMode('list'); try { localStorage.setItem('fc-doc-view-mode', 'list'); } catch {} }}
                 className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1 transition-colors ${
                   viewMode === 'list' ? 'bg-white text-gray-900 shadow-sm' : 'bg-gray-50 text-gray-400 hover:text-gray-600'
                 }`}
@@ -477,91 +493,106 @@ function GridCard({
   const canView = upload.status === 'completed';
   const isProcessing = ['pending', 'processing'].includes(upload.status);
   const isImage = upload.mime_type?.startsWith('image/');
+  const isGroup = item.type === 'group' && item.pages.length > 1;
+  const [lightboxPage, setLightboxPage] = useState<DocumentUpload | null>(null);
 
   const handleClick = () => {
     if (canReview || canView) onSelect();
+    else if (isGroup) setLightboxPage(item.pages[0]); // Open page viewer for groups
+    else if (isImage) window.open(getDocumentUrl(upload), '_blank'); // Open standalone image
   };
 
   return (
-    <div
-      className={`rounded-lg border overflow-hidden bg-white transition-all ${
-        (canReview || canView) ? 'cursor-pointer hover:border-blue-400 hover:shadow-md hover:-translate-y-0.5' : ''
-      }`}
-      style={{ borderColor: 'var(--color-surface-200, #E2E5E9)' }}
-      onClick={handleClick}
-    >
-      {/* Thumbnail */}
-      <div className="aspect-square bg-gray-100 relative flex items-center justify-center overflow-hidden">
-        {isImage ? (
-          <img
-            src={getDocumentUrl(upload)}
-            alt={upload.original_filename}
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
-        ) : (
-          <svg className="w-12 h-12 text-red-300" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M6 2h8l6 6v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/>
-          </svg>
-        )}
+    <>
+      <div
+        className={`rounded-lg border overflow-hidden bg-white transition-all cursor-pointer hover:border-blue-400 hover:shadow-md hover:-translate-y-0.5`}
+        style={{ borderColor: 'var(--color-surface-200, #E2E5E9)' }}
+        onClick={handleClick}
+      >
+        {/* Thumbnail */}
+        <div className="aspect-square bg-gray-100 relative flex items-center justify-center overflow-hidden">
+          {isImage ? (
+            <img
+              src={getDocumentUrl(upload)}
+              alt={upload.original_filename}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <svg className="w-12 h-12 text-red-300" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M6 2h8l6 6v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/>
+            </svg>
+          )}
 
-        {/* Status badge overlay */}
-        {isStored && (
-          <span className="absolute top-1.5 right-1.5 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded bg-white/85 text-gray-500">
-            Stored
-          </span>
-        )}
-        {upload.status === 'pending_review' && upload.pending_items && (
-          <span className="absolute top-1.5 right-1.5 text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50/90 text-amber-700 border border-amber-200">
-            {upload.pending_items} pending
-          </span>
-        )}
-        {(isProcessing || isScanning) && (
-          <span className="absolute top-1.5 right-1.5 text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50/90 text-blue-700 animate-pulse">
-            Processing...
-          </span>
-        )}
+          {/* Status badge overlay */}
+          {isStored && (
+            <span className="absolute top-1.5 right-1.5 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded bg-white/85 text-gray-500">
+              Stored
+            </span>
+          )}
+          {upload.status === 'pending_review' && upload.pending_items && (
+            <span className="absolute top-1.5 right-1.5 text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50/90 text-amber-700 border border-amber-200">
+              {upload.pending_items} pending
+            </span>
+          )}
+          {(isProcessing || isScanning) && (
+            <span className="absolute top-1.5 right-1.5 text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50/90 text-blue-700 animate-pulse">
+              Processing...
+            </span>
+          )}
 
-        {/* Multi-page badge */}
-        {item.type === 'group' && item.pages.length > 1 && (
-          <span className="absolute bottom-1.5 left-1.5 text-[10px] font-bold px-2 py-0.5 rounded bg-black/60 text-white">
-            {item.pages.length} pages
-          </span>
-        )}
-      </div>
-
-      {/* Meta */}
-      <div className="p-2.5">
-        <p className="text-xs font-semibold text-gray-900 truncate">
-          {item.groupName || upload.original_filename}
-        </p>
-        <div className="flex items-center gap-1.5 mt-1">
-          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT_COLORS[upload.status] || 'bg-gray-400'}`} />
-          <span className="text-[11px] text-gray-500">
-            {isScanning ? 'Processing...' : STATUS_LABELS[upload.status] || upload.status}
-          </span>
-          <span className="text-[11px] text-gray-400">
-            {new Date(upload.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-          </span>
+          {/* Multi-page badge */}
+          {isGroup && (
+            <span className="absolute bottom-1.5 left-1.5 text-[10px] font-bold px-2 py-0.5 rounded bg-black/60 text-white">
+              {item.pages.length} pages
+            </span>
+          )}
         </div>
 
-        {/* Action button */}
-        {(isStored || isFailed) && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onScan(); }}
-            disabled={isScanning}
-            className="mt-2 w-full text-xs font-semibold py-1.5 rounded border transition-colors disabled:opacity-50"
-            style={{
-              background: 'var(--color-steel-light, #E8F0F8)',
-              borderColor: 'var(--color-steel, #4A7FB5)',
-              color: 'var(--color-steel-dark, #3A6A9A)',
-            }}
-          >
-            {isScanning ? 'Finding...' : isFailed ? 'Retry' : 'Find Health Records'}
-          </button>
-        )}
+        {/* Meta */}
+        <div className="p-2.5">
+          <p className="text-xs font-semibold text-gray-900 truncate">
+            {item.groupName || upload.original_filename}
+          </p>
+          <div className="flex items-center gap-1.5 mt-1">
+            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT_COLORS[upload.status] || 'bg-gray-400'}`} />
+            <span className="text-[11px] text-gray-500">
+              {isScanning ? 'Processing...' : STATUS_LABELS[upload.status] || upload.status}
+            </span>
+            <span className="text-[11px] text-gray-400">
+              {new Date(upload.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+            </span>
+          </div>
+
+          {/* Action button */}
+          {(isStored || isFailed) && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onScan(); }}
+              disabled={isScanning}
+              className="mt-2 w-full text-xs font-semibold py-1.5 rounded border transition-colors disabled:opacity-50"
+              style={{
+                background: 'var(--color-steel-light, #E8F0F8)',
+                borderColor: 'var(--color-steel, #4A7FB5)',
+                color: 'var(--color-steel-dark, #3A6A9A)',
+              }}
+            >
+              {isScanning ? 'Finding...' : isFailed ? 'Retry' : 'Find Health Records'}
+            </button>
+          )}
+        </div>
       </div>
-    </div>
+
+      {/* Page lightbox for grid cards */}
+      {lightboxPage && (
+        <PageLightbox
+          pages={item.pages}
+          currentPage={lightboxPage}
+          getDocumentUrl={getDocumentUrl}
+          onClose={() => setLightboxPage(null)}
+          onNavigate={setLightboxPage}
+        />
+      )}
+    </>
   );
 }
 
@@ -716,164 +747,154 @@ function ListCard({
         </div>
       </div>
 
-      {/* Expanded page viewer with drag-and-drop reorder */}
+      {/* Expanded page viewer with insertion-style drag-and-drop reorder */}
       {isGroup && pagesExpanded && (
         <div className="px-3 pb-3 border-t" style={{ borderColor: 'var(--color-surface-100, #F1F3F5)' }}>
           {/* Reorder feedback */}
           {reorderFeedback && (
-            <div className="mt-2 mb-1 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded px-2 py-1 inline-block">
+            <div className="mt-2 mb-1 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded px-2 py-1 inline-flex items-center gap-1.5">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
               {reorderFeedback}
             </div>
           )}
 
-          <div className="flex items-start gap-2 overflow-x-auto pt-3 pb-1">
+          <div className="flex items-start overflow-x-auto pt-3 pb-1" style={{ gap: '0px' }}>
             {item.pages.map((page, idx) => (
-              <div
-                key={page.id}
-                draggable
-                onDragStart={(e) => {
-                  setDragIndex(idx);
-                  e.dataTransfer.effectAllowed = 'move';
-                  const img = new Image();
-                  img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-                  e.dataTransfer.setDragImage(img, 0, 0);
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.dataTransfer.dropEffect = 'move';
-                  if (dragIndex !== null && idx !== dragIndex) {
-                    setDragOverIndex(idx);
-                  }
-                }}
-                onDragLeave={() => setDragOverIndex(null)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  if (dragIndex !== null && dragIndex !== idx) {
-                    handleReorder(dragIndex, idx);
-                  }
-                  setDragIndex(null);
-                  setDragOverIndex(null);
-                }}
-                onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
-                className={`flex-shrink-0 rounded-lg border overflow-hidden transition-all cursor-grab active:cursor-grabbing ${
-                  dragOverIndex === idx ? 'border-blue-500 ring-2 ring-blue-300 scale-105' :
-                  dragIndex === idx ? 'opacity-30 scale-95' :
-                  'hover:border-blue-400 hover:shadow-md'
-                }`}
-                style={{ borderColor: dragOverIndex === idx ? undefined : 'var(--color-surface-200, #E2E5E9)', width: '120px' }}
-              >
-                {/* Page thumbnail — click to view full */}
+              <div key={page.id} className="flex items-start flex-shrink-0">
+                {/* Drop zone BEFORE this page (insertion indicator) */}
                 <div
-                  className="w-full bg-gray-100 cursor-pointer relative"
-                  style={{ height: '100px' }}
-                  onClick={() => setLightboxPage(page)}
+                  className={`self-stretch flex items-center transition-all ${
+                    dragOverIndex === idx && dragIndex !== null && dragIndex !== idx ? 'w-3 mx-0.5' : 'w-1'
+                  }`}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    if (dragIndex !== null && idx !== dragIndex && idx !== dragIndex + 1) {
+                      setDragOverIndex(idx);
+                    }
+                  }}
+                  onDragLeave={() => { if (dragOverIndex === idx) setDragOverIndex(null); }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (dragIndex !== null && dragIndex !== idx) {
+                      const targetIdx = dragIndex < idx ? idx - 1 : idx;
+                      handleReorder(dragIndex, targetIdx);
+                    }
+                    setDragIndex(null);
+                    setDragOverIndex(null);
+                  }}
                 >
-                  <img
-                    src={getDocumentUrl(page)}
-                    alt={`Page ${idx + 1}`}
-                    className="w-full h-full object-cover pointer-events-none"
-                    loading="lazy"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                  />
-                  {/* Drag handle indicator */}
-                  <div className="absolute top-1 left-1 bg-black/40 rounded px-1 py-0.5 flex items-center gap-0.5 pointer-events-none">
-                    <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 24 24">
-                      <circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/>
-                      <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
-                      <circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/>
-                    </svg>
+                  <div className={`w-0.5 rounded-full transition-all ${
+                    dragOverIndex === idx && dragIndex !== null && dragIndex !== idx
+                      ? 'bg-blue-500 h-full'
+                      : 'bg-transparent h-0'
+                  }`} />
+                </div>
+
+                {/* Page card */}
+                <div
+                  draggable
+                  onDragStart={(e) => {
+                    setDragIndex(idx);
+                    e.dataTransfer.effectAllowed = 'move';
+                  }}
+                  onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
+                  className={`rounded-lg border overflow-hidden transition-all cursor-grab active:cursor-grabbing ${
+                    dragIndex === idx ? 'opacity-30 scale-95' : 'hover:border-blue-400 hover:shadow-md'
+                  }`}
+                  style={{ borderColor: 'var(--color-surface-200, #E2E5E9)', width: '130px' }}
+                >
+                  {/* Thumbnail — click to view */}
+                  <div
+                    className="w-full bg-gray-100 cursor-pointer relative"
+                    style={{ height: '100px' }}
+                    onClick={() => setLightboxPage(page)}
+                  >
+                    <img
+                      src={getDocumentUrl(page)}
+                      alt={`Page ${idx + 1}`}
+                      className="w-full h-full object-cover pointer-events-none"
+                      loading="lazy"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                    <div className="absolute top-1 left-1 bg-black/50 rounded px-1.5 py-0.5 pointer-events-none">
+                      <span className="text-[10px] font-bold text-white">Page {idx + 1}</span>
+                    </div>
+                    <div className="absolute top-1 right-1 bg-black/40 rounded p-0.5 pointer-events-none">
+                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
+                        <circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/>
+                        <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+                        <circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/>
+                      </svg>
+                    </div>
+                  </div>
+                  {/* Page info */}
+                  <div className="px-2 py-1.5 bg-white">
+                    <p className="text-[10px] text-gray-500 truncate" title={page.original_filename}>
+                      {page.original_filename}
+                    </p>
                   </div>
                 </div>
-                {/* Page label */}
-                <div className="px-2 py-1.5 text-center bg-white">
-                  <span className="text-[11px] font-semibold text-gray-700">Page {idx + 1}</span>
-                </div>
+
+                {/* Drop zone AFTER last page */}
+                {idx === item.pages.length - 1 && (
+                  <div
+                    className={`self-stretch flex items-center transition-all ${
+                      dragOverIndex === item.pages.length && dragIndex !== null ? 'w-3 mx-0.5' : 'w-1'
+                    }`}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'move';
+                      if (dragIndex !== null && dragIndex !== item.pages.length - 1) {
+                        setDragOverIndex(item.pages.length);
+                      }
+                    }}
+                    onDragLeave={() => { if (dragOverIndex === item.pages.length) setDragOverIndex(null); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (dragIndex !== null) {
+                        handleReorder(dragIndex, item.pages.length - 1);
+                      }
+                      setDragIndex(null);
+                      setDragOverIndex(null);
+                    }}
+                  >
+                    <div className={`w-0.5 rounded-full transition-all ${
+                      dragOverIndex === item.pages.length && dragIndex !== null
+                        ? 'bg-blue-500 h-full'
+                        : 'bg-transparent h-0'
+                    }`} />
+                  </div>
+                )}
               </div>
             ))}
             {/* Add page button */}
             {isStored && (
-              <button
-                onClick={onAddPage}
-                className="flex-shrink-0 rounded-lg border-2 border-dashed flex flex-col items-center justify-center text-gray-300 hover:border-blue-400 hover:text-blue-500 transition-colors"
-                style={{ borderColor: 'var(--color-surface-300, #CED4DA)', width: '120px', height: '124px' }}
-              >
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M12 4v16m8-8H4"/></svg>
-                <span className="text-[11px] font-medium mt-1">Add Page</span>
-              </button>
+              <div className="flex-shrink-0 ml-1">
+                <button
+                  onClick={onAddPage}
+                  className="rounded-lg border-2 border-dashed flex flex-col items-center justify-center text-gray-300 hover:border-blue-400 hover:text-blue-500 transition-colors"
+                  style={{ borderColor: 'var(--color-surface-300, #CED4DA)', width: '130px', height: '130px' }}
+                >
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M12 4v16m8-8H4"/></svg>
+                  <span className="text-[11px] font-medium mt-1">Add Page</span>
+                </button>
+              </div>
             )}
           </div>
-          <p className="text-[10px] text-gray-400 mt-1.5">Drag to reorder &middot; Click to view full size</p>
+          <p className="text-[10px] text-gray-400 mt-1.5">Drag pages to reorder &middot; Click to view full size</p>
         </div>
       )}
 
       {/* Page lightbox */}
       {lightboxPage && (
-        <div
-          className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4"
-          onClick={() => setLightboxPage(null)}
-        >
-          <div
-            className="relative bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Close button */}
-            <button
-              onClick={() => setLightboxPage(null)}
-              className="absolute top-3 right-3 z-10 bg-white/90 rounded-full p-1.5 text-gray-600 hover:text-gray-900 shadow-sm"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-
-            {/* Navigation arrows */}
-            {item.pages.length > 1 && (() => {
-              const currentIdx = item.pages.findIndex(p => p.id === lightboxPage.id);
-              return (
-                <>
-                  {currentIdx > 0 && (
-                    <button
-                      onClick={() => setLightboxPage(item.pages[currentIdx - 1])}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-white/90 rounded-full p-2 text-gray-600 hover:text-gray-900 shadow-md"
-                    >
-                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-                    </button>
-                  )}
-                  {currentIdx < item.pages.length - 1 && (
-                    <button
-                      onClick={() => setLightboxPage(item.pages[currentIdx + 1])}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-white/90 rounded-full p-2 text-gray-600 hover:text-gray-900 shadow-md"
-                    >
-                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                    </button>
-                  )}
-                </>
-              );
-            })()}
-
-            {/* Image */}
-            <div className="flex items-center justify-center bg-gray-900 max-h-[75vh]">
-              <img
-                src={getDocumentUrl(lightboxPage)}
-                alt={lightboxPage.original_filename}
-                className="max-w-full max-h-[75vh] object-contain"
-              />
-            </div>
-
-            {/* Footer */}
-            <div className="p-3 border-t flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700">
-                Page {item.pages.findIndex(p => p.id === lightboxPage.id) + 1} of {item.pages.length}
-              </span>
-              <a
-                href={getDocumentUrl(lightboxPage)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-blue-600 hover:underline"
-              >
-                Open full size
-              </a>
-            </div>
-          </div>
-        </div>
+        <PageLightbox
+          pages={item.pages}
+          currentPage={lightboxPage}
+          getDocumentUrl={getDocumentUrl}
+          onClose={() => setLightboxPage(null)}
+          onNavigate={setLightboxPage}
+        />
       )}
 
       {/* Inline metadata for stored standalone images */}
@@ -893,6 +914,72 @@ function ListCard({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// Shared page lightbox with navigation
+function PageLightbox({
+  pages,
+  currentPage,
+  getDocumentUrl,
+  onClose,
+  onNavigate,
+}: {
+  pages: DocumentUpload[];
+  currentPage: DocumentUpload;
+  getDocumentUrl: (u: DocumentUpload) => string;
+  onClose: () => void;
+  onNavigate: (page: DocumentUpload) => void;
+}) {
+  const currentIdx = pages.findIndex(p => p.id === currentPage.id);
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="relative bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button onClick={onClose} className="absolute top-3 right-3 z-10 bg-white/90 rounded-full p-1.5 text-gray-600 hover:text-gray-900 shadow-sm">
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+
+        {pages.length > 1 && (
+          <>
+            {currentIdx > 0 && (
+              <button onClick={() => onNavigate(pages[currentIdx - 1])} className="absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-white/90 rounded-full p-2 text-gray-600 hover:text-gray-900 shadow-md">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              </button>
+            )}
+            {currentIdx < pages.length - 1 && (
+              <button onClick={() => onNavigate(pages[currentIdx + 1])} className="absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-white/90 rounded-full p-2 text-gray-600 hover:text-gray-900 shadow-md">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              </button>
+            )}
+          </>
+        )}
+
+        <div className="flex items-center justify-center bg-gray-900 max-h-[75vh]">
+          <img src={getDocumentUrl(currentPage)} alt={currentPage.original_filename} className="max-w-full max-h-[75vh] object-contain" />
+        </div>
+
+        <div className="p-3 border-t flex items-center justify-between">
+          <div>
+            <span className="text-sm font-medium text-gray-700">
+              {pages.length > 1 ? `Page ${currentIdx + 1} of ${pages.length}` : currentPage.original_filename}
+            </span>
+            {pages.length > 1 && (
+              <span className="text-xs text-gray-400 ml-2">{currentPage.original_filename}</span>
+            )}
+          </div>
+          <a href={getDocumentUrl(currentPage)} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
+            Open full size
+          </a>
+        </div>
+      </div>
     </div>
   );
 }
