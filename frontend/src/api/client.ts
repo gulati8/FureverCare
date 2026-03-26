@@ -700,8 +700,7 @@ export const photoImportApi = {
 };
 
 // Consolidated Document Import Types
-export type DocumentUploadStatus = 'pending' | 'classifying' | 'processing' | 'pending_review' | 'completed' | 'failed';
-export type DetectedDocumentType = 'vaccination_record' | 'visit_summary' | 'lab_results' | 'prescription' | 'medication_label' | 'pet_id_tag' | 'other';
+export type DocumentUploadStatus = 'uploaded' | 'pending' | 'processing' | 'pending_review' | 'completed' | 'failed';
 
 export interface DocumentUpload {
   id: number;
@@ -713,10 +712,8 @@ export interface DocumentUpload {
   file_size: number;
   mime_type: string;
   file_type: 'pdf' | 'image';
+  media_type: 'pdf' | 'image';
   status: DocumentUploadStatus;
-  detected_document_type: DetectedDocumentType | null;
-  classification_confidence: number | null;
-  classification_explanation: string | null;
   processing_started_at: string | null;
   processing_completed_at: string | null;
   error_message: string | null;
@@ -724,22 +721,13 @@ export interface DocumentUpload {
   user_description: string | null;
   date_taken: string | null;
   body_area: string | null;
+  document_group_id: string | null;
+  page_number: number;
+  group_name: string | null;
   created_at: string;
   pending_items?: number;
   approved_items?: number;
   rejected_items?: number;
-}
-
-export interface DocumentClassification {
-  document_type: DetectedDocumentType;
-  confidence: number;
-  explanation: string;
-  summary: {
-    medications_count: number;
-    conditions_count: number;
-    vaccinations_count: number;
-    allergies_count: number;
-  };
 }
 
 export interface DocumentExtraction {
@@ -776,10 +764,24 @@ export interface DocumentExtractionWithItems {
 
 // Consolidated Document Import API
 export const documentsApi = {
-  // Upload a document (PDF or image)
-  upload: async (petId: number, file: File, token: string): Promise<any> => {
+  // Upload a document (PDF or image) - storage only, no AI processing
+  upload: async (
+    petId: number,
+    file: File,
+    token: string,
+    groupOptions?: { documentGroupId?: string; pageNumber?: number; groupName?: string }
+  ): Promise<any> => {
     const formData = new FormData();
     formData.append('document', file);
+    if (groupOptions?.documentGroupId) {
+      formData.append('documentGroupId', groupOptions.documentGroupId);
+    }
+    if (groupOptions?.pageNumber) {
+      formData.append('pageNumber', String(groupOptions.pageNumber));
+    }
+    if (groupOptions?.groupName) {
+      formData.append('groupName', groupOptions.groupName);
+    }
 
     const response = await fetch(`${API_URL}/api/pets/${petId}/documents/upload`, {
       method: 'POST',
@@ -841,11 +843,21 @@ export const documentsApi = {
   processUpload: (petId: number, uploadId: number, token: string) =>
     api.post<any>(`/api/pets/${petId}/documents/uploads/${uploadId}/process`, {}, token),
 
+  // Batch process multiple documents
+  batchProcess: (petId: number, uploadIds: number[], token: string) =>
+    api.post<{ results: Array<{ uploadId: number; success: boolean; extractedItemCount?: number; error?: string }> }>(
+      `/api/pets/${petId}/documents/batch-process`, { uploadIds }, token
+    ),
+
+  // Reorder pages in a multi-page document group
+  reorderGroup: (petId: number, groupId: string, pageOrder: number[], token: string) =>
+    api.patch<DocumentUpload[]>(`/api/pets/${petId}/documents/groups/${groupId}/reorder`, { pageOrder }, token),
+
   // Save image metadata (tag, description, date, body area)
   saveImageMetadata: (
     petId: number,
     uploadId: number,
-    data: { userTag: string; userDescription?: string; dateTaken?: string; bodyArea?: string },
+    data: { userTag?: string; userDescription?: string; dateTaken?: string; bodyArea?: string },
     token: string
   ) =>
     api.patch<DocumentUpload>(`/api/pets/${petId}/documents/uploads/${uploadId}/image-metadata`, data, token),

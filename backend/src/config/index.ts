@@ -76,7 +76,7 @@ export const config = {
   },
 
   documentUpload: {
-    maxSizeMB: parseInt(process.env.DOCUMENT_MAX_SIZE_MB || '20', 10),
+    maxSizeMB: parseInt(process.env.DOCUMENT_MAX_SIZE_MB || '50', 10),
     uploadDir: process.env.DOCUMENT_UPLOAD_DIR || 'uploads/documents',
     allowedMimeTypes: [
       'application/pdf',
