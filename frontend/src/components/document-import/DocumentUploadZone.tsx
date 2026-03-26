@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { documentsApi } from '../../api/client';
 
@@ -44,7 +44,7 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
   // Multi-file grouping dialog state
   const [pendingFiles, setPendingFiles] = useState<File[] | null>(null);
   const [groupMode, setGroupMode] = useState<'one' | 'separate'>('one');
-  const [groupName, setGroupName] = useState('');
+  const groupNameRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -102,7 +102,7 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
       setPendingFiles(imageFiles);
       setGroupMode('one');
       const firstName = imageFiles[0].name.replace(/\.[^/.]+$/, '');
-      setGroupName(firstName);
+      setTimeout(() => { if (groupNameRef.current) groupNameRef.current.value = firstName; }, 0);
     } else {
       // Mix of images and PDFs — upload PDFs separately, show grouping dialog for images
       uploadFiles(pdfFiles);
@@ -112,7 +112,7 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
         setPendingFiles(imageFiles);
         setGroupMode('one');
         const firstName = imageFiles[0].name.replace(/\.[^/.]+$/, '');
-        setGroupName(firstName);
+        setTimeout(() => { if (groupNameRef.current) groupNameRef.current.value = firstName; }, 0);
       }
     }
   };
@@ -120,7 +120,8 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
   const handleGroupConfirm = () => {
     if (!pendingFiles) return;
     if (groupMode === 'one') {
-      uploadFiles(pendingFiles, { documentGroupId: generateGroupId(), groupName: groupName.trim() || pendingFiles[0].name });
+      const name = groupNameRef.current?.value?.trim() || pendingFiles[0].name;
+      uploadFiles(pendingFiles, { documentGroupId: generateGroupId(), groupName: name });
     } else {
       uploadFiles(pendingFiles);
     }
@@ -129,7 +130,6 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
 
   const handleGroupCancel = () => {
     setPendingFiles(null);
-    setGroupName('');
   };
 
   const uploadFiles = async (files: File[], groupOptions?: { documentGroupId: string; groupName: string }) => {
@@ -163,19 +163,6 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
     }
   };
 
-  // Memoize preview URLs so they don't get recreated on every keystroke
-  const previewUrls = useMemo(() => {
-    if (!pendingFiles) return [];
-    return pendingFiles.slice(0, 8).map(file =>
-      file.type.startsWith('image/') ? URL.createObjectURL(file) : null
-    );
-  }, [pendingFiles]);
-
-  // Clean up blob URLs when pendingFiles changes
-  useEffect(() => {
-    return () => { previewUrls.forEach(url => { if (url) URL.revokeObjectURL(url); }); };
-  }, [previewUrls]);
-
   const isDisabled = disabled || isUploading;
 
   return (
@@ -191,9 +178,9 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
           <div className="flex flex-wrap gap-2 mb-4">
             {pendingFiles.slice(0, 8).map((file, i) => (
               <div key={i} className="w-12 h-12 rounded bg-gray-100 flex items-center justify-center text-xs text-gray-500 overflow-hidden">
-                {previewUrls[i] ? (
+                {file.type.startsWith('image/') ? (
                   <img
-                    src={previewUrls[i]!}
+                    src={URL.createObjectURL(file)}
                     alt={file.name}
                     className="w-full h-full object-cover"
                   />
@@ -255,8 +242,7 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
               <label className="block text-sm text-gray-700 mb-1">Document name</label>
               <input
                 type="text"
-                value={groupName}
-                onChange={(e) => setGroupName(e.target.value)}
+                ref={groupNameRef}
                 placeholder="e.g., Wednesday ER Visit Notes"
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
                 maxLength={255}
