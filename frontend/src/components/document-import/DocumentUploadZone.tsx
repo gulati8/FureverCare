@@ -86,16 +86,34 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
 
   const processSelectedFiles = (files: File[]) => {
     setError(null);
-    if (files.length === 1) {
-      // Single file — upload directly, no dialog
-      uploadFiles(files);
-    } else {
-      // Multiple files — show grouping dialog
-      setPendingFiles(files);
+
+    // Split PDFs from images — PDFs are always standalone
+    const imageFiles = files.filter(f => !f.type.includes('pdf') && !f.name.toLowerCase().endsWith('.pdf'));
+    const pdfFiles = files.filter(f => f.type.includes('pdf') || f.name.toLowerCase().endsWith('.pdf'));
+
+    if (imageFiles.length === 0 && pdfFiles.length > 0) {
+      // All PDFs — upload each as separate document, no grouping dialog
+      uploadFiles(pdfFiles);
+    } else if (imageFiles.length === 1 && pdfFiles.length === 0) {
+      // Single image — upload directly
+      uploadFiles(imageFiles);
+    } else if (imageFiles.length > 1 && pdfFiles.length === 0) {
+      // Multiple images only — show grouping dialog
+      setPendingFiles(imageFiles);
       setGroupMode('one');
-      // Default name from first file, minus extension
-      const firstName = files[0].name.replace(/\.[^/.]+$/, '');
+      const firstName = imageFiles[0].name.replace(/\.[^/.]+$/, '');
       setGroupName(firstName);
+    } else {
+      // Mix of images and PDFs — upload PDFs separately, show grouping dialog for images
+      uploadFiles(pdfFiles);
+      if (imageFiles.length === 1) {
+        uploadFiles(imageFiles);
+      } else if (imageFiles.length > 1) {
+        setPendingFiles(imageFiles);
+        setGroupMode('one');
+        const firstName = imageFiles[0].name.replace(/\.[^/.]+$/, '');
+        setGroupName(firstName);
+      }
     }
   };
 
