@@ -170,6 +170,15 @@ export async function getDocumentGroup(groupId: string): Promise<DocumentUpload[
   );
 }
 
+export async function reorderDocumentGroup(groupId: string, uploadIdsInOrder: number[]): Promise<void> {
+  for (let i = 0; i < uploadIdsInOrder.length; i++) {
+    await query(
+      'UPDATE document_uploads SET page_number = $1 WHERE id = $2 AND document_group_id = $3',
+      [i + 1, uploadIdsInOrder[i], groupId]
+    );
+  }
+}
+
 export async function updateDocumentGroupStatus(
   groupId: string,
   status: DocumentUploadStatus,

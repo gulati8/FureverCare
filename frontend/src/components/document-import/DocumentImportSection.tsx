@@ -234,6 +234,16 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
     input.click();
   };
 
+  const handleReorderPages = async (groupId: string, pageOrder: number[]) => {
+    if (!token) return;
+    try {
+      await documentsApi.reorderGroup(petId, groupId, pageOrder, token);
+      await loadUploads();
+    } catch (err: any) {
+      setError(err.message || 'Failed to reorder pages');
+    }
+  };
+
   const getDocumentUrl = (u: DocumentUpload) =>
     `${API_URL}/api/pets/${u.pet_id}/documents/uploads/${u.id}/file`;
 
@@ -409,6 +419,7 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
               onScan={() => handleScanDocument(item)}
               onSelect={() => handleUploadSelect(item.primaryUpload)}
               onAddPage={() => handleAddPage(item)}
+              onReorder={(pageOrder) => item.groupId ? handleReorderPages(item.groupId, pageOrder) : undefined}
             />
           ))}
         </div>
@@ -562,6 +573,7 @@ function ListCard({
   onScan,
   onSelect,
   onAddPage,
+  onReorder,
 }: {
   item: DisplayItem;
   getDocumentUrl: (u: DocumentUpload) => string;
@@ -569,12 +581,15 @@ function ListCard({
   onScan: () => void;
   onSelect: () => void;
   onAddPage: () => void;
+  onReorder: (pageOrder: number[]) => void;
 }) {
   const upload = item.primaryUpload;
   const isStored = upload.status === 'uploaded';
   const isFailed = upload.status === 'failed';
   const canReview = upload.status === 'pending_review';
   const canView = upload.status === 'completed';
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const isProcessing = ['pending', 'processing'].includes(upload.status);
   const isImage = upload.mime_type?.startsWith('image/');
   const [metadataExpanded, setMetadataExpanded] = useState(false);
@@ -671,28 +686,58 @@ function ListCard({
         </div>
       </div>
 
-      {/* Multi-page thumbnail strip */}
+      {/* Multi-page thumbnail strip with drag-and-drop reorder */}
       {item.type === 'group' && item.pages.length > 1 && (
         <div className="px-3 pb-2">
           <div className="flex items-center gap-1 overflow-x-auto pb-1">
-            {item.pages.map((page) => (
-              <a
+            {item.pages.map((page, idx) => (
+              <div
                 key={page.id}
-                href={getDocumentUrl(page)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-shrink-0 w-7 h-7 rounded border overflow-hidden hover:border-blue-400 transition-colors relative"
-                style={{ borderColor: 'var(--color-surface-200, #E2E5E9)' }}
-                title={`Page ${page.page_number}`}
+                draggable
+                onDragStart={(e) => {
+                  setDragIndex(idx);
+                  e.dataTransfer.effectAllowed = 'move';
+                  // Use a tiny transparent image as drag ghost
+                  const img = new Image();
+                  img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+                  e.dataTransfer.setDragImage(img, 0, 0);
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                  if (dragIndex !== null && idx !== dragIndex) {
+                    setDragOverIndex(idx);
+                  }
+                }}
+                onDragLeave={() => setDragOverIndex(null)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (dragIndex !== null && dragIndex !== idx) {
+                    const newPages = [...item.pages];
+                    const [moved] = newPages.splice(dragIndex, 1);
+                    newPages.splice(idx, 0, moved);
+                    onReorder(newPages.map(p => p.id));
+                  }
+                  setDragIndex(null);
+                  setDragOverIndex(null);
+                }}
+                onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
+                className={`flex-shrink-0 w-8 h-8 rounded border overflow-hidden transition-all relative cursor-grab active:cursor-grabbing ${
+                  dragOverIndex === idx ? 'border-blue-500 ring-2 ring-blue-200 scale-110' :
+                  dragIndex === idx ? 'opacity-40 scale-95' :
+                  'hover:border-blue-400'
+                }`}
+                style={{ borderColor: dragOverIndex === idx ? undefined : 'var(--color-surface-200, #E2E5E9)' }}
+                title={`Page ${page.page_number} — drag to reorder`}
               >
-                <img src={getDocumentUrl(page)} alt={`Page ${page.page_number}`} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                <span className="absolute bottom-0 right-0 text-[8px] bg-black/50 text-white px-0.5 rounded-tl">{page.page_number}</span>
-              </a>
+                <img src={getDocumentUrl(page)} alt={`Page ${page.page_number}`} className="w-full h-full object-cover pointer-events-none" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                <span className="absolute bottom-0 right-0 text-[8px] bg-black/50 text-white px-0.5 rounded-tl pointer-events-none">{idx + 1}</span>
+              </div>
             ))}
             {isStored && (
               <button
                 onClick={onAddPage}
-                className="flex-shrink-0 w-7 h-7 rounded border-2 border-dashed flex items-center justify-center text-gray-300 hover:border-blue-400 hover:text-blue-500 transition-colors"
+                className="flex-shrink-0 w-8 h-8 rounded border-2 border-dashed flex items-center justify-center text-gray-300 hover:border-blue-400 hover:text-blue-500 transition-colors"
                 style={{ borderColor: 'var(--color-surface-300, #CED4DA)' }}
                 title="Add page"
               >
@@ -700,6 +745,9 @@ function ListCard({
               </button>
             )}
           </div>
+          {item.pages.length > 1 && (
+            <p className="text-[10px] text-gray-400 mt-1">Drag to reorder pages</p>
+          )}
         </div>
       )}
 

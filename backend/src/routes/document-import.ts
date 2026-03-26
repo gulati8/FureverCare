@@ -12,6 +12,7 @@ import {
   getDocumentUploadById,
   getDocumentUploadsByPetId,
   getDocumentGroup,
+  reorderDocumentGroup,
   deleteDocumentUpload,
   updateDocumentUploadFilename,
   updateDocumentUploadStatus,
@@ -903,6 +904,52 @@ router.patch('/:petId/documents/uploads/:id/image-metadata', authenticate, async
   } catch (error: any) {
     console.error('Error updating image metadata:', error);
     res.status(500).json({ error: error.message || 'Failed to update image metadata' });
+  }
+});
+
+// PATCH /api/pets/:petId/documents/groups/:groupId/reorder - Reorder pages in a multi-page document
+router.patch('/:petId/documents/groups/:groupId/reorder', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const petId = parseInt(req.params.petId);
+    const groupId = req.params.groupId;
+    const { pageOrder } = req.body;
+
+    if (!await verifyPetEditAccess(petId, req.userId!, res)) {
+      return;
+    }
+
+    if (!Array.isArray(pageOrder) || pageOrder.length === 0) {
+      res.status(400).json({ error: 'pageOrder array of upload IDs is required' });
+      return;
+    }
+
+    // Verify all uploads belong to this group and pet
+    const groupUploads = await getDocumentGroup(groupId);
+    if (groupUploads.length === 0) {
+      res.status(404).json({ error: 'Document group not found' });
+      return;
+    }
+
+    if (groupUploads[0].pet_id !== petId) {
+      res.status(403).json({ error: 'Not authorized' });
+      return;
+    }
+
+    const groupUploadIds = new Set(groupUploads.map(u => u.id));
+    for (const id of pageOrder) {
+      if (!groupUploadIds.has(id)) {
+        res.status(400).json({ error: `Upload ${id} does not belong to this group` });
+        return;
+      }
+    }
+
+    await reorderDocumentGroup(groupId, pageOrder);
+
+    const updated = await getDocumentGroup(groupId);
+    res.json(updated);
+  } catch (error: any) {
+    console.error('Error reordering document group:', error);
+    res.status(500).json({ error: error.message || 'Reorder failed' });
   }
 });
 

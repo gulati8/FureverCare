@@ -849,6 +849,10 @@ export const documentsApi = {
       `/api/pets/${petId}/documents/batch-process`, { uploadIds }, token
     ),
 
+  // Reorder pages in a multi-page document group
+  reorderGroup: (petId: number, groupId: string, pageOrder: number[], token: string) =>
+    api.patch<DocumentUpload[]>(`/api/pets/${petId}/documents/groups/${groupId}/reorder`, { pageOrder }, token),
+
   // Save image metadata (tag, description, date, body area)
   saveImageMetadata: (
     petId: number,
