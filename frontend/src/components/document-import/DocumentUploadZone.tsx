@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { documentsApi } from '../../api/client';
 
@@ -163,6 +163,19 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
     }
   };
 
+  // Memoize preview URLs so they don't get recreated on every keystroke
+  const previewUrls = useMemo(() => {
+    if (!pendingFiles) return [];
+    return pendingFiles.slice(0, 8).map(file =>
+      file.type.startsWith('image/') ? URL.createObjectURL(file) : null
+    );
+  }, [pendingFiles]);
+
+  // Clean up blob URLs when pendingFiles changes
+  useEffect(() => {
+    return () => { previewUrls.forEach(url => { if (url) URL.revokeObjectURL(url); }); };
+  }, [previewUrls]);
+
   const isDisabled = disabled || isUploading;
 
   return (
@@ -178,9 +191,9 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
           <div className="flex flex-wrap gap-2 mb-4">
             {pendingFiles.slice(0, 8).map((file, i) => (
               <div key={i} className="w-12 h-12 rounded bg-gray-100 flex items-center justify-center text-xs text-gray-500 overflow-hidden">
-                {file.type.startsWith('image/') ? (
+                {previewUrls[i] ? (
                   <img
-                    src={URL.createObjectURL(file)}
+                    src={previewUrls[i]!}
                     alt={file.name}
                     className="w-full h-full object-cover"
                   />
