@@ -293,7 +293,7 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
       {readyToScan.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-2">
-            <h4 className="text-sm font-medium text-gray-900">Ready to Scan ({readyToScan.length})</h4>
+            <span className="text-sm font-semibold text-gray-900">Ready to Scan ({readyToScan.length})</span>
             <button
               onClick={handleBatchScan}
               disabled={batchScanning}
@@ -324,7 +324,7 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
       {/* Needs Review */}
       {needsReview.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium text-gray-900 mb-2">Needs Review ({needsReview.length})</h4>
+          <span className="text-sm font-semibold text-gray-900 mb-2 block">Needs Review ({needsReview.length})</span>
           <div className="space-y-2">
             {needsReview.map((item) => (
               <DocumentCard
@@ -342,7 +342,7 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
         <div>
           <button
             onClick={() => setCompletedExpanded(!completedExpanded)}
-            className="flex items-center gap-2 text-sm font-medium text-gray-900 hover:text-gray-700 mb-2"
+            className="flex items-center gap-2 text-sm font-semibold text-gray-900 hover:text-gray-700 mb-2"
           >
             <svg
               className={`h-4 w-4 transition-transform ${completedExpanded ? 'rotate-90' : ''}`}
