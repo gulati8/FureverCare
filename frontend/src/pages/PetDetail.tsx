@@ -89,7 +89,7 @@ export default function PetDetail() {
       setAlerts(alertsData);
       setImageUploads(uploadsData.filter((u: any) => {
         const isImage = u.file_type === 'image' || u.media_type === 'image' || (u.mime_type && u.mime_type.startsWith('image/'));
-        return isImage && u.status === 'completed';
+        return isImage && (u.status === 'completed' || u.status === 'uploaded');
       }));
     } catch (err) {
       console.error('Failed to load pet:', err);

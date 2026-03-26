@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { documentsApi } from '../../api/client';
 
@@ -25,13 +25,27 @@ const ACCEPTED_EXTENSIONS = [
   '.heic', '.heif', '.tiff', '.tif', '.bmp',
 ];
 
+function isValidFile(file: File): boolean {
+  const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+  return ACCEPTED_TYPES.includes(file.type) || ACCEPTED_EXTENSIONS.includes(ext);
+}
+
+function generateGroupId(): string {
+  return crypto.randomUUID();
+}
+
 export function DocumentUploadZone({ petId, onUploadComplete, disabled }: DocumentUploadZoneProps) {
   const { token } = useAuth();
   const [isDragOver, setIsDragOver] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  // Multi-file grouping dialog state
+  const [pendingFiles, setPendingFiles] = useState<File[] | null>(null);
+  const [groupMode, setGroupMode] = useState<'one' | 'separate'>('one');
+  const [groupName, setGroupName] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -48,70 +62,84 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
   const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
-
     if (disabled) return;
 
-    const files = Array.from(e.dataTransfer.files);
-    const validFile = files.find(f => {
-      const ext = '.' + f.name.split('.').pop()?.toLowerCase();
-      return ACCEPTED_TYPES.includes(f.type) || ACCEPTED_EXTENSIONS.includes(ext);
-    });
-
-    if (!validFile) {
-      setError('Please drop a PDF or image file (JPEG, PNG, WebP, GIF, HEIC, TIFF, or BMP)');
+    const files = Array.from(e.dataTransfer.files).filter(isValidFile);
+    if (files.length === 0) {
+      setError('Please drop PDF or image files (JPEG, PNG, WebP, GIF, HEIC, TIFF, or BMP)');
       return;
     }
 
-    await uploadFile(validFile);
+    processSelectedFiles(files);
   }, [token, petId, disabled]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const ext = '.' + file.name.split('.').pop()?.toLowerCase();
-    if (!ACCEPTED_TYPES.includes(file.type) && !ACCEPTED_EXTENSIONS.includes(ext)) {
-      setError('Please select a PDF or image file (JPEG, PNG, WebP, GIF, HEIC, TIFF, or BMP)');
+    const files = Array.from(e.target.files || []).filter(isValidFile);
+    if (files.length === 0) {
+      setError('Please select PDF or image files');
       return;
     }
 
-    await uploadFile(file);
+    processSelectedFiles(files);
     e.target.value = '';
   };
 
-  const uploadFile = async (file: File) => {
-    if (!token) return;
-
-    // Show preview for images (skip HEIC/TIFF/BMP which browsers can't display)
-    const nonPreviewable = ['image/heic', 'image/heif', 'image/tiff', 'image/bmp', 'image/x-ms-bmp'];
-    if (file.type.startsWith('image/') && !nonPreviewable.includes(file.type)) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setPreviewUrl(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+  const processSelectedFiles = (files: File[]) => {
+    setError(null);
+    if (files.length === 1) {
+      // Single file — upload directly, no dialog
+      uploadFiles(files);
+    } else {
+      // Multiple files — show grouping dialog
+      setPendingFiles(files);
+      setGroupMode('one');
+      // Default name from first file, minus extension
+      const firstName = files[0].name.replace(/\.[^/.]+$/, '');
+      setGroupName(firstName);
     }
+  };
+
+  const handleGroupConfirm = () => {
+    if (!pendingFiles) return;
+    if (groupMode === 'one') {
+      uploadFiles(pendingFiles, { documentGroupId: generateGroupId(), groupName: groupName.trim() || pendingFiles[0].name });
+    } else {
+      uploadFiles(pendingFiles);
+    }
+    setPendingFiles(null);
+  };
+
+  const handleGroupCancel = () => {
+    setPendingFiles(null);
+    setGroupName('');
+  };
+
+  const uploadFiles = async (files: File[], groupOptions?: { documentGroupId: string; groupName: string }) => {
+    if (!token) return;
 
     setIsUploading(true);
     setError(null);
     setUploadProgress(0);
 
-    // Simulate progress (since fetch doesn't provide progress)
-    const progressInterval = setInterval(() => {
-      setUploadProgress(prev => Math.min(prev + 10, 90));
-    }, 200);
+    const total = files.length;
+    let completed = 0;
 
     try {
-      const result = await documentsApi.upload(petId, file, token);
-      clearInterval(progressInterval);
-      setUploadProgress(100);
-      setPreviewUrl(null);
-      onUploadComplete(result);
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const opts = groupOptions
+          ? { documentGroupId: groupOptions.documentGroupId, pageNumber: i + 1, groupName: groupOptions.groupName }
+          : undefined;
+
+        await documentsApi.upload(petId, file, token, opts);
+        completed++;
+        setUploadProgress(Math.round((completed / total) * 100));
+      }
+
+      onUploadComplete({ count: files.length, grouped: !!groupOptions });
     } catch (err: any) {
       setError(err.message || 'Upload failed');
-      setPreviewUrl(null);
     } finally {
-      clearInterval(progressInterval);
       setIsUploading(false);
       setUploadProgress(0);
     }
@@ -121,70 +149,165 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
 
   return (
     <div className="space-y-4">
-      {/* Upload zone */}
-      <div
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        className={`
-          border-2 border-dashed rounded-lg p-8 text-center transition-colors duration-200
-          ${isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
-          ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-        `}
-      >
-        {isUploading ? (
-          <div className="flex flex-col items-center">
-            {previewUrl && (
-              <img
-                src={previewUrl}
-                alt="Preview"
-                className="h-24 w-24 object-cover rounded-lg mb-3 opacity-50"
-              />
+      {/* Multi-file grouping dialog */}
+      {pendingFiles && (
+        <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+          <p className="font-medium text-gray-900 mb-3">
+            {pendingFiles.length} files selected
+          </p>
+
+          {/* File preview thumbnails */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {pendingFiles.slice(0, 8).map((file, i) => (
+              <div key={i} className="w-12 h-12 rounded bg-gray-100 flex items-center justify-center text-xs text-gray-500 overflow-hidden">
+                {file.type.startsWith('image/') ? (
+                  <img
+                    src={URL.createObjectURL(file)}
+                    alt={file.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <svg className="w-6 h-6 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M4 18h12a2 2 0 002-2V6l-4-4H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                )}
+              </div>
+            ))}
+            {pendingFiles.length > 8 && (
+              <div className="w-12 h-12 rounded bg-gray-100 flex items-center justify-center text-xs text-gray-500">
+                +{pendingFiles.length - 8}
+              </div>
             )}
-            <svg className="animate-spin h-10 w-10 text-blue-500 mb-3" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
-            <p className="text-gray-600">Uploading...</p>
-            <div className="w-48 h-2 bg-gray-200 rounded-full mt-2">
-              <div
-                className="h-full bg-blue-500 rounded-full transition-all duration-200"
-                style={{ width: `${uploadProgress}%` }}
+          </div>
+
+          {/* Radio options */}
+          <div className="space-y-3 mb-4">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="radio"
+                name="groupMode"
+                checked={groupMode === 'one'}
+                onChange={() => setGroupMode('one')}
+                className="mt-0.5"
+              />
+              <div>
+                <p className="text-sm font-medium text-gray-900">
+                  Upload as one document ({pendingFiles.length} pages)
+                </p>
+                <p className="text-xs text-gray-500">
+                  Combine into a single multi-page document that gets scanned together.
+                </p>
+              </div>
+            </label>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="radio"
+                name="groupMode"
+                checked={groupMode === 'separate'}
+                onChange={() => setGroupMode('separate')}
+                className="mt-0.5"
+              />
+              <div>
+                <p className="text-sm font-medium text-gray-900">
+                  Upload as {pendingFiles.length} separate documents
+                </p>
+                <p className="text-xs text-gray-500">
+                  Each file is its own document.
+                </p>
+              </div>
+            </label>
+          </div>
+
+          {/* Group name input (only when grouping) */}
+          {groupMode === 'one' && (
+            <div className="mb-4">
+              <label className="block text-sm text-gray-700 mb-1">Document name</label>
+              <input
+                type="text"
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
+                placeholder="e.g., Wednesday ER Visit Notes"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+                maxLength={255}
               />
             </div>
+          )}
+
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={handleGroupCancel}
+              className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleGroupConfirm}
+              className="px-4 py-2 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-700"
+            >
+              Upload
+            </button>
           </div>
-        ) : (
-          <>
-            <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-              <path
-                d="M28 8H12a4 4 0 00-4 4v20m0 0v4a4 4 0 004 4h24a4 4 0 004-4V24M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4-4m4-12h8m-4-4v8"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <p className="mt-2 text-sm text-gray-600">
-              <label className={`text-blue-600 hover:text-blue-500 ${isDisabled ? '' : 'cursor-pointer'}`}>
-                <span>Upload a document</span>
-                <input
-                  type="file"
-                  accept=".pdf,image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,image/tiff,image/bmp,.heic,.heif,.tiff,.tif,.bmp"
-                  onChange={handleFileSelect}
-                  className="sr-only"
-                  disabled={isDisabled}
+        </div>
+      )}
+
+      {/* Upload zone */}
+      {!pendingFiles && (
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={`
+            border-2 border-dashed rounded-lg p-8 text-center transition-colors duration-200
+            ${isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
+            ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+          `}
+        >
+          {isUploading ? (
+            <div className="flex flex-col items-center">
+              <svg className="animate-spin h-10 w-10 text-blue-500 mb-3" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <p className="text-gray-600">Uploading...</p>
+              <div className="w-48 h-2 bg-gray-200 rounded-full mt-2">
+                <div
+                  className="h-full bg-blue-500 rounded-full transition-all duration-200"
+                  style={{ width: `${uploadProgress}%` }}
                 />
-              </label>
-              {' '}or drag and drop
-            </p>
-            <p className="mt-1 text-xs text-gray-500">
-              PDFs and images (JPEG, PNG, WebP, GIF, HEIC, TIFF, BMP) up to 20MB
-            </p>
-            <p className="mt-2 text-xs text-gray-400">
-              We'll automatically detect what type of document it is
-            </p>
-          </>
-        )}
-      </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                <path
+                  d="M28 8H12a4 4 0 00-4 4v20m0 0v4a4 4 0 004 4h24a4 4 0 004-4V24M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4-4m4-12h8m-4-4v8"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <p className="mt-2 text-sm text-gray-600">
+                <label className={`text-blue-600 hover:text-blue-500 ${isDisabled ? '' : 'cursor-pointer'}`}>
+                  <span>Upload documents</span>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept=".pdf,image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,image/tiff,image/bmp,.heic,.heif,.tiff,.tif,.bmp"
+                    onChange={handleFileSelect}
+                    className="sr-only"
+                    disabled={isDisabled}
+                  />
+                </label>
+                {' '}or drag and drop
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                PDFs and images (JPEG, PNG, WebP, GIF, HEIC, TIFF, BMP) up to 20MB
+              </p>
+            </>
+          )}
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-md p-3">

@@ -44,6 +44,8 @@
     "db:migrate:date-precision:dev": "tsx src/db/migrate-date-precision.ts",
     "db:migrate:allergy-show-on-card": "node dist/db/migrate-allergy-show-on-card.js",
     "db:migrate:allergy-show-on-card:dev": "tsx src/db/migrate-allergy-show-on-card.ts",
+    "db:migrate:document-groups": "node dist/db/migrate-document-groups.js",
+    "db:migrate:document-groups:dev": "tsx src/db/migrate-document-groups.ts",
     "test:backend": "tsx --test src/models/health-records.test.ts"
   },
   "dependencies": {

@@ -226,11 +226,24 @@ async function buildDocumentContent(filePath: string, mediaType: MediaType): Pro
   }
 }
 
+async function buildMultiDocumentContent(filePaths: string[], mediaType: MediaType): Promise<FileContent[]> {
+  const contents: FileContent[] = [];
+  for (const filePath of filePaths) {
+    contents.push(await buildDocumentContent(filePath, mediaType));
+  }
+  return contents;
+}
+
 export async function classifyDocument(
-  filePath: string,
+  filePaths: string | string[],
   mediaType: MediaType
 ): Promise<ClassificationResult> {
-  const documentContent = await buildDocumentContent(filePath, mediaType);
+  const paths = Array.isArray(filePaths) ? filePaths : [filePaths];
+  const documentContents = await buildMultiDocumentContent(paths, mediaType);
+
+  const pageNote = paths.length > 1
+    ? `\n\nNote: This document has ${paths.length} pages. Analyze all pages together as one document.`
+    : '';
 
   const response = await anthropic.messages.create({
     model: config.claude.model,
@@ -239,10 +252,10 @@ export async function classifyDocument(
       {
         role: 'user',
         content: [
-          documentContent as any,
+          ...documentContents.map(c => c as any),
           {
             type: 'text',
-            text: CLASSIFICATION_PROMPT,
+            text: CLASSIFICATION_PROMPT + pageNote,
           },
         ],
       },
@@ -280,13 +293,17 @@ export async function classifyDocument(
 }
 
 export async function extractDocumentData(
-  filePath: string,
+  filePaths: string | string[],
   mediaType: MediaType,
   documentType?: DocumentType
 ): Promise<ExtractionResult> {
-  const documentContent = await buildDocumentContent(filePath, mediaType);
+  const paths = Array.isArray(filePaths) ? filePaths : [filePaths];
+  const documentContents = await buildMultiDocumentContent(paths, mediaType);
 
   const typeHint = documentType ? `\n\nThis appears to be a ${documentType.replace(/_/g, ' ')}.` : '';
+  const pageNote = paths.length > 1
+    ? `\n\nNote: This document has ${paths.length} pages. Analyze all pages together as one document and extract all health records found across all pages.`
+    : '';
 
   const response = await anthropic.messages.create({
     model: config.claude.model,
@@ -295,10 +312,10 @@ export async function extractDocumentData(
       {
         role: 'user',
         content: [
-          documentContent as any,
+          ...documentContents.map(c => c as any),
           {
             type: 'text',
-            text: EXTRACTION_PROMPT + typeHint,
+            text: EXTRACTION_PROMPT + typeHint + pageNote,
           },
         ],
       },
@@ -377,15 +394,15 @@ export async function extractDocumentData(
 }
 
 export async function classifyAndExtractDocument(
-  filePath: string,
+  filePaths: string | string[],
   mediaType: MediaType
 ): Promise<ClassifyAndExtractResult> {
   // First, classify the document
-  const classification = await classifyDocument(filePath, mediaType);
+  const classification = await classifyDocument(filePaths, mediaType);
 
   // Then extract data with the classification hint
   const extraction = await extractDocumentData(
-    filePath,
+    filePaths,
     mediaType,
     classification.confidence >= 50 ? classification.documentType : undefined
   );

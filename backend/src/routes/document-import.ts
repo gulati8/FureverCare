@@ -11,6 +11,7 @@ import {
   createDocumentUpload,
   getDocumentUploadById,
   getDocumentUploadsByPetId,
+  getDocumentGroup,
   deleteDocumentUpload,
   updateDocumentUploadFilename,
   updateDocumentUploadStatus,
@@ -60,8 +61,8 @@ async function verifyPetEditAccess(petId: number, userId: number, res: Response)
   return true;
 }
 
-// POST /api/pets/:petId/documents/upload - Upload and process a document (unified endpoint)
-router.post('/:petId/documents/upload', authenticate, requireFeature('upload'), pdfUploadRateLimit, claudeRateLimit, uploadDocument.single('document'), async (req: AuthRequest, res: Response) => {
+// POST /api/pets/:petId/documents/upload - Upload a document (storage only, no AI processing)
+router.post('/:petId/documents/upload', authenticate, requireFeature('upload'), pdfUploadRateLimit, uploadDocument.single('document'), async (req: AuthRequest, res: Response) => {
   try {
     const petId = parseInt(req.params.petId);
 
@@ -73,6 +74,11 @@ router.post('/:petId/documents/upload', authenticate, requireFeature('upload'), 
       res.status(400).json({ error: 'No file uploaded' });
       return;
     }
+
+    // Optional grouping fields from form data
+    const documentGroupId = req.body.documentGroupId || null;
+    const pageNumber = req.body.pageNumber ? parseInt(req.body.pageNumber) : 1;
+    const groupName = req.body.groupName || null;
 
     // Optimize images before storage (skip PDFs)
     let fileBuffer = req.file.buffer;
@@ -98,7 +104,7 @@ router.post('/:petId/documents/upload', authenticate, requireFeature('upload'), 
       mimeType: fileMimeType,
     });
 
-    // Create document upload record
+    // Create document upload record (status = 'uploaded', no AI processing)
     const documentUpload = await createDocumentUpload({
       petId,
       uploadedBy: req.userId!,
@@ -108,6 +114,9 @@ router.post('/:petId/documents/upload', authenticate, requireFeature('upload'), 
       fileSize,
       mimeType: fileMimeType,
       mediaType: getMediaTypeFromMime(fileMimeType),
+      documentGroupId,
+      pageNumber,
+      groupName,
     });
 
     const mediaType = getMediaTypeFromMime(fileMimeType);
@@ -118,76 +127,10 @@ router.post('/:petId/documents/upload', authenticate, requireFeature('upload'), 
       imageMeta = await extractImageMetadata(fileBuffer);
     }
 
-    // Process through AI classification + extraction for all document types
-    const result = await processDocumentUpload(documentUpload.id);
-
-    if (result.error) {
-      res.status(500).json({
-        error: result.error,
-        upload: result.upload,
-        media_type: mediaType,
-        detected_type: result.classification?.detectedType || null,
-        confidence: result.classification?.confidence || 0,
-        explanation: result.classification?.explanation || result.error,
-        ...(imageMeta && {
-          exif_date_taken: imageMeta.dateTaken,
-          image_width: imageMeta.width,
-          image_height: imageMeta.height,
-        }),
-      });
-      return;
-    }
-
-    const extractedItems = result.items?.map((item) => ({
-      id: item.id,
-      record_type: item.record_type,
-      data: item.extracted_data,
-      confidence: item.confidence_score,
-      status: item.status,
-    })) || [];
-
-    const byCategory: Record<string, number> = {
-      medications: 0,
-      vaccinations: 0,
-      conditions: 0,
-      allergies: 0,
-      vets: 0,
-      emergency_contacts: 0,
-    };
-
-    for (const item of extractedItems) {
-      switch (item.record_type) {
-        case 'medication':
-          byCategory.medications++;
-          break;
-        case 'vaccination':
-          byCategory.vaccinations++;
-          break;
-        case 'condition':
-          byCategory.conditions++;
-          break;
-        case 'allergy':
-          byCategory.allergies++;
-          break;
-        case 'vet':
-          byCategory.vets++;
-          break;
-        case 'emergency_contact':
-          byCategory.emergency_contacts++;
-          break;
-      }
-    }
-
     res.status(201).json({
-      upload: result.upload,
+      upload: documentUpload,
       media_type: mediaType,
-      upload_id: result.upload.id,
-      detected_type: result.classification?.detectedType || 'other',
-      confidence: result.classification?.confidence || 0,
-      explanation: result.classification?.explanation || '',
-      extracted_items: extractedItems,
-      summary: generateExtractedItemsSummary(byCategory),
-      extraction_id: result.extraction?.id,
+      upload_id: documentUpload.id,
       ...(imageMeta && {
         exif_date_taken: imageMeta.dateTaken,
         image_width: imageMeta.width,
@@ -216,10 +159,9 @@ router.post('/:petId/documents/uploads/:id/process', authenticate, requireFeatur
       return;
     }
 
-    // Only allow processing uploads that haven't been successfully processed yet
-    const extraction = await getDocumentExtractionWithItems(uploadId);
-    if (extraction && extraction.items.length > 0) {
-      res.status(400).json({ error: 'This upload has already been processed' });
+    // Only allow processing uploads in 'uploaded' or 'failed' status
+    if (upload.status !== 'uploaded' && upload.status !== 'failed') {
+      res.status(400).json({ error: `Cannot process document with status '${upload.status}'. Only 'uploaded' or 'failed' documents can be scanned.` });
       return;
     }
 
@@ -274,6 +216,63 @@ router.post('/:petId/documents/uploads/:id/process', authenticate, requireFeatur
   } catch (error: any) {
     console.error('Document process error:', error);
     res.status(500).json({ error: error.message || 'Processing failed' });
+  }
+});
+
+// POST /api/pets/:petId/documents/batch-process - Batch scan multiple documents
+router.post('/:petId/documents/batch-process', authenticate, requireFeature('upload'), claudeRateLimit, async (req: AuthRequest, res: Response) => {
+  try {
+    const petId = parseInt(req.params.petId);
+    const { uploadIds } = req.body;
+
+    if (!await verifyPetEditAccess(petId, req.userId!, res)) {
+      return;
+    }
+
+    if (!Array.isArray(uploadIds) || uploadIds.length === 0) {
+      res.status(400).json({ error: 'uploadIds array is required' });
+      return;
+    }
+
+    if (uploadIds.length > 10) {
+      res.status(400).json({ error: 'Maximum 10 documents per batch' });
+      return;
+    }
+
+    if (!config.claude.apiKey) {
+      res.status(500).json({ error: 'AI processing is not configured' });
+      return;
+    }
+
+    const results: Array<{ uploadId: number; success: boolean; extractedItemCount?: number; error?: string }> = [];
+
+    for (const uploadId of uploadIds) {
+      const upload = await getDocumentUploadById(uploadId);
+      if (!upload || upload.pet_id !== petId) {
+        results.push({ uploadId, success: false, error: 'Upload not found' });
+        continue;
+      }
+      if (upload.status !== 'uploaded' && upload.status !== 'failed') {
+        results.push({ uploadId, success: false, error: `Cannot process document with status '${upload.status}'` });
+        continue;
+      }
+
+      try {
+        const result = await processDocumentUpload(uploadId);
+        if (result.error) {
+          results.push({ uploadId, success: false, error: result.error });
+        } else {
+          results.push({ uploadId, success: true, extractedItemCount: result.items?.length || 0 });
+        }
+      } catch (err: any) {
+        results.push({ uploadId, success: false, error: err.message || 'Processing failed' });
+      }
+    }
+
+    res.json({ results });
+  } catch (error: any) {
+    console.error('Batch process error:', error);
+    res.status(500).json({ error: error.message || 'Batch processing failed' });
   }
 });
 
@@ -877,12 +876,12 @@ router.patch('/:petId/documents/uploads/:id/image-metadata', authenticate, async
       return;
     }
 
-    if (!userTag || typeof userTag !== 'string' || userTag.trim().length === 0) {
-      res.status(400).json({ error: 'userTag is required' });
+    if (!userTag && !userDescription && !dateTaken && !bodyArea) {
+      res.status(400).json({ error: 'At least one metadata field is required' });
       return;
     }
 
-    if (userTag.length > 100) {
+    if (userTag && userTag.length > 100) {
       res.status(400).json({ error: 'userTag must be 100 characters or less' });
       return;
     }
@@ -899,7 +898,7 @@ router.patch('/:petId/documents/uploads/:id/image-metadata', authenticate, async
     }
 
     const updatedUpload = await updateDocumentImageMetadata(uploadId, {
-      userTag: userTag.trim(),
+      userTag: userTag ? userTag.trim() : null,
       userDescription: userDescription || null,
       dateTaken: dateTaken || null,
       bodyArea: bodyArea || null,

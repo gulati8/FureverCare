@@ -7,7 +7,9 @@ import {
 } from './document-classifier.js';
 import {
   getDocumentUploadById,
+  getDocumentGroup,
   updateDocumentUploadStatus,
+  updateDocumentGroupStatus,
   updateDocumentClassification,
   DocumentUpload,
 } from '../models/document-upload.js';
@@ -59,8 +61,24 @@ export async function processDocumentUpload(uploadId: number): Promise<Processin
     throw new Error('Document is already being processed');
   }
 
+  // Determine if this is a multi-page group
+  const isGroup = !!upload.document_group_id;
+  let groupPages: DocumentUpload[] = [];
+  if (isGroup) {
+    groupPages = await getDocumentGroup(upload.document_group_id!);
+  }
+
+  // Helper to update status for both single docs and groups
+  const setStatus = async (status: Parameters<typeof updateDocumentUploadStatus>[1], errorMessage?: string) => {
+    if (isGroup) {
+      await updateDocumentGroupStatus(upload.document_group_id!, status, errorMessage);
+    } else {
+      await updateDocumentUploadStatus(uploadId, status, errorMessage);
+    }
+  };
+
   // Mark as classifying
-  await updateDocumentUploadStatus(uploadId, 'classifying');
+  await setStatus('classifying');
 
   try {
     // Check if Claude API key is configured
@@ -68,10 +86,16 @@ export async function processDocumentUpload(uploadId: number): Promise<Processin
       throw new Error('Claude API key not configured');
     }
 
-    // Classify and extract data using Claude
-    const result = await classifyAndExtractDocument(upload.file_path, upload.media_type);
+    // For multi-page groups, gather all file paths and send together
+    const filePaths = isGroup
+      ? groupPages.map(p => p.file_path)
+      : [upload.file_path];
+    const mediaType = upload.media_type;
 
-    // Update classification
+    // Classify and extract data using Claude (supports multiple files)
+    const result = await classifyAndExtractDocument(filePaths, mediaType);
+
+    // Update classification on the primary upload (page 1 or standalone)
     await updateDocumentClassification(
       uploadId,
       result.classification.documentType,
@@ -80,9 +104,9 @@ export async function processDocumentUpload(uploadId: number): Promise<Processin
     );
 
     // Mark as processing (extraction phase)
-    await updateDocumentUploadStatus(uploadId, 'processing');
+    await setStatus('processing');
 
-    // Create extraction record with items
+    // Create extraction record with items (linked to primary upload)
     const items = result.extraction.items.map((item) => ({
       recordType: item.recordType,
       extractedData: mapExtractionToHealthRecord(item.recordType, item.data),
@@ -104,7 +128,7 @@ export async function processDocumentUpload(uploadId: number): Promise<Processin
     );
 
     // Mark as pending_review — user must review extracted items before completing
-    await updateDocumentUploadStatus(uploadId, 'pending_review');
+    await setStatus('pending_review');
 
     const summary = generateExtractedItemsSummary(result.extraction.summary.byCategory);
 
@@ -121,7 +145,7 @@ export async function processDocumentUpload(uploadId: number): Promise<Processin
     };
   } catch (error: any) {
     // Mark as failed
-    await updateDocumentUploadStatus(uploadId, 'failed', error.message);
+    await setStatus('failed', error.message);
     return {
       upload: (await getDocumentUploadById(uploadId))!,
       error: error.message,
