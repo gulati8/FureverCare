@@ -44,6 +44,7 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
 
   // Multi-file grouping dialog state
   const [pendingFiles, setPendingFiles] = useState<File[] | null>(null);
+  const [pendingPdfs, setPendingPdfs] = useState<File[]>([]); // PDFs that will upload alongside grouped images
   const [groupMode, setGroupMode] = useState<'one' | 'separate'>('one');
   const groupNameRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -112,42 +113,65 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
     } else if (imageFiles.length === 1 && pdfFiles.length === 0) {
       // Single image — upload directly
       uploadFiles(imageFiles);
-    } else if (imageFiles.length > 1 && pdfFiles.length === 0) {
-      // Multiple images only — show grouping dialog
+    } else if (imageFiles.length >= 1) {
+      // Multiple images, or images + PDFs — show grouping dialog
+      // Stash PDFs to upload alongside when user confirms
       setPendingFiles(imageFiles);
-      setGroupMode('one');
+      setPendingPdfs(pdfFiles);
+      setGroupMode(imageFiles.length > 1 ? 'one' : 'separate');
       const firstName = imageFiles[0].name.replace(/\.[^/.]+$/, '');
       setTimeout(() => { if (groupNameRef.current) groupNameRef.current.value = firstName; }, 0);
-    } else {
-      // Mix of images and PDFs — upload PDFs separately, show grouping dialog for images
-      uploadFiles(pdfFiles);
-      if (imageFiles.length === 1) {
-        uploadFiles(imageFiles);
-      } else if (imageFiles.length > 1) {
-        setPendingFiles(imageFiles);
-        setGroupMode('one');
-        const firstName = imageFiles[0].name.replace(/\.[^/.]+$/, '');
-        setTimeout(() => { if (groupNameRef.current) groupNameRef.current.value = firstName; }, 0);
-      }
     }
   };
 
   const handleGroupConfirm = () => {
     if (!pendingFiles) return;
-    if (groupMode === 'one') {
+
+    // Collect all files to upload: images (grouped or separate) + any stashed PDFs
+    const allFiles: File[] = [];
+    const allOpts: (undefined | { documentGroupId: string; pageNumber: number; groupName: string })[] = [];
+
+    if (groupMode === 'one' && pendingFiles.length > 1) {
+      const groupId = generateGroupId();
       const name = groupNameRef.current?.value?.trim() || pendingFiles[0].name;
-      uploadFiles(pendingFiles, { documentGroupId: generateGroupId(), groupName: name });
+      for (let i = 0; i < pendingFiles.length; i++) {
+        allFiles.push(pendingFiles[i]);
+        allOpts.push({ documentGroupId: groupId, pageNumber: i + 1, groupName: name });
+      }
     } else {
-      uploadFiles(pendingFiles);
+      for (const file of pendingFiles) {
+        allFiles.push(file);
+        allOpts.push(undefined);
+      }
     }
+
+    // Add stashed PDFs as separate documents
+    for (const pdf of pendingPdfs) {
+      allFiles.push(pdf);
+      allOpts.push(undefined);
+    }
+
+    uploadFilesWithOpts(allFiles, allOpts);
     setPendingFiles(null);
+    setPendingPdfs([]);
   };
 
   const handleGroupCancel = () => {
     setPendingFiles(null);
+    setPendingPdfs([]);
   };
 
   const uploadFiles = async (files: File[], groupOptions?: { documentGroupId: string; groupName: string }) => {
+    const opts = files.map((_, i) =>
+      groupOptions ? { documentGroupId: groupOptions.documentGroupId, pageNumber: i + 1, groupName: groupOptions.groupName } : undefined
+    );
+    return uploadFilesWithOpts(files, opts);
+  };
+
+  const uploadFilesWithOpts = async (
+    files: File[],
+    perFileOpts: (undefined | { documentGroupId: string; pageNumber: number; groupName: string })[]
+  ) => {
     if (!token) return;
 
     setIsUploading(true);
@@ -156,23 +180,20 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
 
     const total = files.length;
     let completed = 0;
+    let hasGrouped = false;
 
     try {
       for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const opts = groupOptions
-          ? { documentGroupId: groupOptions.documentGroupId, pageNumber: i + 1, groupName: groupOptions.groupName }
-          : undefined;
-
-        // Compress images client-side before upload (PDFs pass through unchanged)
-        const compressed = await compressImage(file);
+        const compressed = await compressImage(files[i]);
+        const opts = perFileOpts[i];
+        if (opts) hasGrouped = true;
 
         await documentsApi.upload(petId, compressed, token, opts);
         completed++;
         setUploadProgress(Math.round((completed / total) * 100));
       }
 
-      onUploadComplete({ count: files.length, grouped: !!groupOptions });
+      onUploadComplete({ count: files.length, grouped: hasGrouped });
     } catch (err: any) {
       setError(err.message || 'Upload failed');
     } finally {
@@ -189,46 +210,68 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
       {pendingFiles && (
         <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
           <p className="font-medium text-gray-900 mb-3">
-            {pendingFiles.length} files selected
+            {pendingFiles.length + pendingPdfs.length} files selected
           </p>
 
-          {/* Radio options */}
-          <div className="space-y-3 mb-4">
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="radio"
-                name="groupMode"
-                checked={groupMode === 'one'}
-                onChange={() => setGroupMode('one')}
-                className="mt-0.5"
-              />
+          {/* PDF info banner */}
+          {pendingPdfs.length > 0 && (
+            <div className="mb-4 bg-gray-50 border border-gray-200 rounded-md px-3 py-2.5 flex items-start gap-2.5">
+              <svg className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M6 2h8l6 6v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/>
+              </svg>
               <div>
-                <p className="text-sm font-medium text-gray-900">
-                  Upload as one document ({pendingFiles.length} pages)
-                </p>
-                <p className="text-xs text-gray-500">
-                  Combine into a single multi-page document that gets scanned together.
+                <p className="text-sm text-gray-700">
+                  {pendingPdfs.length === 1
+                    ? <><span className="font-medium">{pendingPdfs[0].name}</span> will upload as a separate document.</>
+                    : <><span className="font-medium">{pendingPdfs.length} PDFs</span> will each upload as separate documents.</>
+                  }
                 </p>
               </div>
-            </label>
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="radio"
-                name="groupMode"
-                checked={groupMode === 'separate'}
-                onChange={() => setGroupMode('separate')}
-                className="mt-0.5"
-              />
-              <div>
-                <p className="text-sm font-medium text-gray-900">
-                  Upload as {pendingFiles.length} separate documents
-                </p>
-                <p className="text-xs text-gray-500">
-                  Each file is its own document.
-                </p>
-              </div>
-            </label>
-          </div>
+            </div>
+          )}
+
+          {/* Image grouping options */}
+          {pendingFiles.length > 1 && <p className="text-xs text-gray-500 mb-2">{pendingFiles.length} images:</p>}
+
+          {/* Radio options (only when 2+ images — 1 image doesn't need grouping choice) */}
+          {pendingFiles.length > 1 && (
+            <div className="space-y-3 mb-4">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="groupMode"
+                  checked={groupMode === 'one'}
+                  onChange={() => setGroupMode('one')}
+                  className="mt-0.5"
+                />
+                <div>
+                  <p className="text-sm font-medium text-gray-900">
+                    Upload as one document ({pendingFiles.length} pages)
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Combine into a single multi-page document that gets scanned together.
+                  </p>
+                </div>
+              </label>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="groupMode"
+                  checked={groupMode === 'separate'}
+                  onChange={() => setGroupMode('separate')}
+                  className="mt-0.5"
+                />
+                <div>
+                  <p className="text-sm font-medium text-gray-900">
+                    Upload as {pendingFiles.length} separate documents
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Each file is its own document.
+                  </p>
+                </div>
+              </label>
+            </div>
+          )}
 
           {/* Page order & name (only when grouping as one document) */}
           {groupMode === 'one' && (
