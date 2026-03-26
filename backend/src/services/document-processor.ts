@@ -1,16 +1,14 @@
 import { logCreate } from './audit-logger.js';
 import {
-  classifyAndExtractDocument,
+  extractDocument,
   mapExtractionToHealthRecord,
   generateExtractedItemsSummary,
-  ClassifyAndExtractResult,
 } from './document-classifier.js';
 import {
   getDocumentUploadById,
   getDocumentGroup,
   updateDocumentUploadStatus,
   updateDocumentGroupStatus,
-  updateDocumentClassification,
   DocumentUpload,
 } from '../models/document-upload.js';
 import {
@@ -42,11 +40,6 @@ export interface ProcessingResult {
   upload: DocumentUpload;
   extraction?: DocumentExtraction;
   items?: DocumentExtractionItem[];
-  classification?: {
-    detectedType: string;
-    confidence: number;
-    explanation: string;
-  };
   summary?: string;
   error?: string;
 }
@@ -57,7 +50,7 @@ export async function processDocumentUpload(uploadId: number): Promise<Processin
     throw new Error('Document upload not found');
   }
 
-  if (upload.status === 'processing' || upload.status === 'classifying') {
+  if (upload.status === 'processing') {
     throw new Error('Document is already being processed');
   }
 
@@ -77,8 +70,8 @@ export async function processDocumentUpload(uploadId: number): Promise<Processin
     }
   };
 
-  // Mark as classifying
-  await setStatus('classifying');
+  // Mark as processing
+  await setStatus('processing');
 
   try {
     // Check if Claude API key is configured
@@ -92,22 +85,11 @@ export async function processDocumentUpload(uploadId: number): Promise<Processin
       : [upload.file_path];
     const mediaType = upload.media_type;
 
-    // Classify and extract data using Claude (supports multiple files)
-    const result = await classifyAndExtractDocument(filePaths, mediaType);
-
-    // Update classification on the primary upload (page 1 or standalone)
-    await updateDocumentClassification(
-      uploadId,
-      result.classification.documentType,
-      result.classification.confidence,
-      result.classification.explanation
-    );
-
-    // Mark as processing (extraction phase)
-    await setStatus('processing');
+    // Extract data using Claude (supports multiple files)
+    const result = await extractDocument(filePaths, mediaType);
 
     // Create extraction record with items (linked to primary upload)
-    const items = result.extraction.items.map((item) => ({
+    const items = result.items.map((item) => ({
       recordType: item.recordType,
       extractedData: mapExtractionToHealthRecord(item.recordType, item.data),
       confidenceScore: item.confidence,
@@ -117,12 +99,11 @@ export async function processDocumentUpload(uploadId: number): Promise<Processin
       {
         documentUploadId: uploadId,
         rawExtraction: {
-          classification: result.classification,
-          extraction: result.extraction.rawResponse,
+          extraction: result.rawResponse,
         },
-        mappedData: { items: result.extraction.items },
-        extractionModel: result.extraction.model,
-        tokensUsed: result.classification.tokensUsed + result.extraction.tokensUsed,
+        mappedData: { items: result.items },
+        extractionModel: result.model,
+        tokensUsed: result.tokensUsed,
       },
       items
     );
@@ -130,17 +111,12 @@ export async function processDocumentUpload(uploadId: number): Promise<Processin
     // Mark as pending_review — user must review extracted items before completing
     await setStatus('pending_review');
 
-    const summary = generateExtractedItemsSummary(result.extraction.summary.byCategory);
+    const summary = generateExtractedItemsSummary(result.summary.byCategory);
 
     return {
       upload: (await getDocumentUploadById(uploadId))!,
       extraction,
       items: createdItems,
-      classification: {
-        detectedType: result.classification.documentType,
-        confidence: result.classification.confidence,
-        explanation: result.classification.explanation,
-      },
       summary,
     };
   } catch (error: any) {

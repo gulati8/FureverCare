@@ -700,8 +700,7 @@ export const photoImportApi = {
 };
 
 // Consolidated Document Import Types
-export type DocumentUploadStatus = 'uploaded' | 'pending' | 'classifying' | 'processing' | 'pending_review' | 'completed' | 'failed';
-export type DetectedDocumentType = 'vaccination_record' | 'visit_summary' | 'lab_results' | 'prescription' | 'medication_label' | 'pet_id_tag' | 'other';
+export type DocumentUploadStatus = 'uploaded' | 'pending' | 'processing' | 'pending_review' | 'completed' | 'failed';
 
 export interface DocumentUpload {
   id: number;
@@ -715,9 +714,6 @@ export interface DocumentUpload {
   file_type: 'pdf' | 'image';
   media_type: 'pdf' | 'image';
   status: DocumentUploadStatus;
-  detected_document_type: DetectedDocumentType | null;
-  classification_confidence: number | null;
-  classification_explanation: string | null;
   processing_started_at: string | null;
   processing_completed_at: string | null;
   error_message: string | null;
@@ -732,18 +728,6 @@ export interface DocumentUpload {
   pending_items?: number;
   approved_items?: number;
   rejected_items?: number;
-}
-
-export interface DocumentClassification {
-  document_type: DetectedDocumentType;
-  confidence: number;
-  explanation: string;
-  summary: {
-    medications_count: number;
-    conditions_count: number;
-    vaccinations_count: number;
-    allergies_count: number;
-  };
 }
 
 export interface DocumentExtraction {

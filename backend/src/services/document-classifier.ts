@@ -2,23 +2,13 @@ import Anthropic from '@anthropic-ai/sdk';
 import * as fs from 'fs';
 import * as path from 'path';
 import { config } from '../config/index.js';
-import { DocumentType, MediaType } from '../models/document-upload.js';
+import { MediaType } from '../models/document-upload.js';
 import { RecordType } from '../models/document-extraction.js';
 import { storage } from './storage.js';
 
 const anthropic = new Anthropic({
   apiKey: config.claude.apiKey,
 });
-
-export interface ClassificationResult {
-  documentType: DocumentType;
-  confidence: number;
-  explanation: string;
-  alternativeTypes?: string[];
-  petName?: string;
-  tokensUsed: number;
-  model: string;
-}
 
 export interface ExtractedItem {
   recordType: RecordType;
@@ -37,43 +27,6 @@ export interface ExtractionResult {
   tokensUsed: number;
   model: string;
 }
-
-export interface ClassifyAndExtractResult {
-  classification: ClassificationResult;
-  extraction: ExtractionResult;
-}
-
-const CLASSIFICATION_PROMPT = `Analyze this document and determine what type of pet health document it is.
-
-Possible document types:
-- medication_label: Prescription labels, medication bottles, drug packaging
-- vet_visit_summary: Veterinary visit summaries, exam reports, discharge notes
-- lab_results: Blood work, urinalysis, diagnostic test results
-- vaccination_record: Vaccination certificates, immunization records
-- receipt: Veterinary invoices, pharmacy receipts, payment records
-- insurance_form: Pet insurance claims, coverage documents, EOBs
-- pet_id: Microchip registration, ID tags, pet licenses
-- medical_history: Comprehensive health records, transferred records
-- prescription: Written prescriptions, refill authorizations
-- other: Documents that don't fit other categories
-
-Evaluate the document and provide:
-1. The most likely document type
-2. A confidence score from 0-100
-3. A brief explanation of why you classified it this way
-4. Any alternative types it could be (if confidence < 80)
-
-Respond with a JSON object:
-{
-  "document_type": "medication_label",
-  "confidence": 85,
-  "explanation": "Document shows a prescription label with drug name, dosage, and pharmacy information",
-  "alternative_types": ["prescription"],
-  "pet_name": "Max"
-}
-
-If confidence is below 50%, explain what makes the document difficult to classify.
-Only classify based on what you can actually see - do not guess.`;
 
 const EXTRACTION_PROMPT = `Extract all relevant pet health information from this document.
 
@@ -234,73 +187,13 @@ async function buildMultiDocumentContent(filePaths: string[], mediaType: MediaTy
   return contents;
 }
 
-export async function classifyDocument(
-  filePaths: string | string[],
-  mediaType: MediaType
-): Promise<ClassificationResult> {
-  const paths = Array.isArray(filePaths) ? filePaths : [filePaths];
-  const documentContents = await buildMultiDocumentContent(paths, mediaType);
-
-  const pageNote = paths.length > 1
-    ? `\n\nNote: This document has ${paths.length} pages. Analyze all pages together as one document.`
-    : '';
-
-  const response = await anthropic.messages.create({
-    model: config.claude.model,
-    max_tokens: config.claude.maxTokens,
-    messages: [
-      {
-        role: 'user',
-        content: [
-          ...documentContents.map(c => c as any),
-          {
-            type: 'text',
-            text: CLASSIFICATION_PROMPT + pageNote,
-          },
-        ],
-      },
-    ],
-  });
-
-  const textContent = response.content.find((c) => c.type === 'text');
-  if (!textContent || textContent.type !== 'text') {
-    throw new Error('No text response from Claude');
-  }
-
-  let parsed: any;
-  try {
-    const jsonMatch = textContent.text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('No JSON found in response');
-    }
-    parsed = JSON.parse(jsonMatch[0]);
-  } catch (e) {
-    console.error('Failed to parse Claude classification response:', textContent.text);
-    throw new Error(`Failed to parse classification response: ${e}`);
-  }
-
-  const tokensUsed = (response.usage?.input_tokens || 0) + (response.usage?.output_tokens || 0);
-
-  return {
-    documentType: (parsed.document_type || 'other') as DocumentType,
-    confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0,
-    explanation: parsed.explanation || 'Unable to determine document type',
-    alternativeTypes: parsed.alternative_types,
-    petName: parsed.pet_name,
-    tokensUsed,
-    model: config.claude.model,
-  };
-}
-
 export async function extractDocumentData(
   filePaths: string | string[],
-  mediaType: MediaType,
-  documentType?: DocumentType
+  mediaType: MediaType
 ): Promise<ExtractionResult> {
   const paths = Array.isArray(filePaths) ? filePaths : [filePaths];
   const documentContents = await buildMultiDocumentContent(paths, mediaType);
 
-  const typeHint = documentType ? `\n\nThis appears to be a ${documentType.replace(/_/g, ' ')}.` : '';
   const pageNote = paths.length > 1
     ? `\n\nNote: This document has ${paths.length} pages. Analyze all pages together as one document and extract all health records found across all pages.`
     : '';
@@ -315,7 +208,7 @@ export async function extractDocumentData(
           ...documentContents.map(c => c as any),
           {
             type: 'text',
-            text: EXTRACTION_PROMPT + typeHint + pageNote,
+            text: EXTRACTION_PROMPT + pageNote,
           },
         ],
       },
@@ -393,24 +286,11 @@ export async function extractDocumentData(
   };
 }
 
-export async function classifyAndExtractDocument(
+export async function extractDocument(
   filePaths: string | string[],
   mediaType: MediaType
-): Promise<ClassifyAndExtractResult> {
-  // First, classify the document
-  const classification = await classifyDocument(filePaths, mediaType);
-
-  // Then extract data with the classification hint
-  const extraction = await extractDocumentData(
-    filePaths,
-    mediaType,
-    classification.confidence >= 50 ? classification.documentType : undefined
-  );
-
-  return {
-    classification,
-    extraction,
-  };
+): Promise<ExtractionResult> {
+  return extractDocumentData(filePaths, mediaType);
 }
 
 /**

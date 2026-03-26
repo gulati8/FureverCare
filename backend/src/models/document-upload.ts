@@ -1,17 +1,6 @@
 import { query, queryOne } from '../db/pool.js';
 
-export type DocumentUploadStatus = 'uploaded' | 'pending' | 'classifying' | 'processing' | 'pending_review' | 'completed' | 'failed';
-export type DocumentType =
-  | 'medication_label'
-  | 'vet_visit_summary'
-  | 'lab_results'
-  | 'vaccination_record'
-  | 'receipt'
-  | 'insurance_form'
-  | 'pet_id'
-  | 'medical_history'
-  | 'prescription'
-  | 'other';
+export type DocumentUploadStatus = 'uploaded' | 'pending' | 'processing' | 'pending_review' | 'completed' | 'failed';
 
 export type MediaType = 'pdf' | 'image';
 
@@ -26,7 +15,7 @@ export interface DocumentUpload {
   mime_type: string;
   media_type: MediaType;
   status: DocumentUploadStatus;
-  detected_type: DocumentType | null;
+  detected_type: string | null;
   classification_confidence: number | null;
   classification_explanation: string | null;
   processing_started_at: Date | null;
@@ -108,7 +97,7 @@ export async function updateDocumentUploadStatus(
   let sql: string;
   let params: any[];
 
-  if (status === 'classifying' || status === 'processing') {
+  if (status === 'processing') {
     sql = `UPDATE document_uploads SET
       status = $2,
       processing_started_at = COALESCE(processing_started_at, CURRENT_TIMESTAMP)
@@ -133,22 +122,6 @@ export async function updateDocumentUploadStatus(
   }
 
   return queryOne<DocumentUpload>(sql, params);
-}
-
-export async function updateDocumentClassification(
-  id: number,
-  detectedType: DocumentType,
-  confidence: number,
-  explanation: string
-): Promise<DocumentUpload | null> {
-  return queryOne<DocumentUpload>(
-    `UPDATE document_uploads SET
-      detected_type = $2,
-      classification_confidence = $3,
-      classification_explanation = $4
-    WHERE id = $1 RETURNING *`,
-    [id, detectedType, confidence, explanation]
-  );
 }
 
 export async function deleteDocumentUpload(id: number, petId: number): Promise<boolean> {
@@ -214,7 +187,7 @@ export async function updateDocumentGroupStatus(
        WHERE document_group_id = $1`,
       [groupId, status]
     );
-  } else if (status === 'classifying' || status === 'processing') {
+  } else if (status === 'processing') {
     await query(
       `UPDATE document_uploads SET status = $2, processing_started_at = COALESCE(processing_started_at, CURRENT_TIMESTAMP)
        WHERE document_group_id = $1`,

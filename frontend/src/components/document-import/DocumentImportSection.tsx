@@ -17,6 +17,8 @@ interface DocumentImportSectionProps {
 }
 
 type ViewState = 'library' | 'review';
+type ViewMode = 'grid' | 'list';
+type FilterStatus = 'all' | 'stored' | 'review' | 'imported';
 
 interface DisplayItem {
   type: 'group' | 'standalone';
@@ -27,18 +29,24 @@ interface DisplayItem {
   primaryUpload: DocumentUpload;
 }
 
+function getFilterCategory(status: string): 'stored' | 'review' | 'imported' {
+  if (status === 'uploaded') return 'stored';
+  if (['pending', 'processing', 'pending_review'].includes(status)) return 'review';
+  return 'imported'; // completed, failed
+}
+
 export function DocumentImportSection({ petId, onImportComplete, navigateToUploadId, highlightItemId, onNavigationHandled }: DocumentImportSectionProps) {
   const { token } = useAuth();
   const [viewState, setViewState] = useState<ViewState>('library');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [filter, setFilter] = useState<FilterStatus>('all');
   const [currentUpload, setCurrentUpload] = useState<DocumentUpload | null>(null);
   const [uploads, setUploads] = useState<DocumentUpload[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [scanningIds, setScanningIds] = useState<Set<number>>(new Set());
-  const [selectedForScan, setSelectedForScan] = useState<Set<string>>(new Set()); // keys are "group:ID" or "standalone:ID"
   const [batchScanning, setBatchScanning] = useState(false);
   const [activeHighlightItemId, setActiveHighlightItemId] = useState<number | null>(null);
-  const [completedExpanded, setCompletedExpanded] = useState(false);
 
   useEffect(() => {
     loadUploads();
@@ -72,7 +80,6 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
       }
     }
 
-    // Sort pages within each group
     for (const pages of groups.values()) {
       pages.sort((a, b) => a.page_number - b.page_number);
     }
@@ -96,18 +103,30 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
       })),
     ];
 
-    // Sort by most recent first
     items.sort((a, b) => new Date(b.primaryUpload.created_at).getTime() - new Date(a.primaryUpload.created_at).getTime());
     return items;
   }, [uploads]);
 
-  const readyToScan = displayItems.filter(d => d.status === 'uploaded');
-  const needsReview = displayItems.filter(d =>
-    ['pending', 'classifying', 'processing', 'pending_review'].includes(d.status)
-  );
-  const completed = displayItems.filter(d =>
-    ['completed', 'failed'].includes(d.status)
-  );
+  // Filter counts
+  const counts = useMemo(() => {
+    const c = { stored: 0, review: 0, imported: 0 };
+    for (const item of displayItems) {
+      c[getFilterCategory(item.status)]++;
+    }
+    return c;
+  }, [displayItems]);
+
+  const filteredItems = useMemo(() => {
+    if (filter === 'all') return displayItems;
+    return displayItems.filter(item => getFilterCategory(item.status) === filter);
+  }, [displayItems, filter]);
+
+  // Show filter bar when 4+ documents or 2+ status categories
+  const statusCategories = new Set(displayItems.map(d => getFilterCategory(d.status)));
+  const showFilters = displayItems.length >= 4 || statusCategories.size >= 2;
+  const showViewToggle = displayItems.length >= 5;
+
+  const storedItems = displayItems.filter(d => d.status === 'uploaded');
 
   const loadUploads = async () => {
     if (!token) return;
@@ -126,7 +145,6 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
   const handleUploadComplete = async () => {
     setError(null);
     await loadUploads();
-    // Stay on library view — upload is done
   };
 
   const handleBackToLibrary = () => {
@@ -149,10 +167,6 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
     setViewState('review');
   };
 
-  const getItemKey = (item: DisplayItem): string => {
-    return item.type === 'group' ? `group:${item.groupId}` : `standalone:${item.primaryUpload.id}`;
-  };
-
   const handleScanDocument = async (item: DisplayItem) => {
     if (!token) return;
     const uploadId = item.primaryUpload.id;
@@ -166,7 +180,7 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
         setViewState('review');
       }
     } catch (err: any) {
-      setError(err.message || 'Scan failed');
+      setError(err.message || 'Failed to find health records');
       await loadUploads();
     } finally {
       setScanningIds(prev => { const n = new Set(prev); n.delete(uploadId); return n; });
@@ -177,36 +191,18 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
     if (!token) return;
     setBatchScanning(true);
     setError(null);
-
-    // Get upload IDs from selected items (or all ready-to-scan if none selected)
-    const targetItems = selectedForScan.size > 0
-      ? readyToScan.filter(item => selectedForScan.has(getItemKey(item)))
-      : readyToScan;
-
-    const uploadIds = targetItems.map(item => item.primaryUpload.id);
-
+    const uploadIds = storedItems.map(item => item.primaryUpload.id);
     try {
       await documentsApi.batchProcess(petId, uploadIds, token);
       await loadUploads();
-      setSelectedForScan(new Set());
     } catch (err: any) {
-      setError(err.message || 'Batch scan failed');
+      setError(err.message || 'Batch processing failed');
     } finally {
       setBatchScanning(false);
     }
   };
 
-  const toggleSelection = (key: string) => {
-    setSelectedForScan(prev => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  };
-
   const handleAddPage = async (item: DisplayItem) => {
-    // Create a file input and trigger it
     const input = document.createElement('input');
     input.type = 'file';
     input.multiple = true;
@@ -215,13 +211,11 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
       const files = Array.from((e.target as HTMLInputElement).files || []);
       if (files.length === 0 || !token) return;
 
-      // Determine group ID and next page number
       const groupId = item.groupId || crypto.randomUUID();
       const maxPage = Math.max(...item.pages.map(p => p.page_number), 0);
 
       setError(null);
       setScanningIds(prev => new Set(prev).add(item.primaryUpload.id));
-
       try {
         for (let i = 0; i < files.length; i++) {
           await documentsApi.upload(petId, files[i], token, {
@@ -239,6 +233,9 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
     };
     input.click();
   };
+
+  const getDocumentUrl = (u: DocumentUpload) =>
+    `${API_URL}/api/pets/${u.pet_id}/documents/uploads/${u.id}/file`;
 
   if (isLoading) {
     return (
@@ -264,20 +261,62 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
     );
   }
 
-  // Library view (default)
+  // Library view
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h3 className="text-sm font-medium text-blue-900 flex items-center gap-2">
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-          </svg>
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-gray-900" style={{ fontFamily: 'var(--font-heading, inherit)' }}>
           Documents
+          {displayItems.length > 0 && (
+            <span className="ml-2 text-sm font-normal text-gray-400">{displayItems.length} total</span>
+          )}
         </h3>
-        <p className="mt-1 text-sm text-blue-700">
-          Store vet documents and photos. Optionally scan them to automatically extract health records.
-        </p>
+        <div className="flex items-center gap-3">
+          {/* Batch action */}
+          {storedItems.length > 1 && (
+            <button
+              onClick={handleBatchScan}
+              disabled={batchScanning}
+              className="px-3 py-1.5 text-xs font-semibold rounded-md border transition-colors"
+              style={{
+                background: 'var(--color-steel-light, #E8F0F8)',
+                borderColor: 'var(--color-steel, #4A7FB5)',
+                color: 'var(--color-steel-dark, #3A6A9A)',
+              }}
+            >
+              {batchScanning ? 'Finding...' : `Find Records in All (${storedItems.length})`}
+            </button>
+          )}
+          {/* View toggle */}
+          {showViewToggle && (
+            <div className="flex rounded-lg overflow-hidden border" style={{ borderColor: 'var(--color-surface-200, #E2E5E9)' }}>
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1 transition-colors ${
+                  viewMode === 'grid' ? 'bg-white text-gray-900 shadow-sm' : 'bg-gray-50 text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+                </svg>
+                Grid
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1 transition-colors ${
+                  viewMode === 'list' ? 'bg-white text-gray-900 shadow-sm' : 'bg-gray-50 text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+                  <circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/>
+                </svg>
+                List
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -289,303 +328,343 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
       {/* Upload zone */}
       <DocumentUploadZone petId={petId} onUploadComplete={handleUploadComplete} />
 
-      {/* Ready to Scan */}
-      {readyToScan.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-semibold text-gray-900">Ready to Scan ({readyToScan.length})</span>
-            <button
-              onClick={handleBatchScan}
-              disabled={batchScanning}
-              className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
-            >
-              {batchScanning ? 'Scanning...' : selectedForScan.size > 0
-                ? `Scan Selected (${selectedForScan.size})`
-                : `Scan All (${readyToScan.length})`}
-            </button>
-          </div>
-          <div className="space-y-2">
-            {readyToScan.map((item) => (
-              <DocumentCard
-                key={getItemKey(item)}
-                item={item}
-                isScanning={scanningIds.has(item.primaryUpload.id) || batchScanning}
-                isSelected={selectedForScan.has(getItemKey(item))}
-                onToggleSelect={() => toggleSelection(getItemKey(item))}
-                onScan={() => handleScanDocument(item)}
-                onAddPage={() => handleAddPage(item)}
-                showCheckbox={readyToScan.length > 1}
-              />
-            ))}
-          </div>
+      {/* Filter pills */}
+      {showFilters && (
+        <div className="flex flex-wrap gap-1.5">
+          {(['all', 'stored', 'review', 'imported'] as FilterStatus[]).map(f => {
+            const count = f === 'all' ? displayItems.length : counts[f];
+            if (f !== 'all' && count === 0) return null;
+            const isActive = filter === f;
+            const labels: Record<FilterStatus, string> = { all: 'All', stored: 'Stored', review: 'Needs Review', imported: 'Imported' };
+            return (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-3 py-1 text-xs font-semibold rounded-full border transition-colors ${
+                  isActive
+                    ? 'text-white border-transparent'
+                    : 'bg-white text-gray-500 hover:text-gray-700'
+                }`}
+                style={isActive ? {
+                  background: 'var(--color-navy, #1B2A4A)',
+                  borderColor: 'var(--color-navy, #1B2A4A)',
+                } : {
+                  borderColor: 'var(--color-surface-200, #E2E5E9)',
+                }}
+              >
+                {labels[f]}
+                {f !== 'all' && count > 0 && (
+                  <span className={`ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                    isActive ? 'bg-white/20' : 'text-white'
+                  }`} style={!isActive ? { background: 'var(--color-coral, #E07A5F)' } : undefined}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
 
-      {/* Needs Review */}
-      {needsReview.length > 0 && (
-        <div>
-          <span className="text-sm font-semibold text-gray-900 mb-2 block">Needs Review ({needsReview.length})</span>
-          <div className="space-y-2">
-            {needsReview.map((item) => (
-              <DocumentCard
-                key={getItemKey(item)}
-                item={item}
-                onSelect={() => handleUploadSelect(item.primaryUpload)}
-              />
-            ))}
-          </div>
+      {/* Document library */}
+      {filteredItems.length === 0 && displayItems.length === 0 && (
+        <div className="text-center py-10">
+          <svg className="mx-auto h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+          </svg>
+          <h4 className="mt-2 text-sm font-semibold text-gray-900">No documents yet</h4>
+          <p className="mt-1 text-sm text-gray-500">Upload vet records, prescriptions, or photos to keep them safe and organized.</p>
         </div>
       )}
 
-      {/* Completed */}
-      {completed.length > 0 && (
-        <div>
-          <button
-            onClick={() => setCompletedExpanded(!completedExpanded)}
-            className="flex items-center gap-2 text-sm font-semibold text-gray-900 hover:text-gray-700 mb-2"
-          >
-            <svg
-              className={`h-4 w-4 transition-transform ${completedExpanded ? 'rotate-90' : ''}`}
-              fill="none" viewBox="0 0 24 24" stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-            Completed ({completed.length})
-          </button>
-          {completedExpanded && (
-            <div className="space-y-2">
-              {completed.map((item) => (
-                <DocumentCard
-                  key={getItemKey(item)}
-                  item={item}
-                  onSelect={() => handleUploadSelect(item.primaryUpload)}
-                />
-              ))}
-            </div>
-          )}
+      {filteredItems.length === 0 && displayItems.length > 0 && (
+        <p className="text-sm text-gray-500 text-center py-6">No documents match this filter.</p>
+      )}
+
+      {/* Grid view */}
+      {viewMode === 'grid' && filteredItems.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          {filteredItems.map(item => (
+            <GridCard
+              key={item.type === 'group' ? `g-${item.groupId}` : `s-${item.primaryUpload.id}`}
+              item={item}
+              getDocumentUrl={getDocumentUrl}
+              isScanning={scanningIds.has(item.primaryUpload.id) || batchScanning}
+              onScan={() => handleScanDocument(item)}
+              onSelect={() => handleUploadSelect(item.primaryUpload)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* List view */}
+      {viewMode === 'list' && filteredItems.length > 0 && (
+        <div className="space-y-1.5">
+          {filteredItems.map(item => (
+            <ListCard
+              key={item.type === 'group' ? `g-${item.groupId}` : `s-${item.primaryUpload.id}`}
+              item={item}
+              getDocumentUrl={getDocumentUrl}
+              isScanning={scanningIds.has(item.primaryUpload.id) || batchScanning}
+              onScan={() => handleScanDocument(item)}
+              onSelect={() => handleUploadSelect(item.primaryUpload)}
+              onAddPage={() => handleAddPage(item)}
+            />
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-// Unified document card component - handles both standalone and grouped documents
-function DocumentCard({
+// Status helpers
+const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
+  uploaded: { bg: 'bg-gray-100', text: 'text-gray-600' },
+  pending: { bg: 'bg-blue-50', text: 'text-blue-700' },
+  processing: { bg: 'bg-blue-50', text: 'text-blue-700' },
+  pending_review: { bg: 'bg-amber-50', text: 'text-amber-700' },
+  completed: { bg: 'bg-green-50', text: 'text-green-700' },
+  failed: { bg: 'bg-red-50', text: 'text-red-700' },
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  uploaded: 'Stored',
+  pending: 'Processing...',
+  processing: 'Processing...',
+  pending_review: 'Needs Review',
+  completed: 'Imported',
+  failed: 'Failed',
+};
+
+const STATUS_DOT_COLORS: Record<string, string> = {
+  uploaded: 'bg-gray-400',
+  pending: 'bg-blue-400',
+  processing: 'bg-blue-400',
+  pending_review: 'bg-amber-400',
+  completed: 'bg-green-500',
+  failed: 'bg-red-500',
+};
+
+// Grid card component
+function GridCard({
   item,
+  getDocumentUrl,
   isScanning,
-  isSelected,
-  onToggleSelect,
   onScan,
   onSelect,
-  onAddPage,
-  showCheckbox,
 }: {
   item: DisplayItem;
-  isScanning?: boolean;
-  isSelected?: boolean;
-  onToggleSelect?: () => void;
-  onScan?: () => void;
-  onSelect?: () => void;
-  onAddPage?: () => void;
-  showCheckbox?: boolean;
+  getDocumentUrl: (u: DocumentUpload) => string;
+  isScanning: boolean;
+  onScan: () => void;
+  onSelect: () => void;
 }) {
-  const { token } = useAuth();
   const upload = item.primaryUpload;
-  const [isEditing, setIsEditing] = useState(false);
-  const [newFilename, setNewFilename] = useState(upload.original_filename);
-  const [isRenaming, setIsRenaming] = useState(false);
-  const [renameError, setRenameError] = useState<string | null>(null);
-  const [currentFilename, setCurrentFilename] = useState(
-    item.type === 'group' ? (item.groupName || upload.original_filename) : upload.original_filename
-  );
-  const [thumbnailError, setThumbnailError] = useState(false);
-  const [metadataExpanded, setMetadataExpanded] = useState(false);
-
-  const getDocumentUrl = (u: DocumentUpload) => {
-    return `${API_URL}/api/pets/${u.pet_id}/documents/uploads/${u.id}/file`;
-  };
-
-  const statusColors: Record<string, string> = {
-    uploaded: 'bg-gray-100 text-gray-600',
-    pending: 'bg-blue-100 text-blue-700',
-    classifying: 'bg-blue-100 text-blue-700',
-    processing: 'bg-blue-100 text-blue-700',
-    pending_review: 'bg-purple-100 text-purple-700',
-    completed: 'bg-green-100 text-green-700',
-    failed: 'bg-red-100 text-red-700',
-  };
-
-  const statusLabels: Record<string, string> = {
-    uploaded: 'Stored',
-    pending: 'Scanning...',
-    classifying: 'Scanning...',
-    processing: 'Scanning...',
-    pending_review: 'Needs review',
-    completed: 'Imported',
-    failed: 'Failed',
-  };
-
-  const isProcessing = ['pending', 'classifying', 'processing'].includes(upload.status);
-  const canReview = upload.status === 'pending_review';
-  const canView = upload.status === 'completed';
   const isStored = upload.status === 'uploaded';
   const isFailed = upload.status === 'failed';
+  const canReview = upload.status === 'pending_review';
+  const canView = upload.status === 'completed';
+  const isProcessing = ['pending', 'processing'].includes(upload.status);
+  const isImage = upload.mime_type?.startsWith('image/');
 
-  const handleStartEdit = () => {
-    setIsEditing(true);
-    setNewFilename(currentFilename);
-    setRenameError(null);
-  };
-
-  const handleCancelEdit = () => {
-    setIsEditing(false);
-    setNewFilename(currentFilename);
-    setRenameError(null);
-  };
-
-  const handleSaveEdit = async () => {
-    if (!token) return;
-    const trimmedFilename = newFilename.trim();
-    if (!trimmedFilename || trimmedFilename.length > 255) {
-      setRenameError(trimmedFilename ? 'Max 255 characters' : 'Name required');
-      return;
-    }
-    setIsRenaming(true);
-    setRenameError(null);
-    try {
-      await documentsApi.renameUpload(upload.pet_id, upload.id, trimmedFilename, token);
-      setCurrentFilename(trimmedFilename);
-      setIsEditing(false);
-    } catch (err: any) {
-      setRenameError(err.message || 'Failed to rename');
-    } finally {
-      setIsRenaming(false);
-    }
+  const handleClick = () => {
+    if (canReview || canView) onSelect();
   };
 
   return (
-    <div className="bg-gray-50 rounded-lg border border-gray-200">
-      <div className="flex items-center justify-between p-3">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          {/* Checkbox for batch selection */}
-          {showCheckbox && onToggleSelect && (
-            <input
-              type="checkbox"
-              checked={isSelected || false}
-              onChange={onToggleSelect}
-              className="h-4 w-4 text-blue-600 rounded border-gray-300"
+    <div
+      className={`rounded-lg border overflow-hidden bg-white transition-all ${
+        (canReview || canView) ? 'cursor-pointer hover:border-blue-400 hover:shadow-md hover:-translate-y-0.5' : ''
+      }`}
+      style={{ borderColor: 'var(--color-surface-200, #E2E5E9)' }}
+      onClick={handleClick}
+    >
+      {/* Thumbnail */}
+      <div className="aspect-square bg-gray-100 relative flex items-center justify-center overflow-hidden">
+        {isImage ? (
+          <img
+            src={getDocumentUrl(upload)}
+            alt={upload.original_filename}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <svg className="w-12 h-12 text-red-300" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 2h8l6 6v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/>
+          </svg>
+        )}
+
+        {/* Status badge overlay */}
+        {isStored && (
+          <span className="absolute top-1.5 right-1.5 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded bg-white/85 text-gray-500">
+            Stored
+          </span>
+        )}
+        {upload.status === 'pending_review' && upload.pending_items && (
+          <span className="absolute top-1.5 right-1.5 text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50/90 text-amber-700 border border-amber-200">
+            {upload.pending_items} pending
+          </span>
+        )}
+        {(isProcessing || isScanning) && (
+          <span className="absolute top-1.5 right-1.5 text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50/90 text-blue-700 animate-pulse">
+            Processing...
+          </span>
+        )}
+
+        {/* Multi-page badge */}
+        {item.type === 'group' && item.pages.length > 1 && (
+          <span className="absolute bottom-1.5 left-1.5 text-[10px] font-bold px-2 py-0.5 rounded bg-black/60 text-white">
+            {item.pages.length} pages
+          </span>
+        )}
+      </div>
+
+      {/* Meta */}
+      <div className="p-2.5">
+        <p className="text-xs font-semibold text-gray-900 truncate">
+          {item.groupName || upload.original_filename}
+        </p>
+        <div className="flex items-center gap-1.5 mt-1">
+          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT_COLORS[upload.status] || 'bg-gray-400'}`} />
+          <span className="text-[11px] text-gray-500">
+            {isScanning ? 'Processing...' : STATUS_LABELS[upload.status] || upload.status}
+          </span>
+          <span className="text-[11px] text-gray-400">
+            {new Date(upload.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+          </span>
+        </div>
+
+        {/* Action button */}
+        {(isStored || isFailed) && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onScan(); }}
+            disabled={isScanning}
+            className="mt-2 w-full text-xs font-semibold py-1.5 rounded border transition-colors disabled:opacity-50"
+            style={{
+              background: 'var(--color-steel-light, #E8F0F8)',
+              borderColor: 'var(--color-steel, #4A7FB5)',
+              color: 'var(--color-steel-dark, #3A6A9A)',
+            }}
+          >
+            {isScanning ? 'Finding...' : isFailed ? 'Retry' : 'Find Health Records'}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// List card component
+function ListCard({
+  item,
+  getDocumentUrl,
+  isScanning,
+  onScan,
+  onSelect,
+  onAddPage,
+}: {
+  item: DisplayItem;
+  getDocumentUrl: (u: DocumentUpload) => string;
+  isScanning: boolean;
+  onScan: () => void;
+  onSelect: () => void;
+  onAddPage: () => void;
+}) {
+  const upload = item.primaryUpload;
+  const isStored = upload.status === 'uploaded';
+  const isFailed = upload.status === 'failed';
+  const canReview = upload.status === 'pending_review';
+  const canView = upload.status === 'completed';
+  const isProcessing = ['pending', 'processing'].includes(upload.status);
+  const isImage = upload.mime_type?.startsWith('image/');
+  const [metadataExpanded, setMetadataExpanded] = useState(false);
+
+  return (
+    <div
+      className="rounded-lg border bg-white transition-colors"
+      style={{ borderColor: 'var(--color-surface-200, #E2E5E9)' }}
+    >
+      <div className="flex items-center gap-3 p-3">
+        {/* Thumbnail */}
+        <div className="w-11 h-11 rounded-md overflow-hidden flex-shrink-0 bg-gray-100 flex items-center justify-center">
+          {isImage ? (
+            <img
+              src={getDocumentUrl(upload)}
+              alt={upload.original_filename}
+              className="w-full h-full object-cover"
+              loading="lazy"
             />
-          )}
-
-          {/* Thumbnail */}
-          <div className="flex-shrink-0 w-10 h-10 rounded flex items-center justify-center overflow-hidden">
-            {upload.file_type === 'pdf' || upload.mime_type === 'application/pdf' ? (
-              <svg className="w-9 h-9" viewBox="0 0 40 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M4 4C4 2.9 4.9 2 6 2H24L36 14V40C36 41.1 35.1 42 34 42H6C4.9 42 4 41.1 4 40V4Z" fill="white" stroke="#B91C1C" strokeWidth="2"/>
-                <path d="M24 2V14H36" fill="#FEE2E2" stroke="#B91C1C" strokeWidth="2" strokeLinejoin="round"/>
-                <rect x="2" y="24" width="28" height="14" rx="2" fill="#B91C1C"/>
-                <text x="16" y="35" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold" fontFamily="Arial, Helvetica, sans-serif">PDF</text>
-              </svg>
-            ) : !thumbnailError ? (
-              <img
-                src={getDocumentUrl(upload)}
-                alt={currentFilename}
-                className="h-10 w-10 object-cover rounded"
-                onError={() => setThumbnailError(true)}
-              />
-            ) : (
-              <svg className="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            )}
-          </div>
-
-          {/* File info */}
-          <div className="flex-1 min-w-0">
-            {isEditing ? (
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={newFilename}
-                  onChange={(e) => setNewFilename(e.target.value)}
-                  className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  disabled={isRenaming}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSaveEdit();
-                    else if (e.key === 'Escape') handleCancelEdit();
-                  }}
-                  autoFocus
-                />
-                <button onClick={handleSaveEdit} disabled={isRenaming} className="p-1 text-green-600 hover:text-green-700 disabled:opacity-50" title="Save">
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                </button>
-                <button onClick={handleCancelEdit} disabled={isRenaming} className="p-1 text-gray-600 hover:text-gray-700 disabled:opacity-50" title="Cancel">
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <a
-                  href={getDocumentUrl(upload)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm font-medium text-blue-700 truncate hover:underline"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {currentFilename}
-                </a>
-                <button onClick={handleStartEdit} className="p-1 text-gray-400 hover:text-gray-600" title="Rename">
-                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                </button>
-              </div>
-            )}
-            <p className="text-xs text-gray-500">
-              {item.type === 'group' && <>{item.pages.length} pages &middot; </>}
-              {new Date(upload.created_at).toLocaleDateString()}
-              {upload.user_tag && <> &middot; {upload.user_tag}</>}
-              {!upload.user_tag && upload.detected_document_type && <> &middot; {upload.detected_document_type.replace(/_/g, ' ')}</>}
-            </p>
-          </div>
-
-          {/* Status badges */}
-          {upload.status === 'pending_review' && (upload.pending_items || upload.approved_items || upload.rejected_items) ? (
-            <div className="flex items-center gap-1.5">
-              {!!upload.pending_items && (
-                <span className="px-2 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-700">
-                  {upload.pending_items} pending
-                </span>
-              )}
-              {!!upload.approved_items && (
-                <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">
-                  {upload.approved_items} approved
-                </span>
-              )}
-            </div>
           ) : (
-            <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[upload.status] || 'bg-gray-100 text-gray-700'} ${isProcessing || isScanning ? 'animate-pulse' : ''}`}>
-              {isScanning ? 'Scanning...' : statusLabels[upload.status] || upload.status}
-            </span>
+            <svg className="w-6 h-6 text-red-300" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M6 2h8l6 6v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/>
+            </svg>
           )}
         </div>
 
-        {/* Action buttons */}
-        <div className="flex items-center gap-2 ml-3">
-          {(isStored || isFailed) && onScan && (
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <a
+            href={getDocumentUrl(upload)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm font-semibold text-gray-900 truncate block hover:text-blue-700 hover:underline"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {item.groupName || upload.original_filename}
+          </a>
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS[upload.status]?.bg || 'bg-gray-100'} ${STATUS_COLORS[upload.status]?.text || 'text-gray-600'} ${(isProcessing || isScanning) ? 'animate-pulse' : ''}`}>
+              {isScanning ? 'Processing...' : upload.status === 'pending_review' && upload.pending_items
+                ? `${upload.pending_items} pending`
+                : STATUS_LABELS[upload.status] || upload.status}
+            </span>
+            {item.type === 'group' && (
+              <span className="text-[11px] text-gray-400">{item.pages.length} pages</span>
+            )}
+            {upload.user_tag && (
+              <span className="text-[11px] text-gray-400">{upload.user_tag}</span>
+            )}
+            <span className="text-[11px] text-gray-400">
+              {new Date(upload.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+            </span>
+          </div>
+        </div>
+
+        {/* Action button */}
+        <div className="flex-shrink-0">
+          {(isStored || isFailed) && (
             <button
               onClick={onScan}
               disabled={isScanning}
-              className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 disabled:opacity-50"
+              className="text-xs font-semibold px-3 py-1.5 rounded-md border transition-colors disabled:opacity-50"
+              style={{
+                background: 'var(--color-steel-light, #E8F0F8)',
+                borderColor: 'var(--color-steel, #4A7FB5)',
+                color: 'var(--color-steel-dark, #3A6A9A)',
+              }}
             >
-              {isScanning ? 'Scanning...' : isFailed ? 'Retry Scan' : 'Scan for Records'}
+              {isScanning ? 'Finding...' : isFailed ? 'Retry' : 'Find Health Records'}
             </button>
           )}
           {canReview && (
-            <button onClick={onSelect} className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100">
+            <button
+              onClick={onSelect}
+              className="text-xs font-semibold px-3 py-1.5 rounded-md border transition-colors"
+              style={{
+                background: 'var(--color-steel-light, #E8F0F8)',
+                borderColor: 'var(--color-steel, #4A7FB5)',
+                color: 'var(--color-steel-dark, #3A6A9A)',
+              }}
+            >
               Review
             </button>
           )}
           {canView && (
-            <button onClick={onSelect} className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100">
+            <button
+              onClick={onSelect}
+              className="text-xs font-semibold px-3 py-1.5 rounded-md border text-gray-500 hover:bg-gray-50 transition-colors"
+              style={{ borderColor: 'var(--color-surface-200, #E2E5E9)' }}
+            >
               View
             </button>
           )}
@@ -595,38 +674,29 @@ function DocumentCard({
       {/* Multi-page thumbnail strip */}
       {item.type === 'group' && item.pages.length > 1 && (
         <div className="px-3 pb-2">
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-            {item.pages.map((page, i) => (
+          <div className="flex items-center gap-1 overflow-x-auto pb-1">
+            {item.pages.map((page) => (
               <a
                 key={page.id}
                 href={getDocumentUrl(page)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-shrink-0 w-10 h-10 rounded border border-gray-200 overflow-hidden hover:border-blue-400 transition-colors relative"
+                className="flex-shrink-0 w-7 h-7 rounded border overflow-hidden hover:border-blue-400 transition-colors relative"
+                style={{ borderColor: 'var(--color-surface-200, #E2E5E9)' }}
                 title={`Page ${page.page_number}`}
               >
-                <img
-                  src={getDocumentUrl(page)}
-                  alt={`Page ${page.page_number}`}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-                <span className="absolute bottom-0 right-0 text-[9px] bg-black/50 text-white px-1 rounded-tl">
-                  {page.page_number}
-                </span>
+                <img src={getDocumentUrl(page)} alt={`Page ${page.page_number}`} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                <span className="absolute bottom-0 right-0 text-[8px] bg-black/50 text-white px-0.5 rounded-tl">{page.page_number}</span>
               </a>
             ))}
-            {isStored && onAddPage && (
+            {isStored && (
               <button
                 onClick={onAddPage}
-                className="flex-shrink-0 w-10 h-10 rounded border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-blue-400 hover:text-blue-500 transition-colors"
+                className="flex-shrink-0 w-7 h-7 rounded border-2 border-dashed flex items-center justify-center text-gray-300 hover:border-blue-400 hover:text-blue-500 transition-colors"
+                style={{ borderColor: 'var(--color-surface-300, #CED4DA)' }}
                 title="Add page"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M12 4v16m8-8H4"/></svg>
               </button>
             )}
           </div>
@@ -634,11 +704,11 @@ function DocumentCard({
       )}
 
       {/* Inline metadata for stored images */}
-      {isStored && upload.mime_type?.startsWith('image/') && item.type === 'standalone' && (
+      {isStored && isImage && item.type === 'standalone' && (
         <div className="px-3 pb-3">
           <button
             onClick={() => setMetadataExpanded(!metadataExpanded)}
-            className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1"
+            className="text-[11px] text-gray-400 hover:text-gray-600 flex items-center gap-1"
           >
             <svg className={`h-3 w-3 transition-transform ${metadataExpanded ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -646,14 +716,8 @@ function DocumentCard({
             Add details (optional)
           </button>
           {metadataExpanded && (
-            <InlineMetadataForm petId={item.primaryUpload.pet_id} uploadId={upload.id} upload={upload} />
+            <InlineMetadataForm petId={upload.pet_id} uploadId={upload.id} upload={upload} />
           )}
-        </div>
-      )}
-
-      {renameError && (
-        <div className="px-3 pb-3">
-          <p className="text-xs text-red-600">{renameError}</p>
         </div>
       )}
     </div>
@@ -684,74 +748,38 @@ function InlineMetadataForm({ petId, uploadId, upload }: { petId: number; upload
       }, token);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
-    } catch {
-      // Silently fail — metadata is optional
-    } finally {
-      setSaving(false);
-    }
+    } catch { /* metadata is optional */ }
+    finally { setSaving(false); }
   };
 
   return (
     <div className="mt-2 space-y-2">
       <div>
-        <label className="block text-xs text-gray-600 mb-1">Tag</label>
+        <label className="block text-[11px] text-gray-500 mb-1">Tag</label>
         <div className="flex flex-wrap gap-1 mb-1">
           {tagSuggestions.map(tag => (
-            <button
-              key={tag}
-              onClick={() => setUserTag(tag)}
-              className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
-                userTag === tag ? 'bg-blue-100 border-blue-300 text-blue-700' : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
-              }`}
-            >
+            <button key={tag} onClick={() => setUserTag(tag)} className={`px-2 py-0.5 text-[11px] rounded-full border transition-colors ${userTag === tag ? 'bg-blue-100 border-blue-300 text-blue-700' : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'}`}>
               {tag}
             </button>
           ))}
         </div>
-        <input
-          type="text"
-          value={userTag}
-          onChange={(e) => setUserTag(e.target.value)}
-          placeholder="Custom tag..."
-          className="w-full border border-gray-200 rounded px-2 py-1 text-xs"
-        />
+        <input type="text" value={userTag} onChange={(e) => setUserTag(e.target.value)} placeholder="Custom tag..." className="w-full border border-gray-200 rounded px-2 py-1 text-xs" />
       </div>
       <div>
-        <label className="block text-xs text-gray-600 mb-1">Note</label>
-        <input
-          type="text"
-          value={userDescription}
-          onChange={(e) => setUserDescription(e.target.value)}
-          placeholder="Brief description..."
-          className="w-full border border-gray-200 rounded px-2 py-1 text-xs"
-        />
+        <label className="block text-[11px] text-gray-500 mb-1">Note</label>
+        <input type="text" value={userDescription} onChange={(e) => setUserDescription(e.target.value)} placeholder="Brief description..." className="w-full border border-gray-200 rounded px-2 py-1 text-xs" />
       </div>
       <div className="flex gap-2">
         <div className="flex-1">
-          <label className="block text-xs text-gray-600 mb-1">Date taken</label>
-          <input
-            type="date"
-            value={dateTaken}
-            onChange={(e) => setDateTaken(e.target.value)}
-            className="w-full border border-gray-200 rounded px-2 py-1 text-xs"
-          />
+          <label className="block text-[11px] text-gray-500 mb-1">Date taken</label>
+          <input type="date" value={dateTaken} onChange={(e) => setDateTaken(e.target.value)} className="w-full border border-gray-200 rounded px-2 py-1 text-xs" />
         </div>
         <div className="flex-1">
-          <label className="block text-xs text-gray-600 mb-1">Body area</label>
-          <input
-            type="text"
-            value={bodyArea}
-            onChange={(e) => setBodyArea(e.target.value)}
-            placeholder="e.g., Left hip"
-            className="w-full border border-gray-200 rounded px-2 py-1 text-xs"
-          />
+          <label className="block text-[11px] text-gray-500 mb-1">Body area</label>
+          <input type="text" value={bodyArea} onChange={(e) => setBodyArea(e.target.value)} placeholder="e.g., Left hip" className="w-full border border-gray-200 rounded px-2 py-1 text-xs" />
         </div>
       </div>
-      <button
-        onClick={handleSave}
-        disabled={saving}
-        className="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50"
-      >
+      <button onClick={handleSave} disabled={saving} className="px-3 py-1 text-xs font-semibold text-white rounded disabled:opacity-50" style={{ background: 'var(--color-steel, #4A7FB5)' }}>
         {saved ? 'Saved!' : saving ? 'Saving...' : 'Save'}
       </button>
     </div>

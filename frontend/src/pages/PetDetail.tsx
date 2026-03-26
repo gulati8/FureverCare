@@ -3,7 +3,6 @@ import { useParams, useNavigate, useLocation, Outlet, Link } from 'react-router-
 import { useAuth } from '../hooks/useAuth';
 import {
   petsApi,
-  documentsApi,
   Pet,
   PetVet,
   PetCondition,
@@ -12,7 +11,6 @@ import {
   PetVaccination,
   PetEmergencyContact,
   PetAlert,
-  DocumentUpload,
 } from '../api/client';
 import ManageAccessModal from '../components/ManageAccessModal';
 import PhotoUpload from '../components/PhotoUpload';
@@ -56,7 +54,6 @@ export default function PetDetail() {
   const [vaccinations, setVaccinations] = useState<PetVaccination[]>([]);
   const [emergencyContacts, setEmergencyContacts] = useState<PetEmergencyContact[]>([]);
   const [alerts, setAlerts] = useState<PetAlert[]>([]);
-  const [imageUploads, setImageUploads] = useState<DocumentUpload[]>([]);
 
   const petId = parseInt(id || '0');
 
@@ -68,7 +65,7 @@ export default function PetDetail() {
     if (!token || !id) return;
     setIsLoading(true);
     try {
-      const [petData, vetsData, conditionsData, allergiesData, medsData, vacsData, contactsData, alertsData, uploadsData] = await Promise.all([
+      const [petData, vetsData, conditionsData, allergiesData, medsData, vacsData, contactsData, alertsData] = await Promise.all([
         petsApi.get(petId, token),
         petsApi.getVets(petId, token),
         petsApi.getConditions(petId, token),
@@ -77,7 +74,6 @@ export default function PetDetail() {
         petsApi.getVaccinations(petId, token),
         petsApi.getEmergencyContacts(petId, token),
         petsApi.getAlerts(petId, token),
-        documentsApi.listUploads(petId, token).catch(() => [] as DocumentUpload[]),
       ]);
       setPet(petData);
       setVets(vetsData);
@@ -87,10 +83,6 @@ export default function PetDetail() {
       setVaccinations(vacsData);
       setEmergencyContacts(contactsData);
       setAlerts(alertsData);
-      setImageUploads(uploadsData.filter((u: any) => {
-        const isImage = u.file_type === 'image' || u.media_type === 'image' || (u.mime_type && u.mime_type.startsWith('image/'));
-        return isImage && (u.status === 'completed' || u.status === 'uploaded');
-      }));
     } catch (err) {
       console.error('Failed to load pet:', err);
       navigate('/dashboard');
@@ -152,7 +144,6 @@ export default function PetDetail() {
     setEmergencyContacts,
     alerts,
     setAlerts,
-    imageUploads,
     handlePetUpdated,
     handleNavigateToReview,
     loadPetData,
@@ -240,7 +231,7 @@ export default function PetDetail() {
             vets: vets.length,
             contacts: emergencyContacts.length,
             alerts: alerts.filter(a => a.is_active).length,
-            images: imageUploads.length,
+            images: 0,
           }}
         />
 

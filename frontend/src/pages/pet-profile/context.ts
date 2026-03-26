@@ -9,7 +9,6 @@ import {
   PetVaccination,
   PetEmergencyContact,
   PetAlert,
-  DocumentUpload,
 } from '../../api/client';
 
 export interface PetProfileContext {
@@ -32,7 +31,6 @@ export interface PetProfileContext {
   setEmergencyContacts: (c: PetEmergencyContact[]) => void;
   alerts: PetAlert[];
   setAlerts: (a: PetAlert[]) => void;
-  imageUploads: DocumentUpload[];
   // Handlers
   handlePetUpdated: (pet: Pet) => void;
   handleNavigateToReview: (uploadId: number, highlightItemId: number) => void;

@@ -1,19 +1,12 @@
 import { usePetProfileContext } from '../context';
-import ImagesTab from '../tabs/ImagesTab';
 import { DocumentImportSection } from '../../../components/document-import/DocumentImportSection';
 import UpgradeBanner from '../../../components/UpgradeBanner';
 
 export default function DocumentsSection() {
-  const { petId, isPremium, imageUploads, loadPetData, pendingDocNav, setPendingDocNav } = usePetProfileContext();
+  const { petId, isPremium, loadPetData, pendingDocNav, setPendingDocNav } = usePetProfileContext();
 
   return (
     <div className="space-y-6 fade-in">
-      {/* Images */}
-      <div className="card">
-        <ImagesTab petId={petId} images={imageUploads} />
-      </div>
-
-      {/* Document Import */}
       <div className="card">
         {isPremium ? (
           <DocumentImportSection

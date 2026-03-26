@@ -206,9 +206,6 @@ router.post('/:petId/documents/uploads/:id/process', authenticate, requireFeatur
 
     res.json({
       upload: result.upload,
-      detected_type: result.classification?.detectedType || 'other',
-      confidence: result.classification?.confidence || 0,
-      explanation: result.classification?.explanation || '',
       extracted_items: extractedItems,
       summary: generateExtractedItemsSummary(byCategory),
       extraction_id: result.extraction?.id,
@@ -440,14 +437,7 @@ router.get('/:petId/documents/uploads/:id/extraction', authenticate, async (req:
       return;
     }
 
-    res.json({
-      ...extraction,
-      classification: {
-        detected_type: upload.detected_type,
-        confidence: upload.classification_confidence,
-        explanation: upload.classification_explanation,
-      },
-    });
+    res.json(extraction);
   } catch (error) {
     console.error('Error fetching extraction:', error);
     res.status(500).json({ error: 'Failed to fetch extraction' });
