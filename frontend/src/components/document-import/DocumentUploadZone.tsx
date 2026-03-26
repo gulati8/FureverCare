@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { documentsApi } from '../../api/client';
 import { compressImage } from '../../utils/compress-image';
@@ -47,6 +47,20 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
   const [groupMode, setGroupMode] = useState<'one' | 'separate'>('one');
   const groupNameRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Memoize preview URLs to avoid re-creating on every render
+  const previewUrls = useMemo(() => {
+    if (!pendingFiles) return [];
+    return pendingFiles.map(f => URL.createObjectURL(f));
+  }, [pendingFiles]);
+
+  const movePage = (fromIdx: number, toIdx: number) => {
+    if (!pendingFiles || toIdx < 0 || toIdx >= pendingFiles.length) return;
+    const reordered = [...pendingFiles];
+    const [moved] = reordered.splice(fromIdx, 1);
+    reordered.splice(toIdx, 0, moved);
+    setPendingFiles(reordered);
+  };
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -178,30 +192,6 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
             {pendingFiles.length} files selected
           </p>
 
-          {/* File preview thumbnails */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            {pendingFiles.slice(0, 8).map((file, i) => (
-              <div key={i} className="w-12 h-12 rounded bg-gray-100 flex items-center justify-center text-xs text-gray-500 overflow-hidden">
-                {file.type.startsWith('image/') ? (
-                  <img
-                    src={URL.createObjectURL(file)}
-                    alt={file.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <svg className="w-6 h-6 text-red-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M4 18h12a2 2 0 002-2V6l-4-4H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                )}
-              </div>
-            ))}
-            {pendingFiles.length > 8 && (
-              <div className="w-12 h-12 rounded bg-gray-100 flex items-center justify-center text-xs text-gray-500">
-                +{pendingFiles.length - 8}
-              </div>
-            )}
-          </div>
-
           {/* Radio options */}
           <div className="space-y-3 mb-4">
             <label className="flex items-start gap-3 cursor-pointer">
@@ -240,17 +230,84 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
             </label>
           </div>
 
-          {/* Group name input (only when grouping) */}
+          {/* Page order & name (only when grouping as one document) */}
           {groupMode === 'one' && (
-            <div className="mb-4">
-              <label className="block text-sm text-gray-700 mb-1">Document name</label>
-              <input
-                type="text"
-                ref={groupNameRef}
-                placeholder="e.g., Wednesday ER Visit Notes"
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
-                maxLength={255}
-              />
+            <>
+              <div className="mb-4">
+                <label className="block text-sm text-gray-700 mb-1">Document name</label>
+                <input
+                  type="text"
+                  ref={groupNameRef}
+                  placeholder="e.g., Wednesday ER Visit Notes"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+                  maxLength={255}
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm text-gray-700 mb-2">Page order</label>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {pendingFiles.map((file, idx) => (
+                    <div key={previewUrls[idx]} className="flex-shrink-0 flex flex-col items-center" style={{ width: '88px' }}>
+                      <div className="relative w-20 h-20 rounded-md overflow-hidden bg-gray-100 border border-gray-200">
+                        <img
+                          src={previewUrls[idx]}
+                          alt={file.name}
+                          className="w-full h-full object-cover"
+                        />
+                        <span className="absolute top-0.5 left-0.5 bg-black/60 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
+                          {idx + 1}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 mt-1">
+                        <button
+                          type="button"
+                          onClick={() => movePage(idx, idx - 1)}
+                          disabled={idx === 0}
+                          className="p-0.5 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-gray-400"
+                          title="Move left"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </button>
+                        <span className="text-[10px] text-gray-400 tabular-nums">{idx + 1}/{pendingFiles.length}</span>
+                        <button
+                          type="button"
+                          onClick={() => movePage(idx, idx + 1)}
+                          disabled={idx === pendingFiles.length - 1}
+                          className="p-0.5 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-gray-400"
+                          title="Move right"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Static thumbnails when uploading as separate documents */}
+          {groupMode === 'separate' && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {pendingFiles.slice(0, 8).map((file, i) => (
+                <div key={i} className="w-12 h-12 rounded bg-gray-100 flex items-center justify-center text-xs text-gray-500 overflow-hidden">
+                  <img
+                    src={previewUrls[i]}
+                    alt={file.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ))}
+              {pendingFiles.length > 8 && (
+                <div className="w-12 h-12 rounded bg-gray-100 flex items-center justify-center text-xs text-gray-500">
+                  +{pendingFiles.length - 8}
+                </div>
+              )}
             </div>
           )}
 

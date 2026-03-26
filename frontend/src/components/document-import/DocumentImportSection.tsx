@@ -418,6 +418,7 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
               isScanning={scanningIds.has(item.primaryUpload.id) || batchScanning}
               onScan={() => handleScanDocument(item)}
               onSelect={() => handleUploadSelect(item.primaryUpload)}
+              onReorder={(pageOrder) => item.groupId ? handleReorderPages(item.groupId, pageOrder) : undefined}
             />
           ))}
         </div>
@@ -479,12 +480,14 @@ function GridCard({
   isScanning,
   onScan,
   onSelect,
+  onReorder,
 }: {
   item: DisplayItem;
   getDocumentUrl: (u: DocumentUpload) => string;
   isScanning: boolean;
   onScan: () => void;
   onSelect: () => void;
+  onReorder: (pageOrder: number[]) => void;
 }) {
   const upload = item.primaryUpload;
   const isStored = upload.status === 'uploaded';
@@ -590,6 +593,7 @@ function GridCard({
           getDocumentUrl={getDocumentUrl}
           onClose={() => setLightboxPage(null)}
           onNavigate={setLightboxPage}
+          onReorder={onReorder}
         />
       )}
     </>
@@ -626,17 +630,13 @@ function ListCard({
   const [metadataExpanded, setMetadataExpanded] = useState(false);
   const [pagesExpanded, setPagesExpanded] = useState(false);
   const [lightboxPage, setLightboxPage] = useState<DocumentUpload | null>(null);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const [reorderFeedback, setReorderFeedback] = useState<string | null>(null);
 
-  const handleReorder = (fromIdx: number, toIdx: number) => {
+  const handleMovePage = (fromIdx: number, toIdx: number) => {
+    if (toIdx < 0 || toIdx >= item.pages.length) return;
     const newPages = [...item.pages];
     const [moved] = newPages.splice(fromIdx, 1);
     newPages.splice(toIdx, 0, moved);
     onReorder(newPages.map(p => p.id));
-    setReorderFeedback(`Moved page ${fromIdx + 1} → ${toIdx + 1}`);
-    setTimeout(() => setReorderFeedback(null), 2000);
   };
 
   return (
@@ -747,142 +747,70 @@ function ListCard({
         </div>
       </div>
 
-      {/* Expanded page viewer with insertion-style drag-and-drop reorder */}
+      {/* Expanded page viewer with arrow-based reorder */}
       {isGroup && pagesExpanded && (
         <div className="px-3 pb-3 border-t" style={{ borderColor: 'var(--color-surface-100, #F1F3F5)' }}>
-          {/* Reorder feedback */}
-          {reorderFeedback && (
-            <div className="mt-2 mb-1 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded px-2 py-1 inline-flex items-center gap-1.5">
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-              {reorderFeedback}
-            </div>
-          )}
-
-          <div className="flex items-start overflow-x-auto pt-3 pb-1" style={{ gap: '0px' }}>
+          <div className="flex items-start gap-2 overflow-x-auto pt-3 pb-1">
             {item.pages.map((page, idx) => (
-              <div key={page.id} className="flex items-start flex-shrink-0">
-                {/* Drop zone BEFORE this page (insertion indicator) */}
+              <div key={page.id} className="flex-shrink-0 flex flex-col items-center" style={{ width: '100px' }}>
+                {/* Thumbnail — click to view */}
                 <div
-                  className={`self-stretch flex items-center transition-all ${
-                    dragOverIndex === idx && dragIndex !== null && dragIndex !== idx ? 'w-3 mx-0.5' : 'w-1'
-                  }`}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = 'move';
-                    if (dragIndex !== null && idx !== dragIndex && idx !== dragIndex + 1) {
-                      setDragOverIndex(idx);
-                    }
-                  }}
-                  onDragLeave={() => { if (dragOverIndex === idx) setDragOverIndex(null); }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    if (dragIndex !== null && dragIndex !== idx) {
-                      const targetIdx = dragIndex < idx ? idx - 1 : idx;
-                      handleReorder(dragIndex, targetIdx);
-                    }
-                    setDragIndex(null);
-                    setDragOverIndex(null);
-                  }}
+                  className="w-full bg-gray-100 cursor-pointer relative rounded-md overflow-hidden border hover:border-blue-400 hover:shadow-md transition-all"
+                  style={{ height: '80px', borderColor: 'var(--color-surface-200, #E2E5E9)' }}
+                  onClick={() => setLightboxPage(page)}
                 >
-                  <div className={`w-0.5 rounded-full transition-all ${
-                    dragOverIndex === idx && dragIndex !== null && dragIndex !== idx
-                      ? 'bg-blue-500 h-full'
-                      : 'bg-transparent h-0'
-                  }`} />
+                  <img
+                    src={getDocumentUrl(page)}
+                    alt={`Page ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                  <span className="absolute top-0.5 left-0.5 bg-black/60 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
+                    {idx + 1}
+                  </span>
                 </div>
-
-                {/* Page card */}
-                <div
-                  draggable
-                  onDragStart={(e) => {
-                    setDragIndex(idx);
-                    e.dataTransfer.effectAllowed = 'move';
-                  }}
-                  onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
-                  className={`rounded-lg border overflow-hidden transition-all cursor-grab active:cursor-grabbing ${
-                    dragIndex === idx ? 'opacity-30 scale-95' : 'hover:border-blue-400 hover:shadow-md'
-                  }`}
-                  style={{ borderColor: 'var(--color-surface-200, #E2E5E9)', width: '130px' }}
-                >
-                  {/* Thumbnail — click to view */}
-                  <div
-                    className="w-full bg-gray-100 cursor-pointer relative"
-                    style={{ height: '100px' }}
-                    onClick={() => setLightboxPage(page)}
+                {/* Reorder arrows */}
+                <div className="flex items-center gap-1 mt-1">
+                  <button
+                    onClick={() => handleMovePage(idx, idx - 1)}
+                    disabled={idx === 0}
+                    className="p-0.5 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-gray-400"
+                    title="Move left"
                   >
-                    <img
-                      src={getDocumentUrl(page)}
-                      alt={`Page ${idx + 1}`}
-                      className="w-full h-full object-cover pointer-events-none"
-                      loading="lazy"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                    />
-                    <div className="absolute top-1 left-1 bg-black/50 rounded px-1.5 py-0.5 pointer-events-none">
-                      <span className="text-[10px] font-bold text-white">Page {idx + 1}</span>
-                    </div>
-                    <div className="absolute top-1 right-1 bg-black/40 rounded p-0.5 pointer-events-none">
-                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/>
-                        <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
-                        <circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/>
-                      </svg>
-                    </div>
-                  </div>
-                  {/* Page info */}
-                  <div className="px-2 py-1.5 bg-white">
-                    <p className="text-[10px] text-gray-500 truncate" title={page.original_filename}>
-                      {page.original_filename}
-                    </p>
-                  </div>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <span className="text-[10px] text-gray-400 tabular-nums">{idx + 1}/{item.pages.length}</span>
+                  <button
+                    onClick={() => handleMovePage(idx, idx + 1)}
+                    disabled={idx === item.pages.length - 1}
+                    className="p-0.5 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-gray-400"
+                    title="Move right"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
                 </div>
-
-                {/* Drop zone AFTER last page */}
-                {idx === item.pages.length - 1 && (
-                  <div
-                    className={`self-stretch flex items-center transition-all ${
-                      dragOverIndex === item.pages.length && dragIndex !== null ? 'w-3 mx-0.5' : 'w-1'
-                    }`}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.dataTransfer.dropEffect = 'move';
-                      if (dragIndex !== null && dragIndex !== item.pages.length - 1) {
-                        setDragOverIndex(item.pages.length);
-                      }
-                    }}
-                    onDragLeave={() => { if (dragOverIndex === item.pages.length) setDragOverIndex(null); }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      if (dragIndex !== null) {
-                        handleReorder(dragIndex, item.pages.length - 1);
-                      }
-                      setDragIndex(null);
-                      setDragOverIndex(null);
-                    }}
-                  >
-                    <div className={`w-0.5 rounded-full transition-all ${
-                      dragOverIndex === item.pages.length && dragIndex !== null
-                        ? 'bg-blue-500 h-full'
-                        : 'bg-transparent h-0'
-                    }`} />
-                  </div>
-                )}
               </div>
             ))}
             {/* Add page button */}
             {isStored && (
-              <div className="flex-shrink-0 ml-1">
+              <div className="flex-shrink-0">
                 <button
                   onClick={onAddPage}
-                  className="rounded-lg border-2 border-dashed flex flex-col items-center justify-center text-gray-300 hover:border-blue-400 hover:text-blue-500 transition-colors"
-                  style={{ borderColor: 'var(--color-surface-300, #CED4DA)', width: '130px', height: '130px' }}
+                  className="rounded-md border-2 border-dashed flex flex-col items-center justify-center text-gray-300 hover:border-blue-400 hover:text-blue-500 transition-colors"
+                  style={{ borderColor: 'var(--color-surface-300, #CED4DA)', width: '100px', height: '80px' }}
                 >
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M12 4v16m8-8H4"/></svg>
-                  <span className="text-[11px] font-medium mt-1">Add Page</span>
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M12 4v16m8-8H4"/></svg>
+                  <span className="text-[10px] font-medium mt-0.5">Add Page</span>
                 </button>
               </div>
             )}
           </div>
-          <p className="text-[10px] text-gray-400 mt-1.5">Drag pages to reorder &middot; Click to view full size</p>
+          <p className="text-[10px] text-gray-400 mt-1.5">Use arrows to reorder &middot; Click to view full size</p>
         </div>
       )}
 
@@ -894,6 +822,7 @@ function ListCard({
           getDocumentUrl={getDocumentUrl}
           onClose={() => setLightboxPage(null)}
           onNavigate={setLightboxPage}
+          onReorder={onReorder}
         />
       )}
 
@@ -918,21 +847,33 @@ function ListCard({
   );
 }
 
-// Shared page lightbox with navigation
+// Shared page lightbox with navigation and reorder
 function PageLightbox({
   pages,
   currentPage,
   getDocumentUrl,
   onClose,
   onNavigate,
+  onReorder,
 }: {
   pages: DocumentUpload[];
   currentPage: DocumentUpload;
   getDocumentUrl: (u: DocumentUpload) => string;
   onClose: () => void;
   onNavigate: (page: DocumentUpload) => void;
+  onReorder: (pageOrder: number[]) => void;
 }) {
   const currentIdx = pages.findIndex(p => p.id === currentPage.id);
+
+  const handleMovePage = (fromIdx: number, toIdx: number) => {
+    if (toIdx < 0 || toIdx >= pages.length) return;
+    const newPages = [...pages];
+    const [moved] = newPages.splice(fromIdx, 1);
+    newPages.splice(toIdx, 0, moved);
+    onReorder(newPages.map(p => p.id));
+    // Navigate to the moved page's new position
+    onNavigate(moved);
+  };
 
   return (
     <div
@@ -967,12 +908,37 @@ function PageLightbox({
         </div>
 
         <div className="p-3 border-t flex items-center justify-between">
-          <div>
+          <div className="flex items-center gap-3">
             <span className="text-sm font-medium text-gray-700">
               {pages.length > 1 ? `Page ${currentIdx + 1} of ${pages.length}` : currentPage.original_filename}
             </span>
             {pages.length > 1 && (
-              <span className="text-xs text-gray-400 ml-2">{currentPage.original_filename}</span>
+              <>
+                <span className="text-xs text-gray-400">{currentPage.original_filename}</span>
+                <div className="flex items-center gap-1 border-l pl-3" style={{ borderColor: 'var(--color-surface-200, #E2E5E9)' }}>
+                  <button
+                    onClick={() => handleMovePage(currentIdx, currentIdx - 1)}
+                    disabled={currentIdx === 0}
+                    className="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-gray-400"
+                    title="Move page earlier"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <span className="text-[11px] text-gray-500 font-medium">Move</span>
+                  <button
+                    onClick={() => handleMovePage(currentIdx, currentIdx + 1)}
+                    disabled={currentIdx === pages.length - 1}
+                    className="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-gray-400"
+                    title="Move page later"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              </>
             )}
           </div>
           <a href={getDocumentUrl(currentPage)} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
