@@ -83,6 +83,16 @@ app.use('/api/admin/subscription', subscriptionAdminRoutes);  // Subscription ad
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  // Multer file-size errors → 413 with a helpful message
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    res.status(413).json({ error: 'File too large. Please upload a smaller file.' });
+    return;
+  }
+  // Multer file-type errors from our filters
+  if (err.message?.includes('Invalid file type')) {
+    res.status(400).json({ error: err.message });
+    return;
+  }
   console.error('Unhandled error:', err);
   res.status(500).json({ error: 'Internal server error' });
 });

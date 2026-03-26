@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { documentsApi } from '../../api/client';
+import { compressImage } from '../../utils/compress-image';
 
 interface DocumentUploadZoneProps {
   petId: number;
@@ -149,7 +150,10 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
           ? { documentGroupId: groupOptions.documentGroupId, pageNumber: i + 1, groupName: groupOptions.groupName }
           : undefined;
 
-        await documentsApi.upload(petId, file, token, opts);
+        // Compress images client-side before upload (PDFs pass through unchanged)
+        const compressed = await compressImage(file);
+
+        await documentsApi.upload(petId, compressed, token, opts);
         completed++;
         setUploadProgress(Math.round((completed / total) * 100));
       }
@@ -319,7 +323,7 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
                 {' '}or drag and drop
               </p>
               <p className="mt-1 text-xs text-gray-500">
-                PDFs and images (JPEG, PNG, WebP, GIF, HEIC, TIFF, BMP) up to 20MB
+                PDFs and images (JPEG, PNG, WebP, GIF, HEIC, TIFF, BMP) — images are compressed automatically
               </p>
             </>
           )}
