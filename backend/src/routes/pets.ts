@@ -26,7 +26,7 @@ import {
   getPetAllergies, createPetAllergy, updatePetAllergy, deletePetAllergy,
   getPetMedications, createPetMedication, updatePetMedication, deletePetMedication,
   getPetVaccinations, createPetVaccination, updatePetVaccination, deletePetVaccination,
-  getPetEmergencyContacts, createPetEmergencyContact, updatePetEmergencyContact, deletePetEmergencyContact,
+  getPetEmergencyContacts, createPetEmergencyContact, updatePetEmergencyContact, deletePetEmergencyContact, setPrimaryEmergencyContact,
   getPetAlerts, createPetAlert, updatePetAlert, deletePetAlert,
 } from '../models/health-records.js';
 
@@ -559,6 +559,38 @@ router.delete('/:id/emergency-contacts/:contactId', authenticate, async (req: Au
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete emergency contact' });
+  }
+});
+
+router.patch('/:id/emergency-contacts/:contactId/primary', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const petId = parseInt(req.params.id);
+    const contactId = parseInt(req.params.contactId);
+
+    if (!await verifyPetAccess(petId, req.userId!)) {
+      res.status(404).json({ error: 'Pet not found' });
+      return;
+    }
+
+    const audit = {
+      userId: req.userId!,
+      source: 'manual' as const,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    };
+
+    await setPrimaryEmergencyContact(petId, contactId, audit);
+    await invalidateCardCache(petId);
+
+    const contacts = await getPetEmergencyContacts(petId);
+    res.json(contacts);
+  } catch (error) {
+    console.error('Error setting primary emergency contact:', error);
+    if (error instanceof Error && error.message === 'Emergency contact not found') {
+      res.status(404).json({ error: 'Emergency contact not found' });
+      return;
+    }
+    res.status(500).json({ error: 'Failed to set primary emergency contact' });
   }
 });
 

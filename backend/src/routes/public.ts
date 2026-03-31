@@ -146,13 +146,17 @@ async function buildEmergencyCard(pet: any) {
       is_primary: v.is_primary,
     })),
 
-    // Additional emergency contacts
-    emergency_contacts: emergencyContacts.map(c => ({
-      name: c.name,
-      relationship: c.relationship,
-      phone: c.phone,
-      is_primary: c.is_primary,
-    })),
+    // Additional emergency contacts — only the primary contact (or first as fallback)
+    emergency_contacts: (() => {
+      if (emergencyContacts.length === 0) return [];
+      const primary = emergencyContacts.find(c => c.is_primary) || emergencyContacts[0];
+      return [{
+        name: primary.name,
+        relationship: primary.relationship,
+        phone: primary.phone,
+        is_primary: primary.is_primary,
+      }];
+    })(),
 
     // Custom alerts (owner-entered behavioral/safety flags)
     custom_alerts: customAlerts.filter(a => a.is_active).map(a => ({

@@ -37,6 +37,11 @@ export default function ContactsTab({ petId, token, contacts, setContacts }: {
     setDeletingId(null);
   };
 
+  const handleSetPrimary = async (contactId: number) => {
+    await petsApi.setPrimaryEmergencyContact(petId, contactId, token);
+    setContacts(contacts.map(c => ({ ...c, is_primary: c.id === contactId })));
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
@@ -76,6 +81,14 @@ export default function ContactsTab({ petId, token, contacts, setContacts }: {
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => setEditingId(c.id)} className="text-navy hover:text-primary-800 text-sm">Edit</button>
+                    {!c.is_primary && (
+                      <button
+                        onClick={() => handleSetPrimary(c.id)}
+                        className="text-navy hover:text-primary-800 text-sm"
+                      >
+                        Set as Primary
+                      </button>
+                    )}
                     {deletingId === c.id ? (
                       <>
                         <span className="text-sm text-gray-500">Sure?</span>

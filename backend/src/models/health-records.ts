@@ -705,6 +705,57 @@ export async function deletePetEmergencyContact(id: number, petId: number, audit
   return true;
 }
 
+export async function setPrimaryEmergencyContact(petId: number, contactId: number, audit?: AuditContext): Promise<PetEmergencyContact> {
+  return transaction(async (client) => {
+    // Get the contact we're setting as primary (to verify it exists)
+    const targetContact = await client.query('SELECT * FROM pet_emergency_contacts WHERE id = $1 AND pet_id = $2', [contactId, petId]);
+    if (!targetContact.rows || targetContact.rows.length === 0) {
+      throw new Error('Emergency contact not found');
+    }
+
+    // Get all contacts for audit logging
+    const allContactsResult = await client.query('SELECT * FROM pet_emergency_contacts WHERE pet_id = $1', [petId]);
+    const oldContacts = allContactsResult.rows;
+
+    // Set all contacts to is_primary = false
+    await client.query('UPDATE pet_emergency_contacts SET is_primary = false WHERE pet_id = $1', [petId]);
+
+    // Set the target contact to is_primary = true
+    const result = await client.query(
+      'UPDATE pet_emergency_contacts SET is_primary = true WHERE id = $1 AND pet_id = $2 RETURNING *',
+      [contactId, petId]
+    );
+
+    const updatedContact = result.rows[0];
+
+    // Audit logging - log the primary contact change
+    if (audit && updatedContact) {
+      const oldContact = oldContacts.find((c: PetEmergencyContact) => c.id === contactId);
+      if (oldContact) {
+        await logUpdate('pet_emergency_contacts', contactId, oldContact, updatedContact, audit.userId, {
+          source: audit.source || 'manual',
+          ipAddress: audit.ipAddress,
+          userAgent: audit.userAgent,
+        });
+      }
+
+      // Also log updates for any previously primary contacts that were demoted
+      for (const oldContact of oldContacts) {
+        if (oldContact.id !== contactId && oldContact.is_primary) {
+          const demotedContact = { ...oldContact, is_primary: false };
+          await logUpdate('pet_emergency_contacts', oldContact.id, oldContact, demotedContact, audit.userId, {
+            source: audit.source || 'manual',
+            ipAddress: audit.ipAddress,
+            userAgent: audit.userAgent,
+          });
+        }
+      }
+    }
+
+    return updatedContact;
+  });
+}
+
 // Pet Alerts (custom owner-entered alerts)
 export interface PetAlert {
   id: number;
