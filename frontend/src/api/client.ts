@@ -155,6 +155,8 @@ export const petsApi = {
     api.patch<PetEmergencyContact>(`/api/pets/${petId}/emergency-contacts/${contactId}`, data, token),
   deleteEmergencyContact: (petId: number, contactId: number, token: string) =>
     api.delete(`/api/pets/${petId}/emergency-contacts/${contactId}`, token),
+  setPrimaryEmergencyContact: (petId: number, contactId: number, token: string) =>
+    api.patch<PetEmergencyContact[]>(`/api/pets/${petId}/emergency-contacts/${contactId}/primary`, {}, token),
 
   getRecordSource: (petId: number, recordType: string, recordId: number, token: string) =>
     api.get<{ source: string; upload_id: number | null; filename: string | null; file_type: string | null }>(`/api/pets/${petId}/records/${recordType}/${recordId}/source`, token),
