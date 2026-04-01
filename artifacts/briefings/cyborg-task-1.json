@@ -1,0 +1,14 @@
+{
+  "agent": "cyborg",
+  "task_id": "task-1",
+  "files_created": [],
+  "files_modified": [
+    "backend/src/routes/public.ts"
+  ],
+  "summary": "Replaced the `vets.map()` call in `buildEmergencyCard()` (lines 142-147) with an IIFE that uses `vets.find(v => v.is_primary)`. If a primary vet exists, the array contains exactly that one vet. If none is primary (or the pet has no vets), the array is empty. The pattern matches the existing `emergency_contacts` IIFE immediately below it. TypeScript compilation produced zero errors.",
+  "notes_for_reviewer": [
+    "The comment on the veterinarians line was updated to accurately describe the new behavior: 'only the primary vet (or empty if none is set as primary)'.",
+    "No other files were touched. The model layer (getPetVets) and the authenticated pets route remain unchanged.",
+    "Per the plan, the no-primary-vet fallback intentionally differs from emergency_contacts: vets return [] rather than falling back to the first entry."
+  ]
+}

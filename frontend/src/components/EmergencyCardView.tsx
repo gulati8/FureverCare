@@ -267,7 +267,7 @@ export default function EmergencyCardView({ card, resolvePhotoUrl }: Props) {
               <div key={i} className="flex items-center gap-3" style={{ padding: '16px', border: '1px solid var(--color-surface-200)', borderRadius: 'var(--radius-md)', background: 'var(--color-white)' }}>
                 <div className="flex-1 min-w-0">
                   <div style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.05em', color: 'var(--color-surface-500)', marginBottom: '4px' }}>
-                    Veterinarian{v.is_primary ? ' (Primary)' : ''}
+                    Primary Veterinarian
                   </div>
                   <div style={{ fontWeight: 500, fontSize: '0.9375rem' }}>{v.clinic_name}</div>
                   {v.vet_name && <div className="text-sm" style={{ color: 'var(--color-surface-500)' }}>Dr. {v.vet_name}</div>}

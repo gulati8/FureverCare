@@ -1,0 +1,36 @@
+{
+  "verdict": "pass",
+  "summary": "The 'Show Only Primary Vet on Emergency Card' change correctly reduces the public data surface. Previously, buildEmergencyCard() forwarded all veterinarian records to an unauthenticated endpoint; the new IIFE at public.ts lines 142-151 applies vets.find(v => v.is_primary) with an immediate null-guard, returning either a single-element array containing only the primary vet or an empty array. The field projection is explicit and minimal — email, address, and created_at are not forwarded. All database calls remain parameterized. The authenticated /pets routes are untouched and retain full middleware coverage. One medium-severity finding was identified: the PATCH /:id/vets/:vetId/primary endpoint does not invalidate the public card cache, meaning a primary-vet change can be served stale for up to 300 seconds. No critical or high findings exist. Verdict is pass.",
+  "owasp_findings": [
+    {
+      "id": "A04-2021",
+      "title": "Insecure Design — Stale Cache After Primary Vet Change",
+      "severity": "medium",
+      "file": "backend/src/routes/pets.ts",
+      "line": 231,
+      "description": "PATCH /:id/vets/:vetId/primary (setPrimaryVet) updates the is_primary flag in the database but does not call invalidateCardCache(). The public emergency card at GET /card/:shareId caches the built card for 300 seconds (cacheSet at public.ts line 47). A user who changes their primary vet will continue to see the old vet on the public card for up to five minutes. By contrast, the analogous setPrimaryEmergencyContact flow in the same file (line 565) correctly calls invalidateCardCache at line 583. This inconsistency means the new primary-vet feature is not reflected promptly on the public-facing card.",
+      "remediation": "Add await invalidateCardCache(petId) inside the PATCH /:id/vets/:vetId/primary handler immediately after the setPrimaryVet call returns (between lines 248 and 249 in pets.ts). The invalidateCardCache helper is already imported and used throughout the same file."
+    },
+    {
+      "id": "A01-2021",
+      "title": "Broken Access Control — Previously All Vets Exposed on Public Endpoint",
+      "severity": "informational",
+      "file": "backend/src/routes/public.ts",
+      "line": 142,
+      "description": "Prior to this change, buildEmergencyCard() used vets.map() which forwarded every veterinarian record to the unauthenticated /card/:shareId endpoint. This change resolves that exposure. Recorded here for audit trail purposes only — the vulnerability no longer exists in the changed code.",
+      "remediation": "No action required. Resolved by this change."
+    }
+  ],
+  "stride_analysis": {
+    "spoofing": "No spoofing risk introduced. The public endpoint is intentionally unauthenticated and keyed on a share ID. The share ID lookup uses parameterized queries (findPetByShareId via the query() helper). No identity claim is made or verified on the public card path.",
+    "tampering": "No tampering risk introduced. The veterinarian object returned to the client is a manually projected subset of the database record. Fields are explicitly selected (clinic_name, vet_name, phone, is_primary). The is_primary flag is read-only on this path — it cannot be written through the public endpoint. All write paths for is_primary go through the authenticated PATCH /:id/vets/:vetId/primary route.",
+    "repudiation": "No repudiation concern introduced. The changed code path (buildEmergencyCard) is a read-only operation. The authenticated setPrimaryVet function has full audit logging via logUpdate() for both the promoted vet and any demoted vets (health-records.ts lines 170-188).",
+    "information_disclosure": "Information disclosure is the primary threat model for this change. The fix correctly limits the veterinarian array to at most one entry (the primary vet). Field projection excludes email, address, and created_at from the public response. No vet data from non-primary records can reach the public endpoint through this code path. The stale cache finding (medium) creates a window where an outdated primary vet is shown, but does not leak non-primary vets — the cache stores the already-filtered card.",
+    "denial_of_service": "No new denial-of-service surface introduced. The public endpoint retains its existing Redis cache (TTL 300s) which limits database load. The vets.find() call is O(n) over the result set returned by getPetVets, which is bounded by the number of vets per pet — a small, owner-controlled set.",
+    "elevation_of_privilege": "No elevation of privilege. The PATCH /:id/vets/:vetId/primary endpoint is protected by the authenticate middleware (pets.ts line 231) and by verifyPetAccess (line 236), which checks pet_owners table membership. The public /card/:shareId endpoint cannot mutate any data. The authenticated /pets routes are unchanged."
+  },
+  "secrets_scan": {
+    "clean": true,
+    "findings": []
+  }
+}
