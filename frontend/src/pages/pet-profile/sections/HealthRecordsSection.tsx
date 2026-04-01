@@ -1,21 +1,40 @@
+import { useState } from 'react';
 import { usePetProfileContext } from '../context';
 import ConditionsTab from '../tabs/ConditionsTab';
 import AllergiesTab from '../tabs/AllergiesTab';
 import MedicationsTab from '../tabs/MedicationsTab';
 import VaccinationsTab from '../tabs/VaccinationsTab';
 import AlertsTab from '../tabs/AlertsTab';
+import { petsApi } from '../../../api/client';
 
 export default function HealthRecordsSection() {
   const ctx = usePetProfileContext();
   const {
-    petId, token,
+    pet, petId, token,
     conditions, setConditions,
     allergies, setAllergies,
     medications, setMedications,
     vaccinations, setVaccinations,
     alerts, setAlerts,
-    handleNavigateToReview,
+    handlePetUpdated, handleNavigateToReview,
   } = ctx;
+
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesValue, setNotesValue] = useState(pet.owners_notes || '');
+  const [savingNotes, setSavingNotes] = useState(false);
+
+  const handleSaveNotes = async () => {
+    setSavingNotes(true);
+    try {
+      const updated = await petsApi.update(petId, { owners_notes: notesValue || undefined }, token);
+      handlePetUpdated(updated);
+      setEditingNotes(false);
+    } catch (err) {
+      console.error('Failed to save notes:', err);
+    } finally {
+      setSavingNotes(false);
+    }
+  };
 
   const activeMeds = medications.filter(m => m.is_active);
   const expiringVacs = vaccinations.filter(v => v.expiration_date && new Date(v.expiration_date) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
@@ -121,6 +140,69 @@ export default function HealthRecordsSection() {
             vaccinations={vaccinations} setVaccinations={setVaccinations}
             onNavigateToReview={handleNavigateToReview}
           />
+        </div>
+      </details>
+
+      {/* Owner's Notes accordion — default collapsed */}
+      <details className="health-accordion">
+        <summary className="health-accordion-summary">
+          <div className="health-accordion-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+            </svg>
+            Owner's Notes
+            {pet.owners_notes && (
+              <span className="badge badge-info">1</span>
+            )}
+          </div>
+          <svg className="health-accordion-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </summary>
+        <div className="health-accordion-content">
+          {editingNotes ? (
+            <div className="space-y-3">
+              <textarea
+                className="input w-full"
+                rows={4}
+                value={notesValue}
+                onChange={(e) => setNotesValue(e.target.value)}
+                placeholder="Notes for emergency staff (e.g., 'needs muzzle at vet', 'scared of loud noises')..."
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  className="btn-secondary btn-sm"
+                  onClick={() => { setEditingNotes(false); setNotesValue(pet.owners_notes || ''); }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary btn-sm"
+                  onClick={handleSaveNotes}
+                  disabled={savingNotes}
+                >
+                  {savingNotes ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div
+              className="group cursor-pointer rounded-lg p-3 -m-1 hover:bg-gray-50 transition-colors"
+              onClick={() => { setNotesValue(pet.owners_notes || ''); setEditingNotes(true); }}
+            >
+              {pet.owners_notes ? (
+                <p className="text-gray-700 whitespace-pre-wrap">{pet.owners_notes}</p>
+              ) : (
+                <p className="text-gray-400 text-sm">No notes yet. Click to add notes for emergency staff.</p>
+              )}
+              <span className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity mt-1 inline-block">Click to edit</span>
+            </div>
+          )}
         </div>
       </details>
 

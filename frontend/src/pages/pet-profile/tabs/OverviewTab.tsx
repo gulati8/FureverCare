@@ -4,7 +4,7 @@ import InlineEditForm, { EditField } from '../../../components/InlineEditForm';
 import { SPECIES_OPTIONS } from '../constants';
 import { formatWeight } from '../utils';
 
-type OverviewField = 'name' | 'species' | 'breed' | 'sex' | 'date_of_birth' | 'weight' | 'microchip_id' | 'special_instructions';
+type OverviewField = 'name' | 'species' | 'breed' | 'sex' | 'date_of_birth' | 'weight' | 'microchip_id';
 
 export default function OverviewTab({ pet, token, onPetUpdated, conditions, allergies, medications, onNavigateToHealth }: {
   pet: Pet;
@@ -43,9 +43,6 @@ export default function OverviewTab({ pet, token, onPetUpdated, conditions, alle
         break;
       case 'microchip_id':
         payload.microchip_id = (values.microchip_id as string) || null;
-        break;
-      case 'special_instructions':
-        payload.special_instructions = (values.special_instructions as string) || null;
         break;
     }
     const updated = await petsApi.update(pet.id, payload as Parameters<typeof petsApi.update>[1], token);
@@ -87,10 +84,6 @@ export default function OverviewTab({ pet, token, onPetUpdated, conditions, alle
     microchip_id: {
       fields: [{ key: 'microchip_id', placeholder: 'Microchip ID', type: 'text' }],
       values: { microchip_id: pet.microchip_id || '' },
-    },
-    special_instructions: {
-      fields: [{ key: 'special_instructions', placeholder: 'Any special care instructions for emergency staff...', type: 'textarea', rows: 3 }],
-      values: { special_instructions: pet.special_instructions || '' },
     },
   };
 
@@ -141,39 +134,6 @@ export default function OverviewTab({ pet, token, onPetUpdated, conditions, alle
           {renderEditableField('weight', 'Weight', pet.weight_kg ? formatWeight(pet.weight_kg, pet.weight_unit) : null, !!pet.weight_kg)}
           {renderEditableField('microchip_id', 'Microchip ID', <span className="font-mono">{pet.microchip_id}</span>, !!pet.microchip_id)}
         </dl>
-      </div>
-
-      <div>
-        {editingField === 'special_instructions' ? (
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Special Instructions</h3>
-            <InlineEditForm
-              fields={fieldConfigs.special_instructions.fields}
-              values={fieldConfigs.special_instructions.values}
-              onSave={(vals) => handleSaveField('special_instructions', vals)}
-              onCancel={() => setEditingField(null)}
-            />
-          </div>
-        ) : (
-          <div
-            className="group cursor-pointer rounded-lg p-2 -m-2 hover:bg-gray-50 transition-colors"
-            onClick={() => setEditingField('special_instructions')}
-          >
-            <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-1">
-              Special Instructions
-              <svg className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-              </svg>
-            </h3>
-            {pet.special_instructions ? (
-              <p className="text-gray-700 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                {pet.special_instructions}
-              </p>
-            ) : (
-              <p className="text-gray-400 text-sm">Click to add special instructions</p>
-            )}
-          </div>
-        )}
       </div>
 
       {(conditions.length > 0 || allergies.length > 0 || activeMeds.length > 0) && (

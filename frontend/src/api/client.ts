@@ -221,7 +221,7 @@ export interface Pet {
   is_fixed: boolean;
   microchip_id: string | null;
   photo_url: string | null;
-  special_instructions: string | null;
+  owners_notes: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -237,7 +237,7 @@ export interface CreatePetInput {
   is_fixed?: boolean;
   microchip_id?: string;
   photo_url?: string;
-  special_instructions?: string;
+  owners_notes?: string;
 }
 
 export interface PetVet {
@@ -340,7 +340,7 @@ export interface EmergencyCard {
     is_fixed: boolean;
     microchip_id: string | null;
     photo_url: string | null;
-    special_instructions: string | null;
+    owners_notes: string | null;
   };
   owner: {
     name: string;

@@ -1,0 +1,12 @@
+{
+  "agent": "cyborg",
+  "task_id": "T6",
+  "files_created": [],
+  "files_modified": [
+    "frontend/src/components/EmergencyCardView.tsx"
+  ],
+  "summary": "Updated EmergencyCardView.tsx with four string replacements: JSX comment from 'Special Instructions' to 'Owner's Notes', conditional guard from pet.special_instructions to pet.owners_notes, label text from 'Special Instructions' to 'Owner's Notes', and rendered value from pet.special_instructions to pet.owners_notes. Yellow callout box styling is untouched.",
+  "notes_for_reviewer": [
+    "TypeScript compilation surfaces two pre-existing errors in EditPetModal.tsx (lines 206-207) referencing the old 'special_instructions' field on CreatePetInput. These are outside T6 scope but will need to be addressed — likely in a parallel task covering EditPetModal."
+  ]
+}

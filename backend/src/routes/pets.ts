@@ -44,10 +44,16 @@ const createPetSchema = z.object({
   is_fixed: z.boolean().optional(),
   microchip_id: z.string().optional(),
   photo_url: z.string().url().optional(),
-  special_instructions: z.string().optional(),
+  owners_notes: z.string().optional(),
 });
 
 const updatePetSchema = createPetSchema.partial();
+
+// Transform pet response: alias special_instructions -> owners_notes
+function transformPetResponse(pet: any) {
+  const { special_instructions, ...rest } = pet;
+  return { ...rest, owners_notes: special_instructions };
+}
 
 // Helper to verify pet access (any role)
 async function verifyPetAccess(petId: number, userId: number): Promise<boolean> {
@@ -71,7 +77,7 @@ async function invalidateCardCache(petId: number): Promise<void> {
 router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const pets = await findPetsForUser(req.userId!);
-    res.json(pets);
+    res.json(pets.map(transformPetResponse));
   } catch (error) {
     console.error('Error fetching pets:', error);
     res.status(500).json({ error: 'Failed to fetch pets' });
@@ -81,15 +87,17 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
 // POST /pets - Create a new pet
 router.post('/', authenticate, checkPetLimit, validate(createPetSchema), async (req: AuthRequest, res: Response) => {
   try {
+    const { owners_notes, ...rest } = req.body;
     const pet = await createPet({
       user_id: req.userId!,
-      ...req.body,
+      ...rest,
+      special_instructions: owners_notes,
     });
 
     // Add creator as owner in pet_owners table
     await addPetOwner(pet.id, req.userId!, 'owner');
 
-    res.status(201).json(pet);
+    res.status(201).json(transformPetResponse(pet));
   } catch (error) {
     console.error('Error creating pet:', error);
     res.status(500).json({ error: 'Failed to create pet' });
@@ -116,7 +124,7 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
 
     // Include user's role in the response
     const role = await getUserPetRole(petId, req.userId!);
-    res.json({ ...pet, userRole: role });
+    res.json({ ...transformPetResponse(pet), userRole: role });
   } catch (error) {
     console.error('Error fetching pet:', error);
     res.status(500).json({ error: 'Failed to fetch pet' });
@@ -126,12 +134,16 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
 // PATCH /pets/:id - Update a pet
 router.patch('/:id', authenticate, validate(updatePetSchema), async (req: AuthRequest, res: Response) => {
   try {
-    const pet = await updatePet(parseInt(req.params.id), req.userId!, req.body);
+    const { owners_notes, ...rest } = req.body;
+    const updateData = owners_notes !== undefined
+      ? { ...rest, special_instructions: owners_notes }
+      : rest;
+    const pet = await updatePet(parseInt(req.params.id), req.userId!, updateData);
     if (!pet) {
       res.status(404).json({ error: 'Pet not found' });
       return;
     }
-    res.json(pet);
+    res.json(transformPetResponse(pet));
   } catch (error) {
     console.error('Error updating pet:', error);
     res.status(500).json({ error: 'Failed to update pet' });

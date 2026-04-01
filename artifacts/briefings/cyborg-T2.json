@@ -1,0 +1,14 @@
+{
+  "agent": "cyborg",
+  "task_id": "T2",
+  "files_created": [],
+  "files_modified": [
+    "backend/src/routes/public.ts"
+  ],
+  "summary": "Changed the key name in buildEmergencyCard()'s return object pet sub-section from `special_instructions` to `owners_notes`. The value expression (`pet.special_instructions`) is unchanged — the database column name stays the same. Both routes that call buildEmergencyCard() (GET /api/public/card/:shareId and POST /api/public/token/:token/access) will now return `pet.owners_notes` in their response.",
+  "notes_for_reviewer": [
+    "The TypeScript compilation was attempted using the main project's tsc binary pointed at the worktree tsconfig. It reported widespread TS2307 (cannot find module) errors across every file in the backend — these are pre-existing environment issues caused by node_modules not being installed in the worktree, not introduced by this change.",
+    "The change itself is a trivial single-line key rename in a plain object literal. No type narrowing or interface constraints apply to the `buildEmergencyCard` return object (it is typed as `any` at the call site), so there is no TypeScript risk specific to this change.",
+    "The Redis cache stores the old response shape. Cached entries for GET /api/public/card/:shareId will continue to return `special_instructions` until their 5-minute TTL expires. This is noted as acceptable in the architecture document."
+  ]
+}

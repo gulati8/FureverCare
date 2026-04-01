@@ -100,7 +100,7 @@ async function buildEmergencyCard(pet: any) {
       is_fixed: pet.is_fixed,
       microchip_id: pet.microchip_id,
       photo_url: pet.photo_url,
-      special_instructions: pet.special_instructions,
+      owners_notes: pet.special_instructions,
     },
 
     // Owner contact (primary emergency contact)

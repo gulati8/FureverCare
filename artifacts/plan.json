@@ -1,0 +1,180 @@
+{
+  "feature": "Rename 'Special Instructions' to 'Owner's Notes' and Elevate to Health Profile",
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Backend: Transform pet API responses to use owners_notes",
+      "parallel_group": "A",
+      "files": [
+        "backend/src/routes/pets.ts"
+      ],
+      "description": "Add a response transform helper function that renames `special_instructions` to `owners_notes` on outbound Pet objects. Apply it to every route handler that returns Pet data. Also update the Zod validation schemas to accept `owners_notes` as the input field name, and map it to `special_instructions` before passing to the model layer.",
+      "acceptance_criteria": [
+        "A helper function `transformPetResponse(pet)` exists that takes a Pet object and returns a new object where the `special_instructions` key is renamed to `owners_notes`",
+        "GET /pets (list) returns an array where each pet has `owners_notes` instead of `special_instructions`",
+        "GET /pets/:id returns a pet object with `owners_notes` instead of `special_instructions`",
+        "POST /pets accepts `owners_notes` in the request body (via Zod schema) and maps it to `special_instructions` before calling createPet(). The response contains `owners_notes`",
+        "PATCH /pets/:id accepts `owners_notes` in the request body and maps it to `special_instructions` before calling updatePet(). The response contains `owners_notes`",
+        "The `createPetSchema` Zod object uses `owners_notes` as the field name (replacing `special_instructions`)",
+        "The `updatePetSchema` (derived via `.partial()`) inherits the rename automatically",
+        "The model layer (`pet.ts`) is NOT modified -- the transform is applied at the route layer only",
+        "No `special_instructions` key appears in any JSON response from the authenticated pet endpoints"
+      ]
+    },
+    {
+      "id": "T2",
+      "title": "Backend: Transform public emergency card response to use owners_notes",
+      "parallel_group": "A",
+      "files": [
+        "backend/src/routes/public.ts"
+      ],
+      "description": "In the `buildEmergencyCard()` function, change the pet section of the response to output `owners_notes` instead of `special_instructions`.",
+      "acceptance_criteria": [
+        "The `buildEmergencyCard()` return object's `pet` sub-object uses key `owners_notes` (value: `pet.special_instructions`) instead of key `special_instructions`",
+        "GET /api/public/card/:shareId returns `pet.owners_notes` in the response",
+        "POST /api/public/token/:token/access returns `pet.owners_notes` in the response (it also calls buildEmergencyCard)",
+        "No `special_instructions` key appears in the public card JSON response"
+      ]
+    },
+    {
+      "id": "T3",
+      "title": "Frontend: Update API types to use owners_notes",
+      "parallel_group": "A",
+      "files": [
+        "frontend/src/api/client.ts"
+      ],
+      "description": "Rename the `special_instructions` field to `owners_notes` in three TypeScript interfaces: `Pet`, `CreatePetInput`, and `EmergencyCard.pet`.",
+      "acceptance_criteria": [
+        "The `Pet` interface (line ~224) has `owners_notes: string | null` instead of `special_instructions: string | null`",
+        "The `CreatePetInput` interface (line ~240) has `owners_notes?: string` instead of `special_instructions?: string`",
+        "The `EmergencyCard` interface's `pet` sub-type (line ~343) has `owners_notes: string | null` instead of `special_instructions: string | null`",
+        "No references to `special_instructions` remain in client.ts",
+        "TypeScript compilation succeeds (dependent components will be fixed in subsequent tasks)"
+      ]
+    },
+    {
+      "id": "T4",
+      "title": "Frontend: Remove Owner's Notes from OverviewTab",
+      "parallel_group": "B",
+      "depends_on": ["T3"],
+      "files": [
+        "frontend/src/pages/pet-profile/tabs/OverviewTab.tsx"
+      ],
+      "description": "Remove the entire 'Special Instructions' display and edit section from the OverviewTab. This includes removing it from the OverviewField type, the fieldConfigs record, the handleSaveField switch case, and the JSX rendering block.",
+      "acceptance_criteria": [
+        "The `OverviewField` type union no longer includes `'special_instructions'` (or any owners_notes equivalent -- it is fully removed from this component)",
+        "The `fieldConfigs` record no longer has a `special_instructions` (or `owners_notes`) entry",
+        "The `handleSaveField` switch statement no longer has a `special_instructions` (or `owners_notes`) case",
+        "The JSX block that renders the 'Special Instructions' heading and edit form (approximately lines 146-177) is completely removed",
+        "The OverviewTab still renders Basic Information and Health Summary sections correctly",
+        "No references to `special_instructions` or `owners_notes` remain in this file"
+      ]
+    },
+    {
+      "id": "T5",
+      "title": "Frontend: Add Owner's Notes accordion to HealthRecordsSection",
+      "parallel_group": "B",
+      "depends_on": ["T3"],
+      "files": [
+        "frontend/src/pages/pet-profile/sections/HealthRecordsSection.tsx"
+      ],
+      "description": "Add a new expand/collapse accordion section for Owner's Notes, positioned after the Vaccinations accordion and before the Card Alerts accordion. The section should display the current notes text and provide inline editing using the InlineEditForm component. Follow the existing health-accordion pattern exactly.",
+      "acceptance_criteria": [
+        "A new `<details className='health-accordion'>` block exists between the Vaccinations accordion and the Card Alerts accordion",
+        "The accordion summary displays an appropriate icon (notepad/pencil SVG), the title 'Owner\\'s Notes', and a badge indicating whether notes exist (e.g., a small indicator when text is present)",
+        "The accordion content displays the current `pet.owners_notes` text when it exists, or a placeholder message like 'No notes yet. Click to add notes for emergency staff.' when empty",
+        "An edit button or click-to-edit interaction opens the InlineEditForm component with a textarea field",
+        "Saving the form calls `petsApi.update(petId, { owners_notes: value }, token)` and calls `handlePetUpdated()` with the response",
+        "Canceling the edit returns to the display view",
+        "The component reads `pet`, `petId`, `token`, and `handlePetUpdated` from the pet profile context (via `usePetProfileContext()`)",
+        "The accordion uses the exact same CSS classes as the other accordions: `health-accordion`, `health-accordion-summary`, `health-accordion-title`, `health-accordion-chevron`, `health-accordion-content`"
+      ]
+    },
+    {
+      "id": "T6",
+      "title": "Frontend: Update EmergencyCardView label and field references",
+      "parallel_group": "B",
+      "depends_on": ["T3"],
+      "files": [
+        "frontend/src/components/EmergencyCardView.tsx"
+      ],
+      "description": "Update the EmergencyCardView component to use `pet.owners_notes` instead of `pet.special_instructions` and change the display label from 'Special Instructions' to 'Owner\\'s Notes'.",
+      "acceptance_criteria": [
+        "The conditional check on line ~204 reads `pet.owners_notes` instead of `pet.special_instructions`",
+        "The text content rendering on line ~217 reads `pet.owners_notes` instead of `pet.special_instructions`",
+        "The label text on line ~214 reads 'Owner\\'s Notes' instead of 'Special Instructions'",
+        "The JSX comment on line ~203 reads 'Owner\\'s Notes' instead of 'Special Instructions'",
+        "The yellow callout box styling remains unchanged (background, border, icon, layout)",
+        "No references to `special_instructions` or 'Special Instructions' remain in this file"
+      ]
+    },
+    {
+      "id": "T7",
+      "title": "Frontend: Update EditPetModal field references and label",
+      "parallel_group": "B",
+      "depends_on": ["T3"],
+      "files": [
+        "frontend/src/components/EditPetModal.tsx"
+      ],
+      "description": "Update the EditPetModal to use `owners_notes` as the field name in formData state, onChange handlers, and the submitted payload. Change the label from 'Special Instructions' to 'Owner\\'s Notes'.",
+      "acceptance_criteria": [
+        "The formData initialization (line ~28) uses `owners_notes: pet.owners_notes || ''` instead of `special_instructions: pet.special_instructions || ''`",
+        "The textarea value prop (line ~206) reads `formData.owners_notes`",
+        "The textarea onChange handler (line ~207) sets `formData.owners_notes`",
+        "The label text (line ~204) reads 'Owner\\'s Notes' instead of 'Special Instructions'",
+        "The textarea placeholder text is updated to 'Any notes for emergency staff...' (removing the word 'instructions')",
+        "No references to `special_instructions` or 'Special Instructions' remain in this file"
+      ]
+    }
+  ],
+  "parallel_groups": {
+    "A": {
+      "description": "Backend API transforms and frontend type definitions. These three tasks modify independent files (two backend route files and one frontend types file) with no shared dependencies. They can all proceed simultaneously.",
+      "tasks": ["T1", "T2", "T3"]
+    },
+    "B": {
+      "description": "Frontend component updates. All four depend on T3 (the type definitions must be in place first), but they are independent of each other since they modify separate component files.",
+      "tasks": ["T4", "T5", "T6", "T7"]
+    }
+  },
+  "execution_order": [
+    {
+      "phase": 1,
+      "parallel_group": "A",
+      "description": "Execute T1, T2, and T3 in parallel. These update the backend API response shapes and the frontend type definitions."
+    },
+    {
+      "phase": 2,
+      "parallel_group": "B",
+      "description": "Execute T4, T5, T6, and T7 in parallel. These update all frontend components to use the new field name, remove the section from Overview, add it to Health Records, and update the emergency card."
+    }
+  ],
+  "files_changed_summary": {
+    "backend/src/routes/pets.ts": "Add transformPetResponse helper; apply to all Pet-returning handlers; rename Zod field; map owners_notes -> special_instructions on input",
+    "backend/src/routes/public.ts": "Change buildEmergencyCard() to output owners_notes instead of special_instructions",
+    "frontend/src/api/client.ts": "Rename special_instructions -> owners_notes in Pet, CreatePetInput, and EmergencyCard interfaces",
+    "frontend/src/pages/pet-profile/tabs/OverviewTab.tsx": "Remove entire special_instructions section (type, config, handler, JSX)",
+    "frontend/src/pages/pet-profile/sections/HealthRecordsSection.tsx": "Add new Owner's Notes accordion after Vaccinations with display and inline edit",
+    "frontend/src/components/EmergencyCardView.tsx": "Update field references and label text from special_instructions to owners_notes",
+    "frontend/src/components/EditPetModal.tsx": "Update field name in state, handlers, and label text"
+  },
+  "files_not_changed": {
+    "backend/src/models/pet.ts": "Intentionally unchanged. The Pet interface and SQL queries continue using special_instructions internally. The aliasing happens at the route layer.",
+    "backend/src/db/seed.ts": "Intentionally unchanged. Seed data writes directly to the database column special_instructions.",
+    "backend/src/db/migrate.ts": "Intentionally unchanged. No database migration required per the acceptance criteria.",
+    "docs/redesign/*.html": "Static mockup files. Not part of the live application.",
+    "frontend/public/redesign/*.html": "Static mockup files. Not part of the live application."
+  },
+  "risks": [
+    {
+      "risk": "Redis cache contains old field name",
+      "severity": "low",
+      "mitigation": "Cache TTL is 5 minutes. After deploy, stale entries auto-expire. Frontend should handle both field names during the brief transition, or a manual cache flush can be performed."
+    },
+    {
+      "risk": "Any external API consumers see breaking field rename",
+      "severity": "low",
+      "mitigation": "This is a first-party app with no documented external API consumers. The public card endpoint is consumed only by the FureverCare frontend."
+    }
+  ]
+}

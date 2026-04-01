@@ -1,0 +1,14 @@
+{
+  "agent": "cyborg",
+  "task_id": "T4",
+  "files_created": [],
+  "files_modified": [
+    "frontend/src/pages/pet-profile/tabs/OverviewTab.tsx"
+  ],
+  "summary": "Removed the entire special_instructions section from OverviewTab. Four targeted edits: (1) removed 'special_instructions' from the OverviewField type union, (2) removed the case 'special_instructions' block from handleSaveField, (3) removed the special_instructions entry from fieldConfigs, (4) removed the entire Special Instructions JSX block (original lines 146-177) including both the editing and display branches. The InlineEditForm and EditField imports were retained — they remain in use by renderEditableField for the other Basic Information fields.",
+  "notes_for_reviewer": [
+    "TypeScript compilation for OverviewTab.tsx is clean. Remaining tsc errors are in EditPetModal.tsx (T7) and EmergencyCardView.tsx (T6) — both out of scope for this task.",
+    "No references to special_instructions or owners_notes remain in OverviewTab.tsx.",
+    "Basic Information and Health Summary sections are intact and unmodified."
+  ]
+}
