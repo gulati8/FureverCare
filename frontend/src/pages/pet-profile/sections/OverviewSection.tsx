@@ -31,6 +31,7 @@ export default function OverviewSection() {
               <p className="capitalize" style={{ color: 'var(--color-surface-500)', marginTop: '2px' }}>
                 {pet.breed ? `${pet.breed} ${pet.species}` : pet.species}
                 {pet.sex && ` \u2022 ${pet.sex}${pet.is_fixed ? ' (Fixed)' : ''}`}
+                {pet.color_markings && ` \u2022 ${pet.color_markings}`}
               </p>
               {pet.weight_kg && (
                 <p className="text-sm" style={{ color: 'var(--color-surface-400)', marginTop: '4px' }}>

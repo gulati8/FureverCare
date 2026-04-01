@@ -12,6 +12,7 @@ import {
 } from '../api/client';
 import AddPetModal from '../components/AddPetModal';
 import UpgradeBanner from '../components/UpgradeBanner';
+import PetAvatarPlaceholder from '../components/PetAvatarPlaceholder';
 
 // Pet limits by tier
 const FREE_TIER_PET_LIMIT = Infinity; // Beta: unlimited pets for all users
@@ -188,9 +189,7 @@ export default function Dashboard() {
             className="mx-auto flex items-center justify-center mb-4"
             style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'var(--color-navy-50)' }}
           >
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="var(--color-steel)">
-              <path d="M12 2C9.24 2 7 4.24 7 7c0 1.38.56 2.63 1.46 3.54C7.56 11.37 7 12.62 7 14v4c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2v-4c0-1.38-.56-2.63-1.46-3.46C16.44 9.63 17 8.38 17 7c0-2.76-2.24-5-5-5z"/>
-            </svg>
+            <PetAvatarPlaceholder size={40} color="var(--color-steel)" />
           </div>
           <h3 className="text-lg font-semibold" style={{ color: 'var(--color-navy)' }}>No pets yet</h3>
           <p className="mt-2" style={{ color: 'var(--color-surface-500)' }}>Add your first pet to create an emergency health card.</p>
@@ -225,20 +224,18 @@ export default function Dashboard() {
                       {pet.photo_url ? (
                         <img src={pet.photo_url} alt={pet.name} className="w-full h-full object-cover" />
                       ) : (
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="#4A7FB5">
-                          <path d="M12 2C9.24 2 7 4.24 7 7c0 1.38.56 2.63 1.46 3.54C7.56 11.37 7 12.62 7 14v4c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2v-4c0-1.38-.56-2.63-1.46-3.46C16.44 9.63 17 8.38 17 7c0-2.76-2.24-5-5-5z"/>
-                        </svg>
+                        <PetAvatarPlaceholder species={pet.species} size={32} color="#4A7FB5" />
                       )}
                     </div>
                     <div style={{ flex: 1 }}>
                       <h3 className="text-xl" style={{ fontWeight: 600, marginBottom: '2px' }}>{pet.name}</h3>
                       <p className="text-sm capitalize" style={{ color: 'var(--color-surface-500)' }}>
                         {pet.breed ? `${pet.breed}` : pet.species}
-                        {pet.date_of_birth && (() => {
+                        {pet.date_of_birth ? (() => {
                           const born = new Date(pet.date_of_birth!.split('T')[0] + 'T00:00:00');
                           const years = Math.floor((Date.now() - born.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
                           return years > 0 ? ` \u2022 ${years} year${years !== 1 ? 's' : ''}` : '';
-                        })()}
+                        })() : pet.age != null ? ` \u2022 ${pet.age} year${pet.age !== 1 ? 's' : ''}` : ''}
                       </p>
 
                       {/* Health context */}

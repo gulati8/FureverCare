@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { Pet, PetCondition, PetAllergy, PetMedication, petsApi } from '../../../api/client';
 import InlineEditForm, { EditField } from '../../../components/InlineEditForm';
 import { SPECIES_OPTIONS } from '../constants';
-import { formatWeight } from '../utils';
+import { formatWeight, calculateAgeFromDOB } from '../utils';
 
-type OverviewField = 'name' | 'species' | 'breed' | 'sex' | 'date_of_birth' | 'weight' | 'microchip_id' | 'special_instructions';
+type OverviewField = 'name' | 'species' | 'breed' | 'color_markings' | 'sex' | 'date_of_birth' | 'weight' | 'microchip_id' | 'special_instructions' | 'age';
 
 export default function OverviewTab({ pet, token, onPetUpdated, conditions, allergies, medications, onNavigateToHealth }: {
   pet: Pet;
@@ -30,6 +30,9 @@ export default function OverviewTab({ pet, token, onPetUpdated, conditions, alle
       case 'breed':
         payload.breed = (values.breed as string) || null;
         break;
+      case 'color_markings':
+        payload.color_markings = (values.color_markings as string) || null;
+        break;
       case 'sex':
         payload.sex = (values.sex as string) || null;
         payload.is_fixed = values.is_fixed;
@@ -46,6 +49,9 @@ export default function OverviewTab({ pet, token, onPetUpdated, conditions, alle
         break;
       case 'special_instructions':
         payload.special_instructions = (values.special_instructions as string) || null;
+        break;
+      case 'age':
+        payload.age = values.age !== '' && values.age !== undefined ? Number(values.age) : null;
         break;
     }
     const updated = await petsApi.update(pet.id, payload as Parameters<typeof petsApi.update>[1], token);
@@ -65,6 +71,10 @@ export default function OverviewTab({ pet, token, onPetUpdated, conditions, alle
     breed: {
       fields: [{ key: 'breed', placeholder: 'Breed', type: 'text' }],
       values: { breed: pet.breed || '' },
+    },
+    color_markings: {
+      fields: [{ key: 'color_markings', placeholder: 'Color or markings', type: 'text' }],
+      values: { color_markings: pet.color_markings || '' },
     },
     sex: {
       fields: [
@@ -91,6 +101,10 @@ export default function OverviewTab({ pet, token, onPetUpdated, conditions, alle
     special_instructions: {
       fields: [{ key: 'special_instructions', placeholder: 'Any special care instructions for emergency staff...', type: 'textarea', rows: 3 }],
       values: { special_instructions: pet.special_instructions || '' },
+    },
+    age: {
+      fields: [{ key: 'age', placeholder: 'Age (years)', type: 'number', min: '0', step: '1' }],
+      values: { age: pet.age != null ? String(pet.age) : '' },
     },
   };
 
@@ -136,10 +150,23 @@ export default function OverviewTab({ pet, token, onPetUpdated, conditions, alle
           {renderEditableField('name', 'Name', pet.name)}
           {renderEditableField('species', 'Species', <span className="capitalize">{pet.species}</span>)}
           {renderEditableField('breed', 'Breed', pet.breed, !!pet.breed)}
+          {renderEditableField('color_markings', 'Color / Markings', pet.color_markings, !!pet.color_markings)}
           {renderEditableField('sex', 'Sex', <span className="capitalize">{pet.sex}{pet.is_fixed ? ' (Spayed/Neutered)' : ''}</span>, !!pet.sex)}
           {renderEditableField('date_of_birth', 'Date of Birth', pet.date_of_birth ? new Date(pet.date_of_birth.split('T')[0] + 'T00:00:00').toLocaleDateString() : null, !!pet.date_of_birth)}
           {renderEditableField('weight', 'Weight', pet.weight_kg ? formatWeight(pet.weight_kg, pet.weight_unit) : null, !!pet.weight_kg)}
           {renderEditableField('microchip_id', 'Microchip ID', <span className="font-mono">{pet.microchip_id}</span>, !!pet.microchip_id)}
+          {pet.date_of_birth ? (
+            <div className="rounded-lg p-2 -m-2">
+              <dt className="text-sm text-gray-500">Age</dt>
+              <dd className="text-gray-900">{calculateAgeFromDOB(pet.date_of_birth.split('T')[0])} years old</dd>
+            </div>
+          ) : (
+            renderEditableField(
+              'age',
+              'Age',
+              pet.age != null ? `${pet.age} years old` : <span className="text-gray-400">Unknown</span>
+            )
+          )}
         </dl>
       </div>
 

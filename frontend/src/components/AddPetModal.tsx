@@ -1,6 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { petsApi, Pet, CreatePetInput } from '../api/client';
+import { calculateAgeFromDOB } from '../pages/pet-profile/utils';
 
 interface Props {
   onClose: () => void;
@@ -16,12 +17,14 @@ export default function AddPetModal({ onClose, onPetAdded }: Props) {
     name: '',
     species: 'dog',
     breed: '',
+    color_markings: '',
     date_of_birth: '',
     sex: '',
     is_fixed: false,
     weight_kg: undefined,
     weight_unit: 'lbs',
     microchip_id: '',
+    age: undefined,
   });
 
   const handleSubmit = async (e: FormEvent) => {
@@ -35,6 +38,7 @@ export default function AddPetModal({ onClose, onPetAdded }: Props) {
       const pet = await petsApi.create({
         ...formData,
         weight_kg: formData.weight_kg ? Number(formData.weight_kg) : undefined,
+        age: formData.age !== undefined ? Number(formData.age) : undefined,
       }, token);
       onPetAdded(pet);
     } catch (err) {
@@ -109,29 +113,62 @@ export default function AddPetModal({ onClose, onPetAdded }: Props) {
               />
             </div>
 
+            <div>
+              <label className="label">Color or Markings</label>
+              <input
+                type="text"
+                value={formData.color_markings}
+                onChange={(e) => setFormData({ ...formData, color_markings: e.target.value })}
+                className="input"
+                placeholder="e.g., blue merle, pink nose"
+                maxLength={500}
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="label">Date of Birth</label>
                 <input
                   type="date"
                   value={formData.date_of_birth}
-                  onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
+                  onChange={(e) => {
+                    const dob = e.target.value;
+                    if (dob) {
+                      setFormData({ ...formData, date_of_birth: dob, age: calculateAgeFromDOB(dob) });
+                    } else {
+                      setFormData({ ...formData, date_of_birth: '', age: undefined });
+                    }
+                  }}
                   className="input"
                 />
               </div>
 
               <div>
-                <label className="label">Sex</label>
-                <select
-                  value={formData.sex}
-                  onChange={(e) => setFormData({ ...formData, sex: e.target.value })}
+                <label className="label">Age (years)</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={formData.age !== undefined ? formData.age : ''}
+                  disabled={!!formData.date_of_birth}
+                  onChange={(e) => setFormData({ ...formData, age: e.target.value !== '' ? Math.max(0, Math.floor(Number(e.target.value))) : undefined })}
                   className="input"
-                >
-                  <option value="">Select...</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                </select>
+                  placeholder="e.g., 3"
+                />
               </div>
+            </div>
+
+            <div>
+              <label className="label">Sex</label>
+              <select
+                value={formData.sex}
+                onChange={(e) => setFormData({ ...formData, sex: e.target.value })}
+                className="input"
+              >
+                <option value="">Select...</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
             </div>
 
             <div className="flex items-center">

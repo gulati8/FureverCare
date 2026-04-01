@@ -69,7 +69,7 @@ async function buildEmergencyCard(pet: any) {
     getPetAlerts(pet.id),
   ]);
 
-  // Calculate age from date of birth
+  // Calculate age from date of birth; fall back to stored age when DOB is absent
   let age = null;
   if (pet.date_of_birth) {
     const dob = new Date(pet.date_of_birth);
@@ -84,6 +84,8 @@ async function buildEmergencyCard(pet: any) {
       const days = Math.floor((now.getTime() - dob.getTime()) / (1000 * 60 * 60 * 24));
       age = `${days} day${days !== 1 ? 's' : ''}`;
     }
+  } else if (pet.age != null) {
+    age = `${pet.age} year${pet.age !== 1 ? 's' : ''}`;
   }
 
   return {
@@ -101,6 +103,7 @@ async function buildEmergencyCard(pet: any) {
       microchip_id: pet.microchip_id,
       photo_url: pet.photo_url,
       special_instructions: pet.special_instructions,
+      color_markings: pet.color_markings,
     },
 
     // Owner contact (primary emergency contact)

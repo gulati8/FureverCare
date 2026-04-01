@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { EmergencyCard } from '../api/client';
+import PetAvatarPlaceholder from './PetAvatarPlaceholder';
 
 const KG_TO_LBS = 2.20462;
 
@@ -173,9 +174,7 @@ export default function EmergencyCardView({ card, resolvePhotoUrl }: Props) {
             {photoUrl ? (
               <img src={photoUrl} alt={pet.name} className="w-full h-full object-cover" />
             ) : (
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="#4A7FB5">
-                <path d="M12 2C9.24 2 7 4.24 7 7c0 1.38.56 2.63 1.46 3.54C7.56 11.37 7 12.62 7 14v4c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2v-4c0-1.38-.56-2.63-1.46-3.46C16.44 9.63 17 8.38 17 7c0-2.76-2.24-5-5-5z"/>
-              </svg>
+              <PetAvatarPlaceholder species={pet.species} size={36} color="#4A7FB5" />
             )}
           </div>
           <div className="flex-1 min-w-0">
@@ -188,6 +187,11 @@ export default function EmergencyCardView({ card, resolvePhotoUrl }: Props) {
               {pet.age && <span>{pet.age}</span>}
               {pet.weight_kg && ` \u2022 ${primaryWeight(pet.weight_kg, pet.weight_unit)}`}
             </p>
+            {pet.color_markings && (
+              <p style={{ fontSize: '0.75rem', color: 'var(--color-surface-500)', marginTop: '4px' }}>
+                {pet.color_markings}
+              </p>
+            )}
             {pet.microchip_id && (
               <p style={{ fontSize: '0.6875rem', color: 'var(--color-surface-400)', fontFamily: 'monospace', marginTop: '4px' }}>
                 Microchip: {pet.microchip_id}

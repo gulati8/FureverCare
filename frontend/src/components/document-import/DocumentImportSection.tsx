@@ -49,6 +49,7 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
   const [scanningIds, setScanningIds] = useState<Set<number>>(new Set());
   const [batchScanning, setBatchScanning] = useState(false);
   const [activeHighlightItemId, setActiveHighlightItemId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
     loadUploads();
@@ -260,6 +261,24 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
     }
   };
 
+  const handleDeleteDocument = async (item: DisplayItem) => {
+    if (!token) return;
+    const uploadIdsToDelete = item.type === 'group'
+      ? item.pages.map(p => p.id)
+      : [item.primaryUpload.id];
+    setError(null);
+    try {
+      for (const uploadId of uploadIdsToDelete) {
+        await documentsApi.deleteUpload(petId, uploadId, token);
+      }
+      setUploads(prev => prev.filter(u => !uploadIdsToDelete.includes(u.id)));
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete document');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const getDocumentUrl = (u: DocumentUpload) =>
     `${API_URL}/api/pets/${u.pet_id}/documents/uploads/${u.id}/file`;
 
@@ -419,6 +438,11 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
               onScan={() => handleScanDocument(item)}
               onSelect={() => handleUploadSelect(item.primaryUpload)}
               onReorder={(pageOrder) => item.groupId ? handleReorderPages(item.groupId, pageOrder) : undefined}
+              onDelete={() => handleDeleteDocument(item)}
+              isDeleting={deletingId === item.primaryUpload.id}
+              showDeleteConfirm={deletingId === item.primaryUpload.id}
+              onDeleteConfirm={() => setDeletingId(item.primaryUpload.id)}
+              onDeleteCancel={() => setDeletingId(null)}
             />
           ))}
         </div>
@@ -437,6 +461,11 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
               onSelect={() => handleUploadSelect(item.primaryUpload)}
               onAddPage={() => handleAddPage(item)}
               onReorder={(pageOrder) => item.groupId ? handleReorderPages(item.groupId, pageOrder) : undefined}
+              onDelete={() => handleDeleteDocument(item)}
+              isDeleting={deletingId === item.primaryUpload.id}
+              showDeleteConfirm={deletingId === item.primaryUpload.id}
+              onDeleteConfirm={() => setDeletingId(item.primaryUpload.id)}
+              onDeleteCancel={() => setDeletingId(null)}
             />
           ))}
         </div>
@@ -481,6 +510,11 @@ function GridCard({
   onScan,
   onSelect,
   onReorder,
+  onDelete,
+  isDeleting,
+  showDeleteConfirm,
+  onDeleteConfirm,
+  onDeleteCancel,
 }: {
   item: DisplayItem;
   getDocumentUrl: (u: DocumentUpload) => string;
@@ -488,6 +522,11 @@ function GridCard({
   onScan: () => void;
   onSelect: () => void;
   onReorder: (pageOrder: number[]) => void;
+  onDelete: () => void;
+  isDeleting: boolean;
+  showDeleteConfirm: boolean;
+  onDeleteConfirm: () => void;
+  onDeleteCancel: () => void;
 }) {
   const upload = item.primaryUpload;
   const isStored = upload.status === 'uploaded';
@@ -550,6 +589,45 @@ function GridCard({
               {item.pages.length} pages
             </span>
           )}
+
+          {/* Delete button — top-left corner */}
+          <button
+            onClick={(e) => { e.stopPropagation(); onDeleteConfirm(); }}
+            disabled={isDeleting}
+            className="absolute top-1.5 left-1.5 bg-white/85 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded p-1 transition-colors disabled:opacity-50"
+            title="Delete document"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+
+          {/* Delete confirmation overlay */}
+          {showDeleteConfirm && (
+            <div
+              className="absolute inset-0 bg-white/95 flex flex-col items-center justify-center gap-2 p-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="text-xs font-semibold text-gray-800 text-center">Delete this document?</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                  disabled={isDeleting}
+                  className="text-xs font-semibold px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+                >
+                  {isDeleting ? 'Deleting...' : 'Yes'}
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDeleteCancel(); }}
+                  disabled={isDeleting}
+                  className="text-xs font-semibold px-3 py-1 rounded border text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                  style={{ borderColor: 'var(--color-surface-200, #E2E5E9)' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Meta */}
@@ -609,6 +687,11 @@ function ListCard({
   onSelect,
   onAddPage,
   onReorder,
+  onDelete,
+  isDeleting,
+  showDeleteConfirm,
+  onDeleteConfirm,
+  onDeleteCancel,
 }: {
   item: DisplayItem;
   getDocumentUrl: (u: DocumentUpload) => string;
@@ -617,6 +700,11 @@ function ListCard({
   onSelect: () => void;
   onAddPage: () => void;
   onReorder: (pageOrder: number[]) => void;
+  onDelete: () => void;
+  isDeleting: boolean;
+  showDeleteConfirm: boolean;
+  onDeleteConfirm: () => void;
+  onDeleteCancel: () => void;
 }) {
   const upload = item.primaryUpload;
   const isStored = upload.status === 'uploaded';
@@ -742,6 +830,33 @@ function ListCard({
               style={{ borderColor: 'var(--color-surface-200, #E2E5E9)' }}
             >
               View
+            </button>
+          )}
+          {showDeleteConfirm ? (
+            <>
+              <span className="text-sm text-gray-500">Sure?</span>
+              <button
+                onClick={onDelete}
+                disabled={isDeleting}
+                className="text-red-600 hover:text-red-800 text-sm font-semibold disabled:opacity-50"
+              >
+                {isDeleting ? '...' : 'Yes'}
+              </button>
+              <button
+                onClick={onDeleteCancel}
+                disabled={isDeleting}
+                className="text-gray-600 hover:text-gray-800 text-sm disabled:opacity-50"
+              >
+                No
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={onDeleteConfirm}
+              disabled={isDeleting}
+              className="text-red-600 hover:text-red-800 text-sm disabled:opacity-50"
+            >
+              Delete
             </button>
           )}
         </div>

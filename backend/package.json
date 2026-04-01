@@ -46,6 +46,10 @@
     "db:migrate:allergy-show-on-card:dev": "tsx src/db/migrate-allergy-show-on-card.ts",
     "db:migrate:document-groups": "node dist/db/migrate-document-groups.js",
     "db:migrate:document-groups:dev": "tsx src/db/migrate-document-groups.ts",
+    "db:migrate:color-markings": "node dist/db/migrate-color-markings.js",
+    "db:migrate:color-markings:dev": "tsx src/db/migrate-color-markings.ts",
+    "db:migrate:pet-age": "node dist/db/migrate-pet-age.js",
+    "db:migrate:pet-age:dev": "tsx src/db/migrate-pet-age.ts",
     "test:backend": "tsx --test src/models/health-records.test.ts"
   },
   "dependencies": {

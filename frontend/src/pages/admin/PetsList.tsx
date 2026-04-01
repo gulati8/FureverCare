@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { adminApi, AdminPet, PetsQueryOptions } from '../../api/admin';
 import PetDetailModal from './PetDetailModal';
+import PetAvatarPlaceholder from '../../components/PetAvatarPlaceholder';
 
 export default function PetsList() {
   const { token } = useAuth();
@@ -255,9 +256,7 @@ export default function PetsList() {
                               className="w-8 h-8 object-cover"
                             />
                           ) : (
-                            <span className="text-sm">
-                              {pet.species === 'dog' ? '🐕' : pet.species === 'cat' ? '🐈' : '🐾'}
-                            </span>
+                            <PetAvatarPlaceholder species={pet.species} size={16} color="var(--color-navy)" />
                           )}
                         </div>
                       </td>

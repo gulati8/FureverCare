@@ -45,6 +45,8 @@ const createPetSchema = z.object({
   microchip_id: z.string().optional(),
   photo_url: z.string().url().optional(),
   special_instructions: z.string().optional(),
+  color_markings: z.string().max(500).optional(),
+  age: z.number().int().min(0).max(100).optional(),
 });
 
 const updatePetSchema = createPetSchema.partial();

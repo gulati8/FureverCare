@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { API_URL } from '../api/client';
+import PetAvatarPlaceholder from './PetAvatarPlaceholder';
 
 interface Props {
   petId: number;
@@ -108,7 +109,6 @@ export default function PhotoUpload({ petId, currentPhotoUrl, onPhotoUpdated, co
     }
   };
 
-  const defaultEmoji = species === 'dog' ? '🐕' : species === 'cat' ? '🐈' : '🐾';
   const fileAccept = "image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif,image/tiff,image/bmp,.heic,.heif,.tiff,.tif,.bmp";
 
   if (compact) {
@@ -118,7 +118,7 @@ export default function PhotoUpload({ petId, currentPhotoUrl, onPhotoUpdated, co
           {currentPhotoUrl ? (
             <img src={getFullPhotoUrl(currentPhotoUrl)!} alt="Pet photo" className="w-20 h-20 rounded-full object-cover" />
           ) : (
-            <span className="text-4xl">{defaultEmoji}</span>
+            <PetAvatarPlaceholder species={species} size={32} color="var(--color-navy)" />
           )}
         </div>
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 rounded-full flex items-center justify-center transition-colors">
@@ -155,7 +155,7 @@ export default function PhotoUpload({ petId, currentPhotoUrl, onPhotoUpdated, co
               className="w-24 h-24 rounded-full object-cover"
             />
           ) : (
-            <span className="text-4xl">🐾</span>
+            <PetAvatarPlaceholder species={species} size={36} color="var(--color-navy)" />
           )}
         </div>
 

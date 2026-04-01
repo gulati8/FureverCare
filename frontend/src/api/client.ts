@@ -222,6 +222,8 @@ export interface Pet {
   microchip_id: string | null;
   photo_url: string | null;
   special_instructions: string | null;
+  color_markings: string | null;
+  age: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -238,6 +240,8 @@ export interface CreatePetInput {
   microchip_id?: string;
   photo_url?: string;
   special_instructions?: string;
+  color_markings?: string;
+  age?: number;
 }
 
 export interface PetVet {
@@ -341,6 +345,7 @@ export interface EmergencyCard {
     microchip_id: string | null;
     photo_url: string | null;
     special_instructions: string | null;
+    color_markings: string | null;
   };
   owner: {
     name: string;

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { adminApi, AdminPetDetails } from '../../api/admin';
+import PetAvatarPlaceholder from '../../components/PetAvatarPlaceholder';
 
 interface Props {
   petId: number;
@@ -102,9 +103,7 @@ export default function PetDetailModal({ petId, onClose }: Props) {
                         className="w-20 h-20 object-cover"
                       />
                     ) : (
-                      <span className="text-3xl">
-                        {pet.species === 'dog' ? '🐕' : pet.species === 'cat' ? '🐈' : '🐾'}
-                      </span>
+                      <PetAvatarPlaceholder species={pet.species} size={32} color="var(--color-navy)" />
                     )}
                   </div>
                   <div className="flex-1">

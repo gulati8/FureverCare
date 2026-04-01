@@ -4,7 +4,7 @@ import { authenticate, AuthRequest } from '../middleware/auth.js';
 import { uploadDocument } from '../middleware/upload.js';
 import { requireFeature } from '../middleware/subscription.js';
 import { storage } from '../services/storage.js';
-import { userHasPetAccess, userCanEditPet } from '../models/pet-owners.js';
+import { userHasPetAccess, userCanEditPet, userIsPetOwner } from '../models/pet-owners.js';
 import { findPetById } from '../models/pet.js';
 import { optimizeImage, replaceExtension, isOptimizableImage, extractImageMetadata } from '../services/image-optimizer.js';
 import {
@@ -396,6 +396,14 @@ router.delete('/:petId/documents/uploads/:id', authenticate, async (req: AuthReq
     if (!upload || upload.pet_id !== petId) {
       res.status(404).json({ error: 'Upload not found' });
       return;
+    }
+
+    if (req.userId !== upload.uploaded_by) {
+      const isOwner = await userIsPetOwner(petId, req.userId!);
+      if (!isOwner) {
+        res.status(403).json({ error: 'You can only delete documents you uploaded' });
+        return;
+      }
     }
 
     // Delete from storage

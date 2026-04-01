@@ -2,6 +2,7 @@ import { useState, FormEvent } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { petsApi, Pet, CreatePetInput } from '../api/client';
 import PhotoUpload from './PhotoUpload';
+import { calculateAgeFromDOB } from '../pages/pet-profile/utils';
 
 interface Props {
   pet: Pet;
@@ -15,17 +16,20 @@ export default function EditPetModal({ pet, onClose, onPetUpdated }: Props) {
   const [error, setError] = useState('');
   const [currentPhotoUrl, setCurrentPhotoUrl] = useState(pet.photo_url);
 
+  const initialDOB = pet.date_of_birth ? pet.date_of_birth.split('T')[0] : '';
   const [formData, setFormData] = useState<CreatePetInput>({
     name: pet.name,
     species: pet.species,
     breed: pet.breed || '',
-    date_of_birth: pet.date_of_birth ? pet.date_of_birth.split('T')[0] : '',
+    date_of_birth: initialDOB,
     sex: pet.sex || '',
     is_fixed: pet.is_fixed || false,
     weight_kg: pet.weight_kg ? Number(pet.weight_kg) : undefined,
     weight_unit: pet.weight_unit || 'lbs',
     microchip_id: pet.microchip_id || '',
+    color_markings: pet.color_markings || '',
     special_instructions: pet.special_instructions || '',
+    age: initialDOB ? calculateAgeFromDOB(initialDOB) : (pet.age ?? undefined),
   });
 
   const handleSubmit = async (e: FormEvent) => {
@@ -126,29 +130,61 @@ export default function EditPetModal({ pet, onClose, onPetUpdated }: Props) {
               />
             </div>
 
+            <div>
+              <label className="label">Color or Markings</label>
+              <input
+                type="text"
+                value={formData.color_markings}
+                onChange={(e) => setFormData({ ...formData, color_markings: e.target.value })}
+                className="input"
+                maxLength={500}
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="label">Date of Birth</label>
                 <input
                   type="date"
                   value={formData.date_of_birth}
-                  onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
+                  onChange={(e) => {
+                    const dob = e.target.value;
+                    setFormData({
+                      ...formData,
+                      date_of_birth: dob,
+                      age: dob ? calculateAgeFromDOB(dob) : undefined,
+                    });
+                  }}
                   className="input"
                 />
               </div>
 
               <div>
-                <label className="label">Sex</label>
-                <select
-                  value={formData.sex}
-                  onChange={(e) => setFormData({ ...formData, sex: e.target.value })}
+                <label className="label">Age (years)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={formData.age ?? ''}
+                  disabled={!!formData.date_of_birth}
+                  onChange={(e) => setFormData({ ...formData, age: e.target.value !== '' ? Math.floor(Number(e.target.value)) : undefined })}
                   className="input"
-                >
-                  <option value="">Select...</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                </select>
+                />
               </div>
+            </div>
+
+            <div>
+              <label className="label">Sex</label>
+              <select
+                value={formData.sex}
+                onChange={(e) => setFormData({ ...formData, sex: e.target.value })}
+                className="input"
+              >
+                <option value="">Select...</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
             </div>
 
             <div className="flex items-center">

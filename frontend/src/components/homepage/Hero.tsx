@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { HeroContent } from '../../api/cms';
 import { useAuth } from '../../hooks/useAuth';
+import PetAvatarPlaceholder from '../../components/PetAvatarPlaceholder';
 
 interface HeroProps {
   content: HeroContent;
@@ -83,9 +84,7 @@ export default function Hero({ content }: HeroProps) {
                       background: 'var(--color-navy)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}
                   >
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="#4A7FB5">
-                      <path d="M12 2C9.24 2 7 4.24 7 7c0 1.38.56 2.63 1.46 3.54C7.56 11.37 7 12.62 7 14v4c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2v-4c0-1.38-.56-2.63-1.46-3.46C16.44 9.63 17 8.38 17 7c0-2.76-2.24-5-5-5zm-2 6a1 1 0 110-2 1 1 0 010 2zm4 0a1 1 0 110-2 1 1 0 010 2z"/>
-                    </svg>
+                    <PetAvatarPlaceholder species="dog" size={28} color="#4A7FB5" />
                   </div>
                   <div>
                     <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.25rem', fontWeight: 600 }}>Max</div>
