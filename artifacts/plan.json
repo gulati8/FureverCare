@@ -1,0 +1,45 @@
+{
+  "feature": "Show Only Primary Vet on Emergency Card",
+  "summary": "Filter the emergency card API to return only the primary vet instead of all vets. If no primary vet is set, return an empty array. The Care Team tab continues to show all vets.",
+  "tasks": [
+    {
+      "id": "task-001",
+      "title": "Filter veterinarians to primary-only in buildEmergencyCard",
+      "description": "Replace the veterinarians mapping in buildEmergencyCard (public.ts lines 142-147) with an IIFE that finds the primary vet and returns it as a single-element array, or an empty array if none is primary. This follows the exact same pattern used for emergency_contacts on lines 150-159.",
+      "files": [
+        "backend/src/routes/public.ts"
+      ],
+      "acceptance_criteria": [
+        "The veterinarians field uses an IIFE matching the emergency_contacts pattern at lines 150-159",
+        "vets.find(v => v.is_primary) is used to locate the primary vet",
+        "When no primary vet exists, an empty array [] is returned (no fallback to first vet)",
+        "When a primary vet exists, exactly one element is returned with fields: clinic_name, vet_name, phone, is_primary",
+        "The getPetVets(pet.id) call at line 63 is NOT modified",
+        "No other lines in the file are changed",
+        "Comment above the block reads: // Veterinarian info -- only show primary vet on emergency card"
+      ],
+      "parallel_group": "A",
+      "depends_on": []
+    },
+    {
+      "id": "task-002",
+      "title": "Add structural verification tests for primary vet filtering",
+      "description": "Create a test file using the structural verification approach (reading public.ts source and asserting on content patterns). This matches the established pattern in pets.test.ts and set-primary-emergency-contact.test.ts.",
+      "files": [
+        "backend/src/__tests__/primary-vet-emergency-card.test.ts"
+      ],
+      "acceptance_criteria": [
+        "Test file imports vitest (describe, it, expect) and fs/promises",
+        "Test reads backend/src/routes/public.ts via fs.readFile",
+        "Test asserts the veterinarians field uses vets.find(v => v.is_primary) not vets.map",
+        "Test asserts that when no primary vet is found an empty array is returned",
+        "Test asserts the result is wrapped in a single-element array with clinic_name, vet_name, phone, is_primary fields",
+        "Test asserts getPetVets is still called without filtering (shared query unchanged)",
+        "Test asserts the emergency_contacts IIFE pattern is still intact (regression check)",
+        "All tests pass with: npx vitest run backend/src/__tests__/primary-vet-emergency-card.test.ts"
+      ],
+      "parallel_group": "A",
+      "depends_on": ["task-001"]
+    }
+  ]
+}

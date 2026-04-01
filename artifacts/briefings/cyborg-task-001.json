@@ -1,0 +1,15 @@
+{
+  "agent": "cyborg",
+  "task_id": "task-001",
+  "files_created": [],
+  "files_modified": [
+    "backend/src/routes/public.ts"
+  ],
+  "summary": "Replaced the veterinarians mapping in buildEmergencyCard (lines 141-147) with an IIFE that uses vets.find(v => v.is_primary) to locate the primary vet. Returns a single-element array when a primary vet exists, or an empty array when none is set. The IIFE structure mirrors the emergency_contacts pattern at lines 154-163. No other lines were changed. getPetVets(pet.id) call at line 63 is untouched.",
+  "notes_for_reviewer": [
+    "TypeScript compilation clean (tsc --noEmit, zero errors).",
+    "The IIFE pattern is structurally identical to the emergency_contacts block directly below it.",
+    "No fallback to first vet -- spec requires empty array when no primary is set, implemented exactly.",
+    "Comment text matches spec verbatim: '// Veterinarian info -- only show primary vet on emergency card'."
+  ]
+}

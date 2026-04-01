@@ -138,13 +138,18 @@ async function buildEmergencyCard(pet: any) {
       expiration_date: v.expiration_date,
     })),
 
-    // Veterinarian info
-    veterinarians: vets.map(v => ({
-      clinic_name: v.clinic_name,
-      vet_name: v.vet_name,
-      phone: v.phone,
-      is_primary: v.is_primary,
-    })),
+    // Veterinarian info -- only show primary vet on emergency card
+    // No fallback -- if no primary vet is set, show nothing (unlike emergency_contacts)
+    veterinarians: (() => {
+      const primary = vets.find(v => v.is_primary);
+      if (!primary) return [];
+      return [{
+        clinic_name: primary.clinic_name,
+        vet_name: primary.vet_name,
+        phone: primary.phone,
+        is_primary: primary.is_primary,
+      }];
+    })(),
 
     // Additional emergency contacts — only the primary contact (or first as fallback)
     emergency_contacts: (() => {
