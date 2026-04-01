@@ -42,7 +42,7 @@ export async function createPet(input: CreatePetInput): Promise<Pet> {
   const result = await queryOne<Pet>(
     `INSERT INTO pets (user_id, share_id, name, species, breed, date_of_birth, weight_kg, weight_unit, sex, is_fixed, microchip_id, photo_url, special_instructions)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-     RETURNING id, user_id, share_id, name, species, breed, date_of_birth, weight_kg, weight_unit, sex, is_fixed, microchip_id, photo_url, special_instructions AS owners_notes, created_at, updated_at`,
+     RETURNING ${PET_RETURNING}`,
     [
       input.user_id,
       shareId,
@@ -63,19 +63,20 @@ export async function createPet(input: CreatePetInput): Promise<Pet> {
   return result!;
 }
 
-const PET_COLUMNS = `id, user_id, share_id, name, species, breed, date_of_birth, weight_kg, weight_unit, sex, is_fixed, microchip_id, photo_url, special_instructions AS owners_notes, created_at, updated_at`;
+const PET_COLUMNS = `p.id, p.user_id, p.share_id, p.name, p.species, p.breed, p.date_of_birth, p.weight_kg, p.weight_unit, p.sex, p.is_fixed, p.microchip_id, p.photo_url, p.special_instructions AS owners_notes, p.created_at, p.updated_at`;
+const PET_RETURNING = `id, user_id, share_id, name, species, breed, date_of_birth, weight_kg, weight_unit, sex, is_fixed, microchip_id, photo_url, special_instructions AS owners_notes, created_at, updated_at`;
 
 export async function findPetById(id: number): Promise<Pet | null> {
-  return queryOne<Pet>(`SELECT ${PET_COLUMNS} FROM pets WHERE id = $1`, [id]);
+  return queryOne<Pet>(`SELECT ${PET_COLUMNS} FROM pets p WHERE p.id = $1`, [id]);
 }
 
 export async function findPetByShareId(shareId: string): Promise<Pet | null> {
-  return queryOne<Pet>(`SELECT ${PET_COLUMNS} FROM pets WHERE share_id = $1`, [shareId]);
+  return queryOne<Pet>(`SELECT ${PET_COLUMNS} FROM pets p WHERE p.share_id = $1`, [shareId]);
 }
 
 // Get pets where user is the original owner (legacy)
 export async function findPetsByUserId(userId: number): Promise<Pet[]> {
-  return query<Pet>(`SELECT ${PET_COLUMNS} FROM pets WHERE user_id = $1 ORDER BY created_at DESC`, [userId]);
+  return query<Pet>(`SELECT ${PET_COLUMNS} FROM pets p WHERE p.user_id = $1 ORDER BY p.created_at DESC`, [userId]);
 }
 
 // Get all pets user has access to (via pet_owners junction table)
@@ -111,7 +112,7 @@ export async function updatePet(id: number, userId: number, updates: Partial<Cre
   values.push(id, userId);
 
   const result = await queryOne<Pet>(
-    `UPDATE pets SET ${fields.join(', ')} WHERE id = $${paramCount} AND user_id = $${paramCount + 1} RETURNING ${PET_COLUMNS}`,
+    `UPDATE pets SET ${fields.join(', ')} WHERE id = $${paramCount} AND user_id = $${paramCount + 1} RETURNING ${PET_RETURNING}`,
     values
   );
 
@@ -140,7 +141,7 @@ export async function regenerateShareId(id: number, userId: number): Promise<Pet
   const newShareId = nanoid();
 
   const result = await queryOne<Pet>(
-    `UPDATE pets SET share_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING ${PET_COLUMNS}`,
+    `UPDATE pets SET share_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING ${PET_RETURNING}`,
     [newShareId, id, userId]
   );
 
