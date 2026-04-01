@@ -1,0 +1,84 @@
+{
+  "verdict": "pass",
+  "reviewer": "diana-prince",
+  "reviewed_at": "2026-04-01",
+  "summary": "The implementation honors the plan faithfully across all eight tasks. Nine files modified -- four backend, five frontend -- all consistent with the architecture. The rename from special_instructions to owners_notes is complete at every boundary: backend model, routes, public API, seed data, frontend types, OverviewTab removal, HealthRecordsSection addition, EmergencyCardView update, and EditPetModal update. The database column is untouched. SQL aliasing is correct. The fieldMapping pattern for writes is sound. No references to special_instructions remain in frontend code. Backend references are exclusively in SQL strings and the fieldMapping, which is correct by design. I find one warning and two informational items.",
+  "issues": [
+    {
+      "severity": "warning",
+      "file": "frontend/src/pages/pet-profile/sections/HealthRecordsSection.tsx",
+      "line": 150,
+      "description": "The className 'health-badge' is not defined in any CSS file. The production CSS at frontend/src/index.css defines 'badge', 'badge-danger', 'badge-warning', 'badge-success', 'badge-info', and 'badge-navy', but not 'health-badge'. The span at line 150 will render with no styling -- no background, no border-radius, no padding. It will appear as unstyled inline text next to the accordion title.",
+      "suggestion": "Change className='health-badge' to className='badge badge-info' (or 'badge badge-navy') to match the styling pattern used by the other accordion badges like 'badge badge-warning' for Conditions and 'badge badge-danger' for Allergies."
+    },
+    {
+      "severity": "info",
+      "file": "frontend/src/pages/pet-profile/sections/HealthRecordsSection.tsx",
+      "line": 26,
+      "description": "The handleSaveNotes function has no try/catch around the petsApi.update call. If the API request fails, the error will be an unhandled promise rejection with no user feedback. However, this is consistent with the existing pattern used by all other tab handlers in this codebase (ConditionsTab, AllergiesTab, MedicationsTab, etc.) which also omit try/catch. This is a pre-existing pattern, not a regression introduced by this change.",
+      "suggestion": "Consider adding try/catch with user-visible error feedback in a future cleanup pass, but this is not specific to this feature."
+    },
+    {
+      "severity": "info",
+      "file": "backend/src/models/pet.ts",
+      "line": 66,
+      "description": "The PET_COLUMNS constant uses unqualified column names. As noted in the briefing, the findPetsForUser query uses a table alias 'p' in a JOIN with pet_owners. This works today because no column names collide between the two tables. If a column name collision is introduced in the future (e.g., 'name' added to pet_owners), the query would become ambiguous. This is a pre-existing risk made slightly more visible by the introduction of the shared constant.",
+      "suggestion": "No action needed now. If pet_owners gains columns that collide with pets column names, prefix PET_COLUMNS with 'p.' at that time."
+    }
+  ],
+  "acceptance_criteria_checklist": [
+    {
+      "criterion": "All user-facing text reads 'Owner's Notes' instead of 'Special Instructions'",
+      "met": true,
+      "evidence": "EmergencyCardView.tsx line 214, EditPetModal.tsx line 204, HealthRecordsSection.tsx line 149 all display 'Owner's Notes'. No 'Special Instructions' text remains in any source file."
+    },
+    {
+      "criterion": "Backend API responses use owners_notes as the field name",
+      "met": true,
+      "evidence": "PET_COLUMNS constant aliases 'special_instructions AS owners_notes'. Used in findPetById, findPetByShareId, findPetsByUserId, findPetsForUser, updatePet RETURNING, regenerateShareId RETURNING, and createPet RETURNING."
+    },
+    {
+      "criterion": "Overview page no longer displays the Owner's Notes section",
+      "met": true,
+      "evidence": "OverviewTab.tsx has no references to special_instructions or owners_notes. The OverviewField union type contains only: name, species, breed, sex, date_of_birth, weight, microchip_id."
+    },
+    {
+      "criterion": "Health Profile tab has new Owner's Notes section with expand/collapse, after vaccinations",
+      "met": true,
+      "evidence": "HealthRecordsSection.tsx lines 139-184 contain the new details/summary accordion using health-accordion CSS classes, positioned between Vaccinations (line 113) and Card Alerts (line 187)."
+    },
+    {
+      "criterion": "Emergency card displays Owner's Notes in yellow callout",
+      "met": true,
+      "evidence": "EmergencyCardView.tsx lines 203-219 render the yellow callout with background 'var(--color-warning-light)', border '#FFF9C4', warning icon, uppercase label 'Owner's Notes', reading from pet.owners_notes."
+    },
+    {
+      "criterion": "Emergency card public API returns owners_notes",
+      "met": true,
+      "evidence": "public.ts line 103 maps 'owners_notes: pet.owners_notes' in the buildEmergencyCard response. Both GET /api/public/card/:shareId and POST /api/public/token/:token/access use the same builder."
+    },
+    {
+      "criterion": "Editing Owner's Notes still works",
+      "met": true,
+      "evidence": "EditPetModal.tsx uses formData.owners_notes (line 206-207). HealthRecordsSection.tsx has inline edit with textarea that calls petsApi.update with owners_notes (line 27). Backend updatePet maps owners_notes to special_instructions via fieldMapping (line 97-102). Zod schema validates owners_notes (line 47)."
+    },
+    {
+      "criterion": "No database migration required",
+      "met": true,
+      "evidence": "No migration file was created or modified. The database column remains 'special_instructions' as confirmed by seed.ts SQL INSERT (line 237) and migrate.ts (line 28, unchanged)."
+    }
+  ],
+  "files_reviewed": [
+    "backend/src/models/pet.ts",
+    "backend/src/routes/pets.ts",
+    "backend/src/routes/public.ts",
+    "backend/src/db/seed.ts",
+    "frontend/src/api/client.ts",
+    "frontend/src/pages/pet-profile/tabs/OverviewTab.tsx",
+    "frontend/src/pages/pet-profile/sections/HealthRecordsSection.tsx",
+    "frontend/src/components/EmergencyCardView.tsx",
+    "frontend/src/components/EditPetModal.tsx",
+    "frontend/src/pages/pet-profile/context.ts",
+    "frontend/src/index.css"
+  ]
+}

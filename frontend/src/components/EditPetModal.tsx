@@ -25,7 +25,7 @@ export default function EditPetModal({ pet, onClose, onPetUpdated }: Props) {
     weight_kg: pet.weight_kg ? Number(pet.weight_kg) : undefined,
     weight_unit: pet.weight_unit || 'lbs',
     microchip_id: pet.microchip_id || '',
-    special_instructions: pet.special_instructions || '',
+    owners_notes: pet.owners_notes || '',
   });
 
   const handleSubmit = async (e: FormEvent) => {
@@ -201,13 +201,14 @@ export default function EditPetModal({ pet, onClose, onPetUpdated }: Props) {
             </div>
 
             <div>
-              <label className="label">Special Instructions</label>
+              <label className="label">Owner's Notes</label>
               <textarea
-                value={formData.special_instructions}
-                onChange={(e) => setFormData({ ...formData, special_instructions: e.target.value })}
+                value={formData.owners_notes}
+                onChange={(e) => setFormData({ ...formData, owners_notes: e.target.value })}
                 className="input"
                 rows={3}
-                placeholder="Any special care instructions for emergency staff..."
+                maxLength={10000}
+                placeholder="Any care notes for emergency staff..."
               />
             </div>
 

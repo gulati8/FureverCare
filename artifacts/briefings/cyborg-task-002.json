@@ -1,0 +1,14 @@
+{
+  "agent": "cyborg",
+  "task_id": "task-002",
+  "files_created": [],
+  "files_modified": [
+    "/Users/amitgulati/Projects/JPD/FureverCare/backend/src/routes/public.ts"
+  ],
+  "summary": "Changed one line in buildEmergencyCard() in public.ts: line 103 renamed the response field from `special_instructions: pet.special_instructions` to `owners_notes: pet.owners_notes`. The pet parameter is typed as `any`, so no interface change is needed in this file. The value source uses `pet.owners_notes` to align with the alias that task-001 introduces in the model layer (SELECT special_instructions AS owners_notes). Both GET /api/public/card/:shareId and POST /api/public/token/:token/access share the same buildEmergencyCard helper, so both endpoints are covered by the single change.",
+  "notes_for_reviewer": [
+    "The only TypeScript error from `npx tsc --noEmit` is in backend/src/models/pet.ts line 59 — that is task-001's file and pre-exists from that parallel task's in-progress work. No errors in public.ts.",
+    "The `buildEmergencyCard` function accepts `pet: any`, so TypeScript does not enforce the field name at this layer. The runtime correctness depends on task-001 aliasing the column as `owners_notes` in the SQL queries.",
+    "No second occurrence of `special_instructions` exists in public.ts — there was only the one at line 103."
+  ]
+}

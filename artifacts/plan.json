@@ -1,0 +1,254 @@
+{
+  "feature": "Rename Special Instructions to Owner's Notes and Elevate to Health Profile",
+  "branch": "factory/step5-owners-notes",
+  "tasks": [
+    {
+      "id": "task-001",
+      "title": "Backend: Alias special_instructions to owners_notes in pet model and routes",
+      "parallel_group": "A",
+      "files": [
+        "/Users/amitgulati/Projects/JPD/FureverCare/backend/src/models/pet.ts",
+        "/Users/amitgulati/Projects/JPD/FureverCare/backend/src/routes/pets.ts"
+      ],
+      "description": "Transform the backend API layer so that all pet responses expose `owners_notes` instead of `special_instructions`, while the database column remains unchanged. The backend must also accept `owners_notes` in request bodies for create/update and map it to `special_instructions` for the database.",
+      "changes": [
+        {
+          "file": "backend/src/models/pet.ts",
+          "what": [
+            "Add an `owners_notes` field (string | null) to the Pet interface, remove `special_instructions` from the interface",
+            "Add an `owners_notes` field (string, optional) to CreatePetInput, remove `special_instructions` from CreatePetInput",
+            "In createPet: map `input.owners_notes` to the `special_instructions` SQL parameter",
+            "In findPetById, findPetByShareId, findPetsByUserId, findPetsForUser: change SELECT * to SELECT with an alias: `special_instructions AS owners_notes`",
+            "In updatePet: accept `owners_notes` in the request but map it to the `special_instructions` column in the allowedFields array. Use a fieldMapping object: { owners_notes: 'special_instructions' } to translate field names before building SQL"
+          ]
+        },
+        {
+          "file": "backend/src/routes/pets.ts",
+          "what": [
+            "In createPetSchema: rename `special_instructions` to `owners_notes` (z.string().optional())",
+            "In updatePetSchema: same rename (it derives from createPetSchema.partial())"
+          ]
+        }
+      ],
+      "acceptance_criteria": [
+        "GET /api/pets returns objects with `owners_notes` field (not `special_instructions`)",
+        "GET /api/pets/:id returns object with `owners_notes` field",
+        "POST /api/pets accepts `owners_notes` in request body and stores it in `special_instructions` column",
+        "PATCH /api/pets/:id accepts `owners_notes` in request body and updates `special_instructions` column",
+        "No database migration is required; the column name in the database remains `special_instructions`",
+        "TypeScript compiles without errors"
+      ]
+    },
+    {
+      "id": "task-002",
+      "title": "Backend: Alias special_instructions to owners_notes in public emergency card API",
+      "parallel_group": "A",
+      "files": [
+        "/Users/amitgulati/Projects/JPD/FureverCare/backend/src/routes/public.ts"
+      ],
+      "description": "In the buildEmergencyCard helper function, change the pet object in the response to use `owners_notes` instead of `special_instructions`.",
+      "changes": [
+        {
+          "file": "backend/src/routes/public.ts",
+          "what": [
+            "In buildEmergencyCard(), line 103: change `special_instructions: pet.special_instructions` to `owners_notes: pet.special_instructions` (the pet object from DB still has the column name, but we alias it in the API response)"
+          ]
+        }
+      ],
+      "acceptance_criteria": [
+        "GET /api/public/card/:shareId returns pet object with `owners_notes` field instead of `special_instructions`",
+        "POST /api/public/token/:token/access returns pet object with `owners_notes` field",
+        "The value comes from the database `special_instructions` column"
+      ]
+    },
+    {
+      "id": "task-003",
+      "title": "Frontend: Update API types to use owners_notes",
+      "parallel_group": "A",
+      "files": [
+        "/Users/amitgulati/Projects/JPD/FureverCare/frontend/src/api/client.ts"
+      ],
+      "description": "Update all TypeScript interfaces in the API client to use `owners_notes` instead of `special_instructions`. This is the foundational type change that all frontend components depend on.",
+      "changes": [
+        {
+          "file": "frontend/src/api/client.ts",
+          "what": [
+            "Line 224: In Pet interface, rename `special_instructions: string | null` to `owners_notes: string | null`",
+            "Line 240: In CreatePetInput interface, rename `special_instructions?: string` to `owners_notes?: string`",
+            "Line 343: In EmergencyCard.pet type, rename `special_instructions: string | null` to `owners_notes: string | null`"
+          ]
+        }
+      ],
+      "acceptance_criteria": [
+        "Pet interface has `owners_notes: string | null` (no `special_instructions`)",
+        "CreatePetInput has `owners_notes?: string` (no `special_instructions`)",
+        "EmergencyCard.pet has `owners_notes: string | null` (no `special_instructions`)",
+        "TypeScript compiles without errors in this file"
+      ]
+    },
+    {
+      "id": "task-004",
+      "title": "Frontend: Remove Owner's Notes from OverviewTab and update field references",
+      "parallel_group": "B",
+      "depends_on": ["task-003"],
+      "files": [
+        "/Users/amitgulati/Projects/JPD/FureverCare/frontend/src/pages/pet-profile/tabs/OverviewTab.tsx"
+      ],
+      "description": "Remove the entire Special Instructions section from the Overview tab. This field is being elevated to the Health Profile section, so it should no longer appear on the overview page. Also remove it from the OverviewField type union and all related field configs/handlers.",
+      "changes": [
+        {
+          "file": "frontend/src/pages/pet-profile/tabs/OverviewTab.tsx",
+          "what": [
+            "Line 7: Remove 'special_instructions' from the OverviewField union type",
+            "Lines 47-48: Remove the 'special_instructions' case from the handleSaveField switch",
+            "Lines 91-94: Remove the 'special_instructions' entry from fieldConfigs",
+            "Lines 146-177: Remove the entire special_instructions section (the <div> block containing the Special Instructions heading, inline edit form, and yellow callout display)"
+          ]
+        }
+      ],
+      "acceptance_criteria": [
+        "The Overview tab no longer displays any 'Special Instructions' or 'Owner's Notes' section",
+        "The OverviewField type no longer includes 'special_instructions'",
+        "No references to special_instructions remain in this file",
+        "TypeScript compiles without errors"
+      ]
+    },
+    {
+      "id": "task-005",
+      "title": "Frontend: Add Owner's Notes accordion section to HealthRecordsSection",
+      "parallel_group": "B",
+      "depends_on": ["task-003"],
+      "files": [
+        "/Users/amitgulati/Projects/JPD/FureverCare/frontend/src/pages/pet-profile/sections/HealthRecordsSection.tsx"
+      ],
+      "description": "Add a new 'Owner's Notes' expandable accordion section to the Health Records page, positioned after the Vaccinations accordion and before the Card Alerts accordion. This section will display the pet's owners_notes text with inline editing capability. Follow the existing health-accordion pattern used by Conditions, Allergies, etc.",
+      "changes": [
+        {
+          "file": "frontend/src/pages/pet-profile/sections/HealthRecordsSection.tsx",
+          "what": [
+            "Import `pet`, `handlePetUpdated`, and `token` from usePetProfileContext (add to destructured values)",
+            "Import `petsApi` from '../../../api/client'",
+            "Import useState from 'react'",
+            "Add state: const [editingNotes, setEditingNotes] = useState(false); const [notesValue, setNotesValue] = useState(pet.owners_notes || '')",
+            "Add a save handler that calls petsApi.update(petId, { owners_notes: notesValue }, token) and then calls handlePetUpdated with the response",
+            "After the Vaccinations <details> block and before the Card Alerts <details> block, add a new <details className='health-accordion'> section with:",
+            "  - summary with a notepad/clipboard icon, title 'Owner's Notes', and optional badge showing if notes exist",
+            "  - content area that shows: if editingNotes, a textarea + Save/Cancel buttons; if not editing, the notes text (or a placeholder 'No notes yet') with an Edit button",
+            "Follow the exact same CSS class pattern: health-accordion, health-accordion-summary, health-accordion-title, health-accordion-chevron, health-accordion-content"
+          ]
+        }
+      ],
+      "acceptance_criteria": [
+        "A new 'Owner's Notes' accordion appears in Health Records after Vaccinations and before Card Alerts",
+        "The accordion expands/collapses using the native <details> element (same as other sections)",
+        "When expanded, it shows the current owners_notes text or a placeholder if empty",
+        "An Edit button enables a textarea for editing; Save persists via PATCH /api/pets/:id with owners_notes field",
+        "Cancel reverts the textarea to the original value",
+        "Uses the same health-accordion CSS classes as existing sections",
+        "TypeScript compiles without errors"
+      ]
+    },
+    {
+      "id": "task-006",
+      "title": "Frontend: Update EmergencyCardView to show Owner's Notes in yellow callout",
+      "parallel_group": "B",
+      "depends_on": ["task-003"],
+      "files": [
+        "/Users/amitgulati/Projects/JPD/FureverCare/frontend/src/components/EmergencyCardView.tsx"
+      ],
+      "description": "Update the EmergencyCardView component to rename 'Special Instructions' to 'Owner's Notes' in the yellow callout box, and update the field reference from pet.special_instructions to pet.owners_notes. The visual style (yellow background, warning icon, uppercase label) should remain the same -- it already meets the 'prominent yellow callout' requirement.",
+      "changes": [
+        {
+          "file": "frontend/src/components/EmergencyCardView.tsx",
+          "what": [
+            "Line 203: Change comment from '/* Special Instructions */' to '/* Owner's Notes */'",
+            "Line 204: Change `pet.special_instructions` to `pet.owners_notes`",
+            "Line 214: Change label text from 'Special Instructions' to \"Owner's Notes\"",
+            "Line 217: Change `pet.special_instructions` to `pet.owners_notes`"
+          ]
+        }
+      ],
+      "acceptance_criteria": [
+        "The emergency card displays 'OWNER'S NOTES' (uppercase) instead of 'SPECIAL INSTRUCTIONS'",
+        "The yellow callout styling is preserved (background, border, warning icon)",
+        "The notes text renders from pet.owners_notes",
+        "The section still conditionally renders only when owners_notes is truthy",
+        "TypeScript compiles without errors"
+      ]
+    },
+    {
+      "id": "task-007",
+      "title": "Frontend: Update EditPetModal to use owners_notes field name and label",
+      "parallel_group": "B",
+      "depends_on": ["task-003"],
+      "files": [
+        "/Users/amitgulati/Projects/JPD/FureverCare/frontend/src/components/EditPetModal.tsx"
+      ],
+      "description": "Update the EditPetModal component to use the new `owners_notes` field name and 'Owner's Notes' label. The form field still writes to the same data path, just with the renamed key.",
+      "changes": [
+        {
+          "file": "frontend/src/components/EditPetModal.tsx",
+          "what": [
+            "Line 28: Change `special_instructions: pet.special_instructions || ''` to `owners_notes: pet.owners_notes || ''`",
+            "Line 204: Change label text from 'Special Instructions' to \"Owner's Notes\"",
+            "Line 206: Change `value={formData.special_instructions}` to `value={formData.owners_notes}`",
+            "Line 207: Change `special_instructions: e.target.value` to `owners_notes: e.target.value`",
+            "Line 210: Update placeholder text to 'Any care notes for emergency staff...' (optional, to match new naming)"
+          ]
+        }
+      ],
+      "acceptance_criteria": [
+        "The EditPetModal form label reads 'Owner's Notes' instead of 'Special Instructions'",
+        "The form data uses `owners_notes` key",
+        "Saving the form sends `owners_notes` to the API",
+        "TypeScript compiles without errors"
+      ]
+    },
+    {
+      "id": "task-008",
+      "title": "Backend: Update seed data to use owners_notes key",
+      "parallel_group": "A",
+      "files": [
+        "/Users/amitgulati/Projects/JPD/FureverCare/backend/src/db/seed.ts"
+      ],
+      "description": "Update the seed data file so that the pet objects and INSERT statements use `owners_notes` instead of `special_instructions` in the TypeScript interface and object literals. The SQL INSERT column name stays as `special_instructions` since that is the database column.",
+      "changes": [
+        {
+          "file": "backend/src/db/seed.ts",
+          "what": [
+            "Line 32: In the SeedPet interface, rename `special_instructions: string` to `owners_notes: string`",
+            "Lines 88, 100, 112, 123, 135, 146, 157: In each pet object, rename the key from `special_instructions:` to `owners_notes:`",
+            "Line 237: SQL INSERT column stays as `special_instructions` (this is the DB column name)",
+            "Line 251: Change `pet.special_instructions` to `pet.owners_notes`"
+          ]
+        }
+      ],
+      "acceptance_criteria": [
+        "The SeedPet TypeScript interface uses `owners_notes`",
+        "All pet seed data objects use `owners_notes` key",
+        "The INSERT SQL still references the `special_instructions` column",
+        "The parameter value references `pet.owners_notes`",
+        "TypeScript compiles without errors"
+      ]
+    }
+  ],
+  "parallel_groups": {
+    "A": {
+      "description": "Backend API aliasing and frontend type updates -- these touch separate files with no runtime dependencies between them",
+      "tasks": ["task-001", "task-002", "task-003", "task-008"]
+    },
+    "B": {
+      "description": "Frontend component updates -- all depend on task-003 (type definitions) being complete first",
+      "tasks": ["task-004", "task-005", "task-006", "task-007"]
+    }
+  },
+  "execution_order": [
+    {"group": "A", "tasks": ["task-001", "task-002", "task-003", "task-008"]},
+    {"group": "B", "tasks": ["task-004", "task-005", "task-006", "task-007"]}
+  ],
+  "risks": [
+    "The pet model currently uses SELECT * which returns the raw column name `special_instructions`. After task-001 changes the queries to alias the column, the model layer will return `owners_notes`. All downstream code must be updated atomically or TypeScript will catch mismatches.",
+    "The cached emergency card responses in Redis will still contain `special_instructions` until the cache expires (5 minutes) or is invalidated. This is acceptable for a short window after deployment.",
+    "E2E tests or integration tests that reference `special_instructions` in API response assertions will need updating. Current test files do not appear to reference this field, but verify after implementation."
+  ]
+}

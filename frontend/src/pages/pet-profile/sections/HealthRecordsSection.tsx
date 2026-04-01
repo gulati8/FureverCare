@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { usePetProfileContext } from '../context';
+import { petsApi } from '../../../api/client';
 import ConditionsTab from '../tabs/ConditionsTab';
 import AllergiesTab from '../tabs/AllergiesTab';
 import MedicationsTab from '../tabs/MedicationsTab';
@@ -8,14 +10,24 @@ import AlertsTab from '../tabs/AlertsTab';
 export default function HealthRecordsSection() {
   const ctx = usePetProfileContext();
   const {
-    petId, token,
+    pet, petId, token,
     conditions, setConditions,
     allergies, setAllergies,
     medications, setMedications,
     vaccinations, setVaccinations,
     alerts, setAlerts,
+    handlePetUpdated,
     handleNavigateToReview,
   } = ctx;
+
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesValue, setNotesValue] = useState(pet.owners_notes || '');
+
+  const handleSaveNotes = async () => {
+    const updated = await petsApi.update(petId, { owners_notes: notesValue }, token);
+    handlePetUpdated(updated);
+    setEditingNotes(false);
+  };
 
   const activeMeds = medications.filter(m => m.is_active);
   const expiringVacs = vaccinations.filter(v => v.expiration_date && new Date(v.expiration_date) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
@@ -121,6 +133,54 @@ export default function HealthRecordsSection() {
             vaccinations={vaccinations} setVaccinations={setVaccinations}
             onNavigateToReview={handleNavigateToReview}
           />
+        </div>
+      </details>
+
+      {/* Owner's Notes accordion */}
+      <details className="health-accordion">
+        <summary className="health-accordion-summary">
+          <div className="health-accordion-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
+              <rect x="9" y="3" width="6" height="4" rx="1" />
+              <line x1="9" y1="12" x2="15" y2="12" />
+              <line x1="9" y1="16" x2="13" y2="16" />
+            </svg>
+            Owner's Notes
+            {pet.owners_notes && <span className="badge badge-info">Has Notes</span>}
+          </div>
+          <svg className="health-accordion-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </summary>
+        <div className="health-accordion-content">
+          {editingNotes ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <textarea
+                value={notesValue}
+                onChange={e => setNotesValue(e.target.value)}
+                rows={4}
+                maxLength={10000}
+                placeholder="Any care notes for emergency staff..."
+                style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '14px', resize: 'vertical', boxSizing: 'border-box' }}
+              />
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button className="btn btn-primary btn-sm" onClick={handleSaveNotes}>Save</button>
+                <button className="btn btn-secondary btn-sm" onClick={() => { setNotesValue(pet.owners_notes || ''); setEditingNotes(false); }}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <p style={{ margin: 0, fontSize: '14px', color: pet.owners_notes ? 'inherit' : '#9ca3af', whiteSpace: 'pre-wrap' }}>
+                {pet.owners_notes || 'No owner\'s notes yet'}
+              </p>
+              {token && (
+                <div>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setEditingNotes(true)}>Edit</button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </details>
 

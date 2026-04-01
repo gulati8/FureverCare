@@ -1,0 +1,63 @@
+{
+  "verdict": "fail",
+  "summary": "Perimeter scan of six files changed by the 'Owner's Notes' rename feature. The SQL layer is clean: all queries use parameterized statements and the updatePet field-mapping table is a hardcoded allowlist with no user-influence over column names, eliminating injection risk. Frontend rendering uses React text nodes exclusively — no dangerouslySetInnerHTML — so the notes content is XSS-safe in all display locations. The public emergency card endpoint intentionally exposes owners_notes without authentication; this is by design and consistent with the pre-existing exposure of the same data under the old field name. One medium-severity finding was identified: the Zod schema for owners_notes lacks a maximum length constraint, leaving the field unbounded at the validation layer. While PostgreSQL's TEXT type will accept arbitrarily large input without corruption, the absence of a server-side length cap is a denial-of-service and storage-abuse vector — any authenticated user can write arbitrarily large payloads that bloat the database and Redis cache. A second informational finding concerns the HealthRecordsSection edit button visibility: it gates on the truthiness of the context token (correct), but the underlying PATCH /api/pets/:id route enforces ownership only via updatePet's WHERE user_id = $N clause, not the broader verifyPetEditAccess helper used elsewhere in routes/pets.ts. This is a pre-existing gap, not introduced by this PR, and has been flagged informational only. No hardcoded secrets, API keys, or tokens were found in any of the six scanned files.",
+  "owasp_findings": [
+    {
+      "id": "A03-2021",
+      "title": "Injection — SQL (Informational / Not Present)",
+      "severity": "informational",
+      "file": "backend/src/models/pet.ts",
+      "line": 97,
+      "description": "The updatePet function maps user-supplied field names through a hardcoded allowlist (allowedFields array, line 98) and a hardcoded fieldMapping table (line 97). The SQL SET clause is built from these hardcoded strings, never from user input. All values are passed as parameterized query arguments. Column names are not user-influenced. No injection vector exists.",
+      "remediation": "No action required. The pattern is correctly implemented."
+    },
+    {
+      "id": "A03-2021",
+      "title": "Injection — Stored XSS via owners_notes display",
+      "severity": "informational",
+      "file": "frontend/src/pages/pet-profile/sections/HealthRecordsSection.tsx",
+      "line": 173,
+      "description": "The owners_notes value is rendered inside a <p> element as a React text node ({pet.owners_notes}). React automatically escapes text node content. No dangerouslySetInnerHTML is used anywhere in the six files under review. The EmergencyCardView (line 217) and EditPetModal (line 206) follow the same safe pattern.",
+      "remediation": "No action required. Rendering is XSS-safe."
+    },
+    {
+      "id": "A04-2021",
+      "title": "Insecure Design — Unbounded Text Input (No Length Validation)",
+      "severity": "medium",
+      "file": "backend/src/routes/pets.ts",
+      "line": 47,
+      "description": "The Zod schema defines owners_notes as z.string().optional() with no maximum length constraint. An authenticated user can submit an arbitrarily large string (e.g., megabytes of text) which will be written to the PostgreSQL TEXT column and subsequently cached verbatim in Redis with a 5-minute TTL. This enables storage-layer DoS and cache-bloat abuse by any authenticated user against their own (or shared-access) pet records. The pre-existing special_instructions field had the same gap, but the rename is an appropriate moment to address it.",
+      "remediation": "Apply a reasonable maximum on the Zod schema: owners_notes: z.string().max(10000).optional(). 10,000 characters is generous for care notes. Add a matching maxlength attribute to the textarea in EditPetModal.tsx (line 205) and HealthRecordsSection.tsx (line 159) to provide client-side feedback before the request is sent."
+    },
+    {
+      "id": "A01-2021",
+      "title": "Broken Access Control — PATCH /pets/:id uses ownership-only check",
+      "severity": "informational",
+      "file": "backend/src/routes/pets.ts",
+      "line": 127,
+      "description": "The PATCH /pets/:id route (line 127) calls updatePet directly, which enforces WHERE id = $N AND user_id = $N. Other write routes in the same file use verifyPetEditAccess (userCanEditPet), which consults the pet_owners junction table and supports editor-role collaborators. The PATCH route therefore silently denies updates from legitimate editor-role collaborators rather than permitting them. This is a pre-existing gap not introduced by this PR — owners_notes follows the same pattern as all other PATCH fields. It is flagged informational because it is a correctness/authorization design issue in existing code, not a new vulnerability introduced here.",
+      "remediation": "Out of scope for this PR. Track separately: update the PATCH /pets/:id handler to use verifyPetEditAccess before calling updatePet, or modify updatePet to accept a userId that can be a collaborator with edit rights."
+    },
+    {
+      "id": "A05-2021",
+      "title": "Security Misconfiguration — Public endpoint exposes owners_notes without authentication",
+      "severity": "informational",
+      "file": "backend/src/routes/public.ts",
+      "line": 103,
+      "description": "The GET /api/public/card/:shareId endpoint returns owners_notes in the emergency card payload with no authentication. This is intentional — the endpoint is the public emergency card accessible to first responders via a share link. The owners_notes field was already exposed under the name special_instructions before this rename. The change is a field rename only, not a new disclosure. The share ID is a nanoid, providing ~126 bits of entropy, making enumeration impractical.",
+      "remediation": "No action required for this PR. If owners_notes ever needs to be restricted (e.g., for sensitive medical notes intended only for the owner), add a separate boolean field to control card visibility, consistent with the show_on_card pattern used by other record types."
+    }
+  ],
+  "stride_analysis": {
+    "spoofing": "No new authentication surfaces introduced. All writes to owners_notes go through the existing authenticate middleware in routes/pets.ts. The public card endpoint was already unauthenticated. No spoofing vectors introduced.",
+    "tampering": "The updatePet allowlist (backend/src/models/pet.ts line 98) prevents injection of arbitrary column names into UPDATE statements. Parameterized queries prevent value tampering at the SQL level. A shared-access collaborator with viewer-only role cannot update owners_notes because the WHERE user_id clause blocks them — though this also incorrectly blocks legitimate editor-role collaborators (see A01 finding above).",
+    "repudiation": "No audit logging is wired for owners_notes changes via PATCH /pets/:id. This is consistent with the existing behavior for all other pet core fields (name, breed, etc.). Health record sub-resources (conditions, allergies, etc.) do log via the audit parameter pattern. If owners_notes requires auditability, it should be added to the audit_log table on write. Not a regression introduced by this PR.",
+    "information_disclosure": "owners_notes is exposed on the public emergency card (GET /api/public/card/:shareId). This matches the pre-existing behavior for special_instructions. The Redis cache key (pet:{shareId}) is the same as before. No new data paths were opened. Owner email is included in the emergency card response (public.ts line 109); this is pre-existing and out of scope for this review.",
+    "denial_of_service": "Medium concern: no maximum length is enforced on owners_notes at the Zod validation layer. An authenticated attacker can submit large payloads to PATCH /pets/:id to inflate database storage and Redis cache usage. See A04 finding for details and remediation.",
+    "elevation_of_privilege": "No privilege escalation vectors introduced. The field rename operates entirely within the existing permission model. No new admin-only paths, no new role assignments, no bypass of the authenticate middleware."
+  },
+  "secrets_scan": {
+    "clean": true,
+    "findings": []
+  }
+}

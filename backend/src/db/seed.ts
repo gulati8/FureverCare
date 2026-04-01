@@ -29,7 +29,7 @@ interface SeedPet {
   sex: string;
   microchip_id: string;
   photo_url: string;
-  special_instructions: string;
+  owners_notes: string;
 }
 
 // Realistic sample users
@@ -85,7 +85,7 @@ const pets: SeedPet[] = [
     sex: 'Male',
     microchip_id: '985141000123456',
     photo_url: 'https://images.unsplash.com/photo-1633722715463-d30f4f325e24?w=400&h=400&fit=crop',
-    special_instructions: 'Allergic to chicken-based treats. Loves belly rubs and playing fetch. Gets anxious during thunderstorms - needs comfort.',
+    owners_notes: 'Allergic to chicken-based treats. Loves belly rubs and playing fetch. Gets anxious during thunderstorms - needs comfort.',
   },
   // Pet for Marcus Johnson (User 2)
   {
@@ -97,7 +97,7 @@ const pets: SeedPet[] = [
     sex: 'Female',
     microchip_id: '985141000234567',
     photo_url: 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=400&h=400&fit=crop',
-    special_instructions: 'Indoor only. Requires daily medication for hyperthyroidism (methimazole 2.5mg twice daily). Very affectionate but shy with strangers.',
+    owners_notes: 'Indoor only. Requires daily medication for hyperthyroidism (methimazole 2.5mg twice daily). Very affectionate but shy with strangers.',
   },
   // Pets for Emily Rodriguez (User 3) - 2 pets
   {
@@ -109,7 +109,7 @@ const pets: SeedPet[] = [
     sex: 'Male',
     microchip_id: '985141000345678',
     photo_url: 'https://images.unsplash.com/photo-1591769225440-811ad7d6eab3?w=400&h=400&fit=crop',
-    special_instructions: 'Hip dysplasia - on joint supplements (Cosequin DS). No jumping or stairs. Loves swimming. Very food motivated for training.',
+    owners_notes: 'Hip dysplasia - on joint supplements (Cosequin DS). No jumping or stairs. Loves swimming. Very food motivated for training.',
   },
   {
     name: 'Luna',
@@ -120,7 +120,7 @@ const pets: SeedPet[] = [
     sex: 'Female',
     microchip_id: '985141000456789',
     photo_url: 'https://images.unsplash.com/photo-1568152950566-c1bf43f4ab28?w=400&h=400&fit=crop',
-    special_instructions: 'Very vocal and social. Needs interactive play daily (feather wands are her favorite). Grain-free diet only.',
+    owners_notes: 'Very vocal and social. Needs interactive play daily (feather wands are her favorite). Grain-free diet only.',
   },
   // Shared pets for James Wilson & Priya Sharma (Users 4 & 5) - 3 pets
   {
@@ -132,7 +132,7 @@ const pets: SeedPet[] = [
     sex: 'Male',
     microchip_id: '985141000567890',
     photo_url: 'https://images.unsplash.com/photo-1612536057832-2ff7ead58194?w=400&h=400&fit=crop',
-    special_instructions: 'High energy - needs minimum 2 walks daily. Prone to back issues, no jumping from heights. Knows commands: sit, stay, come, paw.',
+    owners_notes: 'High energy - needs minimum 2 walks daily. Prone to back issues, no jumping from heights. Knows commands: sit, stay, come, paw.',
   },
   {
     name: 'Maple',
@@ -143,7 +143,7 @@ const pets: SeedPet[] = [
     sex: 'Female',
     microchip_id: '985141000678901',
     photo_url: 'https://images.unsplash.com/photo-1505628346881-b72b27e84530?w=400&h=400&fit=crop',
-    special_instructions: 'Strong prey drive - always leash outdoors. Food allergies (no beef or dairy). Expert escape artist - check fence/gate security.',
+    owners_notes: 'Strong prey drive - always leash outdoors. Food allergies (no beef or dairy). Expert escape artist - check fence/gate security.',
   },
   {
     name: 'Oliver',
@@ -154,7 +154,7 @@ const pets: SeedPet[] = [
     sex: 'Male',
     microchip_id: '985141000789012',
     photo_url: 'https://images.unsplash.com/photo-1615796153287-98eacf0abb13?w=400&h=400&fit=crop',
-    special_instructions: 'Long coat requires daily brushing. Very gentle giant - great with kids. Needs puzzle feeders for mental stimulation. Indoor/outdoor with catio access.',
+    owners_notes: 'Long coat requires daily brushing. Very gentle giant - great with kids. Needs puzzle feeders for mental stimulation. Indoor/outdoor with catio access.',
   },
 ];
 
@@ -248,7 +248,7 @@ async function seed() {
             pet.sex,
             pet.microchip_id,
             pet.photo_url,
-            pet.special_instructions,
+            pet.owners_notes,
           ]
         );
 

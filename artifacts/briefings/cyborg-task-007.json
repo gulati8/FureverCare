@@ -1,0 +1,14 @@
+{
+  "agent": "cyborg",
+  "task_id": "task-007",
+  "files_created": [],
+  "files_modified": [
+    "/Users/amitgulati/Projects/JPD/FureverCare/frontend/src/components/EditPetModal.tsx"
+  ],
+  "summary": "Updated EditPetModal to use owners_notes throughout. Four changes made: (1) formData state initialization at line 28 changed from special_instructions to owners_notes, (2) label text at line 204 changed from 'Special Instructions' to \"Owner's Notes\", (3) textarea value binding at line 206 updated to formData.owners_notes, (4) onChange handler at line 207 updated to owners_notes key. Placeholder text also updated to 'Any care notes for emergency staff...' per optional spec item. TypeScript compilation passes clean with no errors.",
+  "notes_for_reviewer": [
+    "No special_instructions references remain in this file.",
+    "The Pet and CreatePetInput types (task-003) must be complete before this compiles — verified clean because task-003 was already applied.",
+    "The form submits owners_notes in the PATCH body, which the backend (task-001) maps to the special_instructions DB column."
+  ]
+}

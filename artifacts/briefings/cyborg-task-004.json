@@ -1,0 +1,14 @@
+{
+  "agent": "cyborg",
+  "task_id": "task-004",
+  "files_created": [],
+  "files_modified": [
+    "frontend/src/pages/pet-profile/tabs/OverviewTab.tsx"
+  ],
+  "summary": "Removed all 'special_instructions' references from OverviewTab.tsx. Four surgical removals: (1) dropped 'special_instructions' from the OverviewField union type, (2) removed its case from the handleSaveField switch, (3) removed its entry from the fieldConfigs Record, (4) removed the entire JSX block (the Special Instructions heading, InlineEditForm, and yellow callout display). No references to special_instructions or owners_notes remain in this file.",
+  "notes_for_reviewer": [
+    "TypeScript compilation for OverviewTab.tsx is clean — zero errors in this file.",
+    "Two errors exist in EditPetModal.tsx referencing 'special_instructions' but those belong to task-007, which is not yet applied.",
+    "The Pet type change (task-003) was already in place when this task ran, confirming correct execution order (group A before group B)."
+  ]
+}

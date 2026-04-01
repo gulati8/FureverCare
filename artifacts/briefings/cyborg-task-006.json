@@ -1,0 +1,13 @@
+{
+  "agent": "cyborg",
+  "task_id": "task-006",
+  "files_created": [],
+  "files_modified": [
+    "frontend/src/components/EmergencyCardView.tsx"
+  ],
+  "summary": "Renamed 3 references in EmergencyCardView.tsx: comment text 'Special Instructions' -> 'Owner's Notes', conditional pet.special_instructions -> pet.owners_notes, display value pet.special_instructions -> pet.owners_notes, and label text 'Special Instructions' -> 'Owner's Notes'. Yellow callout styling (background, border, icon, uppercase, letterSpacing, color) left entirely unchanged.",
+  "notes_for_reviewer": [
+    "TypeScript compilation produced 4 errors, all in EditPetModal.tsx (lines 28, 206, 207) — these are pre-existing and belong to a separate task covering that component. No new errors were introduced by this change.",
+    "The label text uses a typographic apostrophe in \"Owner's Notes\" matching the existing comment style; if the style guide requires a straight apostrophe, update line 214 accordingly."
+  ]
+}

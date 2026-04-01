@@ -1,0 +1,15 @@
+{
+  "agent": "cyborg",
+  "task_id": "task-001",
+  "files_created": [],
+  "files_modified": [
+    "/Users/amitgulati/Projects/JPD/FureverCare/backend/src/models/pet.ts",
+    "/Users/amitgulati/Projects/JPD/FureverCare/backend/src/routes/pets.ts"
+  ],
+  "summary": "Renamed special_instructions to owners_notes throughout the backend pet model and routes layer. The database column name is unchanged. All SELECT queries now use an explicit column list with 'special_instructions AS owners_notes'. A PET_COLUMNS constant was introduced to avoid repetition across findPetById, findPetByShareId, findPetsByUserId, findPetsForUser, updatePet RETURNING, and regenerateShareId RETURNING. The createPet function reads from input.owners_notes and the INSERT column stays as special_instructions. The updatePet function uses a fieldMapping object to translate owners_notes back to special_instructions for the SQL SET clause. The Zod createPetSchema in routes/pets.ts was updated from special_instructions to owners_notes; updatePetSchema derives from createPetSchema.partial() and picks up the rename automatically. regenerateShareId was also updated to use PET_COLUMNS in its RETURNING clause (not in the plan spec, but necessary to maintain type integrity since it returns Pet). TypeScript compilation is clean.",
+  "notes_for_reviewer": [
+    "regenerateShareId was updated to use PET_COLUMNS in its RETURNING clause. The plan only called out updatePet, but regenerateShareId also had RETURNING * and returns Pet. Leaving it as RETURNING * would produce a runtime object with special_instructions (not owners_notes), which would be a silent type mismatch since queryOne<Pet> trusts the generic. The route only reads pet.share_id from the result so it would not break at runtime, but it is cleaner to fix it here.",
+    "findPetsForUser uses a table alias 'p' in the JOIN. The PET_COLUMNS constant uses unqualified column names. This is valid SQL because only the pets table has those columns, so the database resolves them unambiguously. If a column name collision with pet_owners ever occurs in future, the constant would need prefixing.",
+    "updatePetSchema auto-derives from createPetSchema.partial() (line 50 of routes/pets.ts) — verified before and after the change. No separate edit needed."
+  ]
+}

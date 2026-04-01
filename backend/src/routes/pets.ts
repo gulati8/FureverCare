@@ -44,7 +44,7 @@ const createPetSchema = z.object({
   is_fixed: z.boolean().optional(),
   microchip_id: z.string().optional(),
   photo_url: z.string().url().optional(),
-  special_instructions: z.string().optional(),
+  owners_notes: z.string().max(10000).optional(),
 });
 
 const updatePetSchema = createPetSchema.partial();

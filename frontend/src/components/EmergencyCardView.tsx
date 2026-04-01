@@ -200,8 +200,8 @@ export default function EmergencyCardView({ card, resolvePhotoUrl }: Props) {
       {/* Content */}
       <div className="max-w-lg mx-auto px-4 py-4" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-        {/* Special Instructions */}
-        {pet.special_instructions && (
+        {/* Owner's Notes */}
+        {pet.owners_notes && (
           <div style={{
             background: 'var(--color-warning-light)',
             border: '1px solid #FFF9C4',
@@ -211,10 +211,10 @@ export default function EmergencyCardView({ card, resolvePhotoUrl }: Props) {
             <div className="flex items-center gap-2" style={{ marginBottom: '6px' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--color-warning)"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
               <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.05em', color: '#8B6914' }}>
-                Special Instructions
+                Owner's Notes
               </span>
             </div>
-            <p style={{ fontSize: '0.9375rem', lineHeight: 1.6 }}>{pet.special_instructions}</p>
+            <p style={{ fontSize: '0.9375rem', lineHeight: 1.6 }}>{pet.owners_notes}</p>
           </div>
         )}
 

@@ -1,0 +1,14 @@
+{
+  "agent": "cyborg",
+  "task_id": "task-003",
+  "files_created": [],
+  "files_modified": [
+    "frontend/src/api/client.ts"
+  ],
+  "summary": "Renamed all three occurrences of `special_instructions` to `owners_notes` in frontend/src/api/client.ts: Pet interface (line 224), CreatePetInput interface (line 240), and EmergencyCard.pet type (line 343). No other changes made.",
+  "notes_for_reviewer": [
+    "TypeScript compilation produces errors in EditPetModal.tsx, EmergencyCardView.tsx, and OverviewTab.tsx -- these are the expected downstream errors that tasks 004, 006, and 007 are responsible for fixing. The errors confirm the interface change propagated correctly.",
+    "No occurrences of special_instructions remain in client.ts.",
+    "Scope was strictly limited to the three interface field renames specified in the plan."
+  ]
+}
