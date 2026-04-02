@@ -14,6 +14,7 @@ import {
   getDocumentGroup,
   reorderDocumentGroup,
   deleteDocumentUpload,
+  softDeleteDocumentWithCascade,
   updateDocumentUploadFilename,
   updateDocumentUploadStatus,
   updateDocumentImageMetadata,
@@ -301,6 +302,8 @@ router.get('/:petId/documents/uploads', authenticate, async (req: AuthRequest, r
       FROM document_extractions de
       JOIN document_extraction_items dei ON dei.extraction_id = de.id
       WHERE de.document_upload_id = ANY($1)
+        AND de.deleted_at IS NULL
+        AND dei.deleted_at IS NULL
       GROUP BY de.document_upload_id`,
       [uploads.map(u => u.id)]
     );
@@ -382,7 +385,8 @@ router.get('/:petId/documents/uploads/:id/file', async (req, res) => {
   }
 });
 
-// DELETE /api/pets/:petId/documents/uploads/:id - Delete a document upload
+// DELETE /api/pets/:petId/documents/uploads/:id - Soft-delete a document upload
+// Query param: cascade=true|false (required for processed documents, optional for unprocessed)
 router.delete('/:petId/documents/uploads/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const petId = parseInt(req.params.petId);
@@ -398,15 +402,22 @@ router.delete('/:petId/documents/uploads/:id', authenticate, async (req: AuthReq
       return;
     }
 
-    // Delete from storage
-    try {
-      const key = storage.extractKey(upload.file_path);
-      await storage.delete(key, 'documents');
-    } catch (err) {
-      console.error('Failed to delete document file:', err);
+    const isProcessed = upload.status === 'completed' || upload.status === 'pending_review';
+
+    if (isProcessed) {
+      // cascade param required for processed documents
+      const cascadeParam = req.query.cascade;
+      if (cascadeParam === undefined || cascadeParam === null || cascadeParam === '') {
+        res.status(400).json({ error: 'cascade query param is required for processed documents (true or false)' });
+        return;
+      }
+      const cascade = cascadeParam === 'true';
+      await softDeleteDocumentWithCascade(uploadId, petId, cascade);
+    } else {
+      // Unprocessed document: simple soft-delete
+      await deleteDocumentUpload(uploadId, petId);
     }
 
-    await deleteDocumentUpload(uploadId, petId);
     res.status(204).send();
   } catch (error) {
     console.error('Error deleting document upload:', error);

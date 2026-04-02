@@ -124,21 +124,21 @@ export async function createDocumentExtractionWithItems(
 
 export async function getDocumentExtractionByUploadId(documentUploadId: number): Promise<DocumentExtraction | null> {
   return queryOne<DocumentExtraction>(
-    'SELECT * FROM document_extractions WHERE document_upload_id = $1',
+    'SELECT * FROM document_extractions WHERE document_upload_id = $1 AND deleted_at IS NULL',
     [documentUploadId]
   );
 }
 
 export async function getDocumentExtractionById(id: number): Promise<DocumentExtraction | null> {
   return queryOne<DocumentExtraction>(
-    'SELECT * FROM document_extractions WHERE id = $1',
+    'SELECT * FROM document_extractions WHERE id = $1 AND deleted_at IS NULL',
     [id]
   );
 }
 
 export async function getDocumentExtractionItems(extractionId: number): Promise<DocumentExtractionItem[]> {
   return query<DocumentExtractionItem>(
-    'SELECT * FROM document_extraction_items WHERE extraction_id = $1 ORDER BY id',
+    'SELECT * FROM document_extraction_items WHERE extraction_id = $1 AND deleted_at IS NULL ORDER BY id',
     [extractionId]
   );
 }
@@ -212,7 +212,7 @@ export async function updateDocumentExtractionStatus(
 
 export async function getDocumentExtractionItemById(itemId: number): Promise<DocumentExtractionItem | null> {
   return queryOne<DocumentExtractionItem>(
-    'SELECT * FROM document_extraction_items WHERE id = $1',
+    'SELECT * FROM document_extraction_items WHERE id = $1 AND deleted_at IS NULL',
     [itemId]
   );
 }

@@ -1,70 +1,10 @@
-import { PetCondition, PetAllergy, PetMedication, PetVaccination, PetAlert, PetEmergencyContact } from '../../api/client';
+import { PetCondition, PetAllergy, PetMedication, PetVaccination, PetAlert, PetEmergencyContact, PetVet } from '../../api/client';
 
-interface AlertItem {
-  type: 'allergy' | 'medication' | 'condition' | 'vaccination' | 'custom';
-  title: string;
-  detail: string;
-}
-
-function buildPreviewAlerts(
-  conditions: PetCondition[],
-  allergies: PetAllergy[],
-  medications: PetMedication[],
-  vaccinations: PetVaccination[],
-  alerts: PetAlert[],
-): AlertItem[] {
-  const items: AlertItem[] = [];
-
-  for (const a of alerts.filter(a => a.is_active)) {
-    items.push({ type: 'custom', title: a.alert_text, detail: 'Owner alert' });
-  }
-
-  for (const a of allergies.filter(a => a.show_on_card)) {
-    const severity = a.severity === 'life-threatening' ? ' (ANAPHYLAXIS RISK)' :
-      a.severity === 'severe' ? ' (SEVERE)' : '';
-    items.push({
-      type: 'allergy',
-      title: `${a.allergen} Allergy${severity}`,
-      detail: a.reaction ? `Reaction: ${a.reaction}` : 'Avoid this allergen',
-    });
-  }
-
-  for (const m of medications.filter(m => m.show_on_card && m.is_active)) {
-    items.push({
-      type: 'medication',
-      title: `On ${m.name}`,
-      detail: [m.dosage, m.frequency].filter(Boolean).join(' '),
-    });
-  }
-
-  for (const c of conditions.filter(c => c.show_on_card && c.is_active)) {
-    items.push({
-      type: 'condition',
-      title: c.name,
-      detail: c.notes || 'Monitor during procedures',
-    });
-  }
-
-  for (const v of vaccinations.filter(v => v.show_on_card)) {
-    const isExpired = v.expiration_date && new Date(v.expiration_date) < new Date();
-    items.push({
-      type: 'vaccination',
-      title: `${v.name}${isExpired ? ' (EXPIRED)' : ''}`,
-      detail: v.expiration_date
-        ? `${isExpired ? 'Expired' : 'Expires'}: ${new Date(v.expiration_date.split('T')[0] + 'T00:00:00').toLocaleDateString()}`
-        : `Given ${new Date(v.administered_date.split('T')[0] + 'T00:00:00').toLocaleDateString()}`,
-    });
-  }
-
-  return items;
-}
-
-const alertTypeColors: Record<string, { bg: string; text: string; icon: string }> = {
-  allergy: { bg: 'var(--color-danger-light)', text: 'var(--color-danger)', icon: '\u26A0' },
-  medication: { bg: 'var(--color-info-light)', text: 'var(--color-info)', icon: '\u{1F48A}' },
-  condition: { bg: 'var(--color-warning-light)', text: '#8B6914', icon: '\u2665' },
-  vaccination: { bg: 'var(--color-success-light)', text: '#1E8449', icon: '\u{1F489}' },
-  custom: { bg: 'var(--color-danger-light)', text: 'var(--color-danger)', icon: '\u26A0' },
+const sectionColors: Record<string, { bg: string; text: string; label: string }> = {
+  condition: { bg: 'var(--color-warning-light)', text: '#8B6914', label: 'Conditions' },
+  allergy: { bg: 'var(--color-danger-light)', text: 'var(--color-danger)', label: 'Allergies' },
+  medication: { bg: 'var(--color-info-light)', text: 'var(--color-info)', label: 'Medications' },
+  vaccination: { bg: 'var(--color-success-light)', text: '#1E8449', label: 'Vaccinations' },
 };
 
 export default function EmergencyCardPreview({
@@ -75,8 +15,10 @@ export default function EmergencyCardPreview({
   vaccinations,
   alerts,
   contacts,
+  vets,
+  specialInstructions,
   onShare,
-  onConfigure,
+  onEdit,
 }: {
   petName: string;
   conditions: PetCondition[];
@@ -85,11 +27,20 @@ export default function EmergencyCardPreview({
   vaccinations: PetVaccination[];
   alerts: PetAlert[];
   contacts: PetEmergencyContact[];
+  vets: PetVet[];
+  specialInstructions: string | null;
   onShare: () => void;
-  onConfigure: () => void;
+  onEdit: () => void;
 }) {
-  const previewAlerts = buildPreviewAlerts(conditions, allergies, medications, vaccinations, alerts);
+  const activeConditions = conditions.filter(c => c.show_on_card && c.is_active);
+  const activeAllergies = allergies.filter(a => a.show_on_card);
+  const activeMedications = medications.filter(m => m.show_on_card && m.is_active);
+  const activeVaccinations = vaccinations.filter(v => v.show_on_card);
+
   const primaryContact = contacts.find(c => c.is_primary) || contacts[0];
+  const primaryVet = vets.find(v => v.is_primary) ?? null;
+
+  const hasContent = activeConditions.length > 0 || activeAllergies.length > 0 || activeMedications.length > 0 || activeVaccinations.length > 0;
 
   return (
     <div className="emergency-card-preview">
@@ -103,40 +54,146 @@ export default function EmergencyCardPreview({
         <span>EMERGENCY PET CARD</span>
       </div>
 
-      {/* Alert items */}
+      {/* Card body */}
       <div className="emergency-card-preview-body">
-        {previewAlerts.length === 0 ? (
+        {!hasContent ? (
           <p style={{ color: 'var(--color-surface-500)', fontSize: '0.8125rem', textAlign: 'center', padding: '16px 0' }}>
-            No alerts configured yet. Use the bell icon on health records to add items to the emergency card.
+            No items on card yet. Use the bell icon on health records to add items to the emergency card.
           </p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {previewAlerts.slice(0, 4).map((alert, i) => {
-              const colors = alertTypeColors[alert.type];
-              return (
-                <div key={i} style={{
-                  display: 'flex', alignItems: 'center', gap: '8px',
-                  padding: '6px 10px', borderRadius: 'var(--radius-sm)',
-                  background: colors.bg, fontSize: '0.8125rem',
-                }}>
-                  <span>{colors.icon}</span>
-                  <span style={{ color: colors.text, fontWeight: 600 }}>{alert.title}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {/* Conditions */}
+            {activeConditions.length > 0 && (
+              <div>
+                <p style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#8B6914', marginBottom: '4px' }}>
+                  {sectionColors.condition.label}
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  {activeConditions.map(c => (
+                    <div key={c.id} style={{
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      padding: '4px 8px', borderRadius: 'var(--radius-sm)',
+                      background: sectionColors.condition.bg, fontSize: '0.8125rem',
+                    }}>
+                      <span style={{ color: sectionColors.condition.text, fontWeight: 600 }}>{c.name}</span>
+                      {c.severity && <span style={{ color: sectionColors.condition.text, fontSize: '0.6875rem', opacity: 0.8 }}>({c.severity})</span>}
+                    </div>
+                  ))}
                 </div>
-              );
-            })}
-            {previewAlerts.length > 4 && (
-              <p style={{ fontSize: '0.75rem', color: 'var(--color-surface-500)', textAlign: 'center' }}>
-                +{previewAlerts.length - 4} more alerts
-              </p>
+              </div>
+            )}
+
+            {/* Allergies */}
+            {activeAllergies.length > 0 && (
+              <div>
+                <p style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-danger)', marginBottom: '4px' }}>
+                  {sectionColors.allergy.label}
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  {activeAllergies.map(a => {
+                    const severity = a.severity === 'life-threatening' ? ' (ANAPHYLAXIS RISK)' :
+                      a.severity === 'severe' ? ' (SEVERE)' : '';
+                    return (
+                      <div key={a.id} style={{
+                        display: 'flex', alignItems: 'center', gap: '6px',
+                        padding: '4px 8px', borderRadius: 'var(--radius-sm)',
+                        background: sectionColors.allergy.bg, fontSize: '0.8125rem',
+                      }}>
+                        <span style={{ color: sectionColors.allergy.text, fontWeight: 600 }}>{a.allergen}{severity}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Medications */}
+            {activeMedications.length > 0 && (
+              <div>
+                <p style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-info)', marginBottom: '4px' }}>
+                  {sectionColors.medication.label}
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  {activeMedications.map(m => (
+                    <div key={m.id} style={{
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      padding: '4px 8px', borderRadius: 'var(--radius-sm)',
+                      background: sectionColors.medication.bg, fontSize: '0.8125rem',
+                    }}>
+                      <span style={{ color: sectionColors.medication.text, fontWeight: 600 }}>{m.name}</span>
+                      {(m.dosage || m.frequency) && (
+                        <span style={{ color: sectionColors.medication.text, fontSize: '0.6875rem', opacity: 0.8 }}>
+                          {[m.dosage, m.frequency].filter(Boolean).join(' ')}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Vaccinations */}
+            {activeVaccinations.length > 0 && (
+              <div>
+                <p style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#1E8449', marginBottom: '4px' }}>
+                  {sectionColors.vaccination.label}
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  {activeVaccinations.map(v => {
+                    const isExpired = v.expiration_date && new Date(v.expiration_date) < new Date();
+                    return (
+                      <div key={v.id} style={{
+                        display: 'flex', alignItems: 'center', gap: '6px',
+                        padding: '4px 8px', borderRadius: 'var(--radius-sm)',
+                        background: sectionColors.vaccination.bg, fontSize: '0.8125rem',
+                      }}>
+                        <span style={{ color: sectionColors.vaccination.text, fontWeight: 600 }}>
+                          {v.name}{isExpired ? ' (EXPIRED)' : ''}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </div>
         )}
 
-        {/* Primary contact */}
-        {primaryContact && (
+        {/* Owner's Notes */}
+        {specialInstructions && (
+          <div style={{
+            marginTop: '10px',
+            background: '#FEFCE8',
+            border: '1px solid #FEF08A',
+            borderRadius: 'var(--radius-sm)',
+            padding: '8px 10px',
+          }}>
+            <p style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#92400E', marginBottom: '4px' }}>
+              Owner's Notes
+            </p>
+            <p style={{ fontSize: '0.8125rem', color: '#78350F' }}>{specialInstructions}</p>
+          </div>
+        )}
+
+        {/* Primary vet */}
+        {primaryVet && (
           <div style={{
             marginTop: '12px', paddingTop: '12px',
             borderTop: '1px solid var(--color-surface-200)',
+            fontSize: '0.8125rem',
+          }}>
+            <span style={{ color: 'var(--color-surface-500)' }}>Primary Vet: </span>
+            <span style={{ fontWeight: 600 }}>{primaryVet.clinic_name}</span>
+            {primaryVet.phone && (
+              <span style={{ color: 'var(--color-surface-500)' }}> {primaryVet.phone}</span>
+            )}
+          </div>
+        )}
+
+        {/* Primary emergency contact */}
+        {primaryContact && (
+          <div style={{
+            marginTop: '8px',
             fontSize: '0.8125rem',
           }}>
             <span style={{ color: 'var(--color-surface-500)' }}>Emergency Contact: </span>
@@ -152,13 +209,13 @@ export default function EmergencyCardPreview({
           background: 'var(--color-danger)', color: 'white', flex: 1,
           padding: '8px 12px', fontSize: '0.8125rem',
         }}>
-          Share Card
+          Send Card
         </button>
-        <button onClick={onConfigure} className="btn btn-sm btn-ghost" style={{
+        <button onClick={onEdit} className="btn btn-sm btn-ghost" style={{
           fontSize: '0.8125rem', padding: '8px 12px',
           border: '1px solid var(--color-surface-200)',
         }}>
-          Configure
+          Edit
         </button>
       </div>
     </div>

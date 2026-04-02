@@ -16,6 +16,7 @@ export default function AddPetModal({ onClose, onPetAdded }: Props) {
     name: '',
     species: 'dog',
     breed: '',
+    color_markings: '',
     date_of_birth: '',
     sex: '',
     is_fixed: false,
@@ -106,6 +107,17 @@ export default function AddPetModal({ onClose, onPetAdded }: Props) {
                 onChange={(e) => setFormData({ ...formData, breed: e.target.value })}
                 className="input"
                 placeholder="Golden Retriever"
+              />
+            </div>
+
+            <div>
+              <label className="label">Color or Markings</label>
+              <input
+                type="text"
+                value={formData.color_markings || ''}
+                onChange={(e) => setFormData({ ...formData, color_markings: e.target.value })}
+                className="input"
+                placeholder="Gold / White"
               />
             </div>
 

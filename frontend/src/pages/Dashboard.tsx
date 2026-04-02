@@ -10,8 +10,10 @@ import {
   PetVaccination,
   PetAlert,
 } from '../api/client';
+import { cmsApi } from '../api/cms';
 import AddPetModal from '../components/AddPetModal';
 import UpgradeBanner from '../components/UpgradeBanner';
+import SpeciesAvatar from '../components/SpeciesAvatar';
 
 // Pet limits by tier
 const FREE_TIER_PET_LIMIT = Infinity; // Beta: unlimited pets for all users
@@ -37,6 +39,8 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [healthData, setHealthData] = useState<Record<number, PetHealthData>>({});
+  const [emptyStateHeading, setEmptyStateHeading] = useState('No pets yet');
+  const [emptyStateSubheading, setEmptyStateSubheading] = useState('Add your first pet to create an emergency health card.');
 
   useEffect(() => {
     loadPets();
@@ -49,6 +53,20 @@ export default function Dashboard() {
       setPets(data);
       // Fire parallel health fetches
       loadHealthData(data);
+      // Fetch CMS empty state content when there are no pets
+      if (data.length === 0) {
+        try {
+          const page = await cmsApi.fetchPage('dashboard-empty-state');
+          const block = page.blocks.find(b => b.block_type === 'empty_state' && b.is_visible);
+          if (block) {
+            const content = block.content as { heading: string; subheading?: string };
+            if (content.heading) setEmptyStateHeading(content.heading);
+            if (content.subheading) setEmptyStateSubheading(content.subheading);
+          }
+        } catch {
+          // Keep fallback text on CMS failure
+        }
+      }
     } catch (err) {
       console.error('Failed to load pets:', err);
     } finally {
@@ -188,12 +206,10 @@ export default function Dashboard() {
             className="mx-auto flex items-center justify-center mb-4"
             style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'var(--color-navy-50)' }}
           >
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="var(--color-steel)">
-              <path d="M12 2C9.24 2 7 4.24 7 7c0 1.38.56 2.63 1.46 3.54C7.56 11.37 7 12.62 7 14v4c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2v-4c0-1.38-.56-2.63-1.46-3.46C16.44 9.63 17 8.38 17 7c0-2.76-2.24-5-5-5z"/>
-            </svg>
+            <SpeciesAvatar species="other" size={40} />
           </div>
-          <h3 className="text-lg font-semibold" style={{ color: 'var(--color-navy)' }}>No pets yet</h3>
-          <p className="mt-2" style={{ color: 'var(--color-surface-500)' }}>Add your first pet to create an emergency health card.</p>
+          <h3 className="text-lg font-semibold" style={{ color: 'var(--color-navy)' }}>{emptyStateHeading}</h3>
+          <p className="mt-2" style={{ color: 'var(--color-surface-500)' }}>{emptyStateSubheading}</p>
           <button onClick={() => setShowAddModal(true)} className="mt-4 btn btn-primary">
             Add Your First Pet
           </button>
@@ -211,7 +227,7 @@ export default function Dashboard() {
                 <Link
                   key={pet.id}
                   to={`/pets/${pet.id}`}
-                  className="card fade-in-up"
+                  className="card fade-in-up hover:shadow-lg transition-shadow"
                   style={{ cursor: 'pointer', textDecoration: 'none' }}
                 >
                   <div className="flex gap-4" style={{ marginBottom: '16px' }}>
@@ -225,13 +241,16 @@ export default function Dashboard() {
                       {pet.photo_url ? (
                         <img src={pet.photo_url} alt={pet.name} className="w-full h-full object-cover" />
                       ) : (
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="#4A7FB5">
-                          <path d="M12 2C9.24 2 7 4.24 7 7c0 1.38.56 2.63 1.46 3.54C7.56 11.37 7 12.62 7 14v4c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2v-4c0-1.38-.56-2.63-1.46-3.46C16.44 9.63 17 8.38 17 7c0-2.76-2.24-5-5-5z"/>
-                        </svg>
+                        <SpeciesAvatar species={pet.species} size={32} />
                       )}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <h3 className="text-xl" style={{ fontWeight: 600, marginBottom: '2px' }}>{pet.name}</h3>
+                      <div className="flex items-center gap-2" style={{ marginBottom: '2px' }}>
+                        <h3 className="text-xl" style={{ fontWeight: 600 }}>{pet.name}</h3>
+                        {pet.user_role && pet.user_role !== 'owner' && (
+                          <span className="badge badge-navy" style={{ fontSize: '0.6rem', padding: '2px 6px' }}>Shared with you</span>
+                        )}
+                      </div>
                       <p className="text-sm capitalize" style={{ color: 'var(--color-surface-500)' }}>
                         {pet.breed ? `${pet.breed}` : pet.species}
                         {pet.date_of_birth && (() => {
@@ -263,9 +282,8 @@ export default function Dashboard() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center justify-between" style={{ borderTop: '1px solid var(--color-surface-100)', paddingTop: '12px' }}>
-                    <span className="badge badge-navy">View profile</span>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--color-surface-400)">
+                  <div className="flex items-center justify-end" style={{ borderTop: '1px solid var(--color-surface-100)', paddingTop: '12px' }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--color-surface-400)">
                       <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
                     </svg>
                   </div>

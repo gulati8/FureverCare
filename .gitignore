@@ -39,6 +39,7 @@ tmp/
 *.tmp
 *.temp
 state.json
+eval/
 
 # Uploaded files (keep directory structure only)
 backend/uploads/**/*.pdf

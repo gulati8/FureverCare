@@ -45,6 +45,8 @@ const createPetSchema = z.object({
   microchip_id: z.string().optional(),
   photo_url: z.string().url().optional(),
   special_instructions: z.string().optional(),
+  age: z.number().int().min(0).optional(),
+  color_markings: z.string().max(255).optional(),
 });
 
 const updatePetSchema = createPetSchema.partial();
@@ -614,6 +616,8 @@ router.get('/:id/records/:recordType/:recordId/source', authenticate, async (req
        WHERE dei.created_record_id = $1
          AND dei.created_record_type = $2
          AND du.pet_id = $3
+         AND dei.deleted_at IS NULL
+         AND du.deleted_at IS NULL
        ORDER BY dei.updated_at DESC
        LIMIT 1`,
       [parseInt(recordId), recordType, petId]
