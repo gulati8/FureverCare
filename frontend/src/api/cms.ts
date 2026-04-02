@@ -59,10 +59,15 @@ export interface FooterContent {
   copyright: string;
 }
 
-// Block type union
-export type BlockContent = HeroContent | FeaturesContent | HowItWorksContent | CTAContent | FooterContent;
+export interface EmptyStateContent {
+  heading: string;
+  subheading?: string;
+}
 
-export type BlockType = 'hero' | 'features' | 'how_it_works' | 'cta' | 'footer';
+// Block type union
+export type BlockContent = HeroContent | FeaturesContent | HowItWorksContent | CTAContent | FooterContent | EmptyStateContent;
+
+export type BlockType = 'hero' | 'features' | 'how_it_works' | 'cta' | 'footer' | 'empty_state';
 
 export interface Block {
   id: number;

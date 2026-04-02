@@ -257,26 +257,45 @@ export function MedicalTimeline({ conditions, allergies, medications, vaccinatio
     currentGroup.events.push(event);
   });
 
+  type FilterOption = { value: EventType | 'all'; label: string };
+  const filterOptions: FilterOption[] = [
+    { value: 'all', label: 'All' },
+    { value: 'vaccination', label: 'Vaccinations' },
+    { value: 'medication_start', label: 'Medications' },
+    { value: 'condition', label: 'Conditions' },
+    { value: 'allergy', label: 'Allergies' },
+  ];
+
   return (
     <div>
-      {/* Header and Filters */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div>
-          <h3 className="text-lg font-semibold">Medical Timeline</h3>
-          <p className="text-sm text-gray-500">{events.length} event{events.length !== 1 ? 's' : ''}</p>
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+        <div className="flex flex-wrap gap-1.5">
+          {filterOptions.map(({ value, label }) => {
+            const isActive = filterType === value;
+            return (
+              <button
+                key={value}
+                onClick={() => setFilterType(value)}
+                className={`px-3 py-1 text-xs font-semibold rounded-full border transition-colors ${
+                  isActive
+                    ? 'text-white border-transparent'
+                    : 'bg-white text-gray-500 hover:text-gray-700'
+                }`}
+                style={isActive ? {
+                  background: 'var(--color-navy, #1B2A4A)',
+                  borderColor: 'var(--color-navy, #1B2A4A)',
+                } : {
+                  borderColor: 'var(--color-surface-200, #E2E5E9)',
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value as EventType | 'all')}
-            className="input text-sm py-1.5 pr-8"
-          >
-            <option value="all">All Events</option>
-            <option value="vaccination">Vaccinations</option>
-            <option value="medication_start">Medications</option>
-            <option value="condition">Conditions</option>
-            <option value="allergy">Allergies</option>
-          </select>
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-gray-500">{events.length} event{events.length !== 1 ? 's' : ''}</p>
           <button
             onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
             className="btn-secondary text-sm py-1.5 px-3 flex items-center gap-1"

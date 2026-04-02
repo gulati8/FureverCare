@@ -36,6 +36,8 @@
     "db:migrate:cms:dev": "tsx src/db/migrate-cms.ts",
     "db:seed:cms": "node dist/db/seed-cms.js",
     "db:seed:cms:dev": "tsx src/db/seed-cms.ts",
+    "db:seed:cms-empty-state": "node dist/db/seed-cms-empty-state.js",
+    "db:seed:cms-empty-state:dev": "tsx src/db/seed-cms-empty-state.ts",
     "db:migrate:subscriptions": "node dist/db/migrate-subscriptions.js",
     "db:migrate:subscriptions:dev": "tsx src/db/migrate-subscriptions.ts",
     "db:migrate:alerts": "node dist/db/migrate-alerts.js",
@@ -46,6 +48,10 @@
     "db:migrate:allergy-show-on-card:dev": "tsx src/db/migrate-allergy-show-on-card.ts",
     "db:migrate:document-groups": "node dist/db/migrate-document-groups.js",
     "db:migrate:document-groups:dev": "tsx src/db/migrate-document-groups.ts",
+    "db:migrate:soft-delete": "node dist/db/migrate-soft-delete.js",
+    "db:migrate:soft-delete:dev": "tsx src/db/migrate-soft-delete.ts",
+    "db:migrate:pet-age-color": "node dist/db/migrate-pet-age-color.js",
+    "db:migrate:pet-age-color:dev": "tsx src/db/migrate-pet-age-color.ts",
     "test:backend": "tsx --test src/models/health-records.test.ts"
   },
   "dependencies": {

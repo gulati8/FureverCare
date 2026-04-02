@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import {
   API_URL,
@@ -18,7 +18,7 @@ interface DocumentImportSectionProps {
 
 type ViewState = 'library' | 'review';
 type ViewMode = 'grid' | 'list';
-type FilterStatus = 'all' | 'stored' | 'review' | 'imported';
+type FilterStatus = 'all' | 'review' | 'processed';
 
 interface DisplayItem {
   type: 'group' | 'standalone';
@@ -29,10 +29,9 @@ interface DisplayItem {
   primaryUpload: DocumentUpload;
 }
 
-function getFilterCategory(status: string): 'stored' | 'review' | 'imported' {
-  if (status === 'uploaded') return 'stored';
+function getFilterCategory(status: string): 'review' | 'processed' {
   if (['pending', 'processing', 'pending_review'].includes(status)) return 'review';
-  return 'imported'; // completed, failed
+  return 'processed'; // completed, failed
 }
 
 export function DocumentImportSection({ petId, onImportComplete, navigateToUploadId, highlightItemId, onNavigationHandled }: DocumentImportSectionProps) {
@@ -49,6 +48,8 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
   const [scanningIds, setScanningIds] = useState<Set<number>>(new Set());
   const [batchScanning, setBatchScanning] = useState(false);
   const [activeHighlightItemId, setActiveHighlightItemId] = useState<number | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DisplayItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     loadUploads();
@@ -111,9 +112,11 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
 
   // Filter counts
   const counts = useMemo(() => {
-    const c = { stored: 0, review: 0, imported: 0 };
+    const c = { review: 0, processed: 0 };
     for (const item of displayItems) {
-      c[getFilterCategory(item.status)]++;
+      if (item.status !== 'uploaded') {
+        c[getFilterCategory(item.status)]++;
+      }
     }
     return c;
   }, [displayItems]);
@@ -236,6 +239,31 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
     input.click();
   };
 
+  const handleDeleteRequest = (item: DisplayItem) => {
+    setDeleteTarget(item);
+  };
+
+  const handleDeleteConfirm = async (cascade?: boolean) => {
+    if (!deleteTarget || !token) return;
+    setIsDeleting(true);
+    setError(null);
+    try {
+      for (const page of deleteTarget.pages) {
+        await documentsApi.deleteUpload(petId, page.id, token, cascade);
+      }
+      await loadUploads();
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete document');
+    } finally {
+      setIsDeleting(false);
+      setDeleteTarget(null);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteTarget(null);
+  };
+
   const handleReorderPages = async (groupId: string, pageOrder: number[]) => {
     if (!token) return;
 
@@ -311,7 +339,7 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
                 color: 'var(--color-steel-dark, #3A6A9A)',
               }}
             >
-              {batchScanning ? 'Finding...' : `Find Records in All (${storedItems.length})`}
+              {batchScanning ? 'Processing...' : `Process All (${storedItems.length})`}
             </button>
           )}
           {/* View toggle */}
@@ -357,11 +385,11 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
       {/* Filter pills */}
       {showFilters && (
         <div className="flex flex-wrap gap-1.5">
-          {(['all', 'stored', 'review', 'imported'] as FilterStatus[]).map(f => {
-            const count = f === 'all' ? displayItems.length : counts[f];
+          {(['all', 'review', 'processed'] as FilterStatus[]).map(f => {
+            const count = f === 'all' ? displayItems.length : counts[f as 'review' | 'processed'];
             if (f !== 'all' && count === 0) return null;
             const isActive = filter === f;
-            const labels: Record<FilterStatus, string> = { all: 'All', stored: 'Stored', review: 'Needs Review', imported: 'Imported' };
+            const labels: Record<FilterStatus, string> = { all: 'All', review: 'Needs Review', processed: 'Processed' };
             return (
               <button
                 key={f}
@@ -379,7 +407,7 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
                 }}
               >
                 {labels[f]}
-                {f !== 'all' && count > 0 && (
+                {f === 'review' && count > 0 && (
                   <span className={`ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
                     isActive ? 'bg-white/20' : 'text-white'
                   }`} style={!isActive ? { background: 'var(--color-coral, #E07A5F)' } : undefined}>
@@ -414,11 +442,14 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
             <GridCard
               key={item.type === 'group' ? `g-${item.groupId}` : `s-${item.primaryUpload.id}`}
               item={item}
+              petId={petId}
               getDocumentUrl={getDocumentUrl}
               isScanning={scanningIds.has(item.primaryUpload.id) || batchScanning}
               onScan={() => handleScanDocument(item)}
               onSelect={() => handleUploadSelect(item.primaryUpload)}
               onReorder={(pageOrder) => item.groupId ? handleReorderPages(item.groupId, pageOrder) : undefined}
+              onDelete={() => handleDeleteRequest(item)}
+              onRenameComplete={loadUploads}
             />
           ))}
         </div>
@@ -431,15 +462,28 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
             <ListCard
               key={item.type === 'group' ? `g-${item.groupId}` : `s-${item.primaryUpload.id}`}
               item={item}
+              petId={petId}
               getDocumentUrl={getDocumentUrl}
               isScanning={scanningIds.has(item.primaryUpload.id) || batchScanning}
               onScan={() => handleScanDocument(item)}
               onSelect={() => handleUploadSelect(item.primaryUpload)}
               onAddPage={() => handleAddPage(item)}
               onReorder={(pageOrder) => item.groupId ? handleReorderPages(item.groupId, pageOrder) : undefined}
+              onDelete={() => handleDeleteRequest(item)}
+              onRenameComplete={loadUploads}
             />
           ))}
         </div>
+      )}
+
+      {/* Delete confirmation dialog */}
+      {deleteTarget && (
+        <DeleteConfirmDialog
+          item={deleteTarget}
+          isDeleting={isDeleting}
+          onConfirm={handleDeleteConfirm}
+          onCancel={handleDeleteCancel}
+        />
       )}
     </div>
   );
@@ -456,11 +500,11 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  uploaded: 'Stored',
+  uploaded: 'Uploaded',
   pending: 'Processing...',
   processing: 'Processing...',
   pending_review: 'Needs Review',
-  completed: 'Imported',
+  completed: 'Processed',
   failed: 'Failed',
 };
 
@@ -473,22 +517,113 @@ const STATUS_DOT_COLORS: Record<string, string> = {
   failed: 'bg-red-500',
 };
 
+// Delete confirmation dialog
+function DeleteConfirmDialog({
+  item,
+  isDeleting,
+  onConfirm,
+  onCancel,
+}: {
+  item: DisplayItem;
+  isDeleting: boolean;
+  onConfirm: (cascade?: boolean) => void;
+  onCancel: () => void;
+}) {
+  const isProcessed = item.primaryUpload.status === 'completed' || item.primaryUpload.status === 'pending_review';
+  const name = item.groupName || item.primaryUpload.original_filename;
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      onClick={onCancel}
+    >
+      <div
+        className="bg-white rounded-lg shadow-xl max-w-sm w-full p-5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-base font-semibold text-gray-900 mb-1">Delete document?</h3>
+        <p className="text-sm text-gray-500 mb-4 break-words">
+          {isProcessed
+            ? `"${name}" has imported health records. What should happen to them?`
+            : `Are you sure you want to delete "${name}"? This cannot be undone.`}
+        </p>
+
+        {isProcessed ? (
+          <div className="space-y-2">
+            <button
+              onClick={() => onConfirm(true)}
+              disabled={isDeleting}
+              className="w-full px-4 py-2 text-sm font-semibold text-white rounded-md transition-colors disabled:opacity-50"
+              style={{ background: 'var(--color-coral, #E07A5F)' }}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete document and imported records'}
+            </button>
+            <button
+              onClick={() => onConfirm(false)}
+              disabled={isDeleting}
+              className="w-full px-4 py-2 text-sm font-semibold rounded-md border transition-colors disabled:opacity-50"
+              style={{
+                borderColor: 'var(--color-surface-200, #E2E5E9)',
+                color: 'var(--color-navy, #1B2A4A)',
+              }}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete document only, keep imported records'}
+            </button>
+            <button
+              onClick={onCancel}
+              disabled={isDeleting}
+              className="w-full px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-3 justify-end">
+            <button
+              onClick={onCancel}
+              disabled={isDeleting}
+              className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => onConfirm()}
+              disabled={isDeleting}
+              className="px-4 py-2 text-sm font-semibold text-white rounded-md transition-colors disabled:opacity-50"
+              style={{ background: 'var(--color-coral, #E07A5F)' }}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Grid card component
 function GridCard({
   item,
+  petId,
   getDocumentUrl,
   isScanning,
   onScan,
   onSelect,
   onReorder,
+  onDelete,
+  onRenameComplete,
 }: {
   item: DisplayItem;
+  petId: number;
   getDocumentUrl: (u: DocumentUpload) => string;
   isScanning: boolean;
   onScan: () => void;
   onSelect: () => void;
   onReorder: (pageOrder: number[]) => void;
+  onDelete: () => void;
+  onRenameComplete: () => void;
 }) {
+  const { token } = useAuth();
   const upload = item.primaryUpload;
   const isStored = upload.status === 'uploaded';
   const isFailed = upload.status === 'failed';
@@ -498,17 +633,50 @@ function GridCard({
   const isImage = upload.mime_type?.startsWith('image/');
   const isGroup = item.type === 'group' && item.pages.length > 1;
   const [lightboxPage, setLightboxPage] = useState<DocumentUpload | null>(null);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameTo, setRenameTo] = useState('');
+  const [renaming, setRenaming] = useState(false);
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
   const handleClick = () => {
+    if (isRenaming) return;
     if (canReview || canView) onSelect();
-    else if (isGroup) setLightboxPage(item.pages[0]); // Open page viewer for groups
-    else if (isImage) window.open(getDocumentUrl(upload), '_blank'); // Open standalone image
+    else if (isGroup) setLightboxPage(item.pages[0]);
+    else if (isImage) window.open(getDocumentUrl(upload), '_blank');
+  };
+
+  const startRename = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRenameTo(item.groupName || upload.original_filename);
+    setIsRenaming(true);
+    setTimeout(() => renameInputRef.current?.focus(), 0);
+  };
+
+  const commitRename = async () => {
+    const trimmed = renameTo.trim();
+    if (!trimmed || !token) { setIsRenaming(false); return; }
+    setRenaming(true);
+    try {
+      await documentsApi.renameUpload(petId, upload.id, trimmed, token);
+      onRenameComplete();
+    } catch { /* ignore */ }
+    finally { setRenaming(false); setIsRenaming(false); }
+  };
+
+  const cancelRename = () => {
+    setIsRenaming(false);
+    setRenameTo('');
+  };
+
+  const handleRenameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') { e.preventDefault(); commitRename(); }
+    if (e.key === 'Escape') { e.preventDefault(); cancelRename(); }
   };
 
   return (
     <>
       <div
-        className={`rounded-lg border overflow-hidden bg-white transition-all cursor-pointer hover:border-blue-400 hover:shadow-md hover:-translate-y-0.5`}
+        className={`group rounded-lg border overflow-hidden bg-white transition-all cursor-pointer hover:border-blue-400 hover:shadow-md hover:-translate-y-0.5`}
         style={{ borderColor: 'var(--color-surface-200, #E2E5E9)' }}
         onClick={handleClick}
       >
@@ -530,7 +698,7 @@ function GridCard({
           {/* Status badge overlay */}
           {isStored && (
             <span className="absolute top-1.5 right-1.5 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded bg-white/85 text-gray-500">
-              Stored
+              Uploaded
             </span>
           )}
           {upload.status === 'pending_review' && upload.pending_items && (
@@ -544,6 +712,17 @@ function GridCard({
             </span>
           )}
 
+          {/* Delete button overlay */}
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            className="absolute top-1.5 left-1.5 p-1 rounded bg-white/80 text-gray-400 hover:text-red-500 hover:bg-white transition-colors opacity-0 group-hover:opacity-100"
+            title="Delete document"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+
           {/* Multi-page badge */}
           {isGroup && (
             <span className="absolute bottom-1.5 left-1.5 text-[10px] font-bold px-2 py-0.5 rounded bg-black/60 text-white">
@@ -554,15 +733,47 @@ function GridCard({
 
         {/* Meta */}
         <div className="p-2.5">
-          <p className="text-xs font-semibold text-gray-900 truncate">
-            {item.groupName || upload.original_filename}
-          </p>
+          {isRenaming ? (
+            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+              <input
+                ref={renameInputRef}
+                type="text"
+                value={renameTo}
+                onChange={(e) => setRenameTo(e.target.value)}
+                onKeyDown={handleRenameKeyDown}
+                maxLength={255}
+                className="flex-1 min-w-0 text-sm font-semibold text-gray-900 border border-blue-400 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                disabled={renaming}
+              />
+              <button onClick={commitRename} disabled={renaming} className="p-0.5 text-green-600 hover:text-green-700 disabled:opacity-50" title="Save">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+              </button>
+              <button onClick={cancelRename} disabled={renaming} className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-50" title="Cancel">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 group/name">
+              <p className="text-xs md:text-sm font-semibold text-gray-900 truncate flex-1 min-w-0">
+                {item.groupName || upload.original_filename}
+              </p>
+              <button
+                onClick={startRename}
+                className="flex-shrink-0 p-0.5 text-gray-300 hover:text-gray-600 transition-colors opacity-0 group-hover/name:opacity-100"
+                title="Rename"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </button>
+            </div>
+          )}
           <div className="flex items-center gap-1.5 mt-1">
             <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT_COLORS[upload.status] || 'bg-gray-400'}`} />
-            <span className="text-[11px] text-gray-500">
+            <span className="text-[11px] md:text-xs text-gray-500">
               {isScanning ? 'Processing...' : STATUS_LABELS[upload.status] || upload.status}
             </span>
-            <span className="text-[11px] text-gray-400">
+            <span className="text-[11px] md:text-xs text-gray-400">
               {new Date(upload.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
             </span>
           </div>
@@ -572,14 +783,14 @@ function GridCard({
             <button
               onClick={(e) => { e.stopPropagation(); onScan(); }}
               disabled={isScanning}
-              className="mt-2 w-full text-xs font-semibold py-1.5 rounded border transition-colors disabled:opacity-50"
+              className="mt-2 w-full text-xs md:text-sm font-semibold py-1.5 rounded border transition-colors disabled:opacity-50"
               style={{
                 background: 'var(--color-steel-light, #E8F0F8)',
                 borderColor: 'var(--color-steel, #4A7FB5)',
                 color: 'var(--color-steel-dark, #3A6A9A)',
               }}
             >
-              {isScanning ? 'Finding...' : isFailed ? 'Retry' : 'Find Health Records'}
+              {isScanning ? 'Processing...' : isFailed ? 'Retry' : 'Process'}
             </button>
           )}
         </div>
@@ -603,21 +814,28 @@ function GridCard({
 // List card component
 function ListCard({
   item,
+  petId,
   getDocumentUrl,
   isScanning,
   onScan,
   onSelect,
   onAddPage,
   onReorder,
+  onDelete,
+  onRenameComplete,
 }: {
   item: DisplayItem;
+  petId: number;
   getDocumentUrl: (u: DocumentUpload) => string;
   isScanning: boolean;
   onScan: () => void;
   onSelect: () => void;
   onAddPage: () => void;
   onReorder: (pageOrder: number[]) => void;
+  onDelete: () => void;
+  onRenameComplete: () => void;
 }) {
+  const { token } = useAuth();
   const upload = item.primaryUpload;
   const isStored = upload.status === 'uploaded';
   const isFailed = upload.status === 'failed';
@@ -630,6 +848,10 @@ function ListCard({
   const [metadataExpanded, setMetadataExpanded] = useState(false);
   const [pagesExpanded, setPagesExpanded] = useState(false);
   const [lightboxPage, setLightboxPage] = useState<DocumentUpload | null>(null);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameTo, setRenameTo] = useState('');
+  const [renaming, setRenaming] = useState(false);
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
   const handleMovePage = (fromIdx: number, toIdx: number) => {
     if (toIdx < 0 || toIdx >= item.pages.length) return;
@@ -637,6 +859,34 @@ function ListCard({
     const [moved] = newPages.splice(fromIdx, 1);
     newPages.splice(toIdx, 0, moved);
     onReorder(newPages.map(p => p.id));
+  };
+
+  const startRename = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRenameTo(item.groupName || upload.original_filename);
+    setIsRenaming(true);
+    setTimeout(() => renameInputRef.current?.focus(), 0);
+  };
+
+  const commitRename = async () => {
+    const trimmed = renameTo.trim();
+    if (!trimmed || !token) { setIsRenaming(false); return; }
+    setRenaming(true);
+    try {
+      await documentsApi.renameUpload(petId, upload.id, trimmed, token);
+      onRenameComplete();
+    } catch { /* ignore */ }
+    finally { setRenaming(false); setIsRenaming(false); }
+  };
+
+  const cancelRename = () => {
+    setIsRenaming(false);
+    setRenameTo('');
+  };
+
+  const handleRenameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') { e.preventDefault(); commitRename(); }
+    if (e.key === 'Escape') { e.preventDefault(); cancelRename(); }
   };
 
   return (
@@ -663,21 +913,53 @@ function ListCard({
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          {/* For standalone docs: link to file. For groups: just a label (no single file to link to) */}
-          {isGroup ? (
-            <span className="text-sm font-semibold text-gray-900 truncate block">
-              {item.groupName || upload.original_filename}
-            </span>
+          {isRenaming ? (
+            <div className="flex items-center gap-1">
+              <input
+                ref={renameInputRef}
+                type="text"
+                value={renameTo}
+                onChange={(e) => setRenameTo(e.target.value)}
+                onKeyDown={handleRenameKeyDown}
+                maxLength={255}
+                className="flex-1 min-w-0 text-sm font-semibold text-gray-900 border border-blue-400 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                disabled={renaming}
+              />
+              <button onClick={commitRename} disabled={renaming} className="p-0.5 text-green-600 hover:text-green-700 disabled:opacity-50 flex-shrink-0" title="Save">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+              </button>
+              <button onClick={cancelRename} disabled={renaming} className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-50 flex-shrink-0" title="Cancel">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
           ) : (
-            <a
-              href={getDocumentUrl(upload)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm font-semibold text-gray-900 truncate block hover:text-blue-700 hover:underline"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {upload.original_filename}
-            </a>
+            <div className="flex items-center gap-1 group/name">
+              {/* For standalone docs: link to file. For groups: just a label */}
+              {isGroup ? (
+                <span className="text-sm font-semibold text-gray-900 truncate flex-1 min-w-0">
+                  {item.groupName || upload.original_filename}
+                </span>
+              ) : (
+                <a
+                  href={getDocumentUrl(upload)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-semibold text-gray-900 truncate flex-1 min-w-0 hover:text-blue-700 hover:underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {upload.original_filename}
+                </a>
+              )}
+              <button
+                onClick={startRename}
+                className="flex-shrink-0 p-0.5 text-gray-300 hover:text-gray-600 transition-colors opacity-0 group-hover/name:opacity-100"
+                title="Rename"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </button>
+            </div>
           )}
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
             <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS[upload.status]?.bg || 'bg-gray-100'} ${STATUS_COLORS[upload.status]?.text || 'text-gray-600'} ${(isProcessing || isScanning) ? 'animate-pulse' : ''}`}>
@@ -719,7 +1001,7 @@ function ListCard({
                 color: 'var(--color-steel-dark, #3A6A9A)',
               }}
             >
-              {isScanning ? 'Finding...' : isFailed ? 'Retry' : 'Find Health Records'}
+              {isScanning ? 'Processing...' : isFailed ? 'Retry' : 'Process'}
             </button>
           )}
           {canReview && (
@@ -744,6 +1026,16 @@ function ListCard({
               View
             </button>
           )}
+          {/* Delete button */}
+          <button
+            onClick={onDelete}
+            className="p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+            title="Delete document"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
         </div>
       </div>
 

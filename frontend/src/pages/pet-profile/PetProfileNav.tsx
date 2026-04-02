@@ -1,11 +1,18 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 interface NavItem {
+  type: 'item';
   path: string;
   label: string;
   count?: number;
   icon: React.ReactNode;
 }
+
+interface NavDivider {
+  type: 'divider';
+}
+
+type NavEntry = NavItem | NavDivider;
 
 export default function PetProfileNav({ basePath, counts }: {
   basePath: string;
@@ -21,13 +28,25 @@ export default function PetProfileNav({ basePath, counts }: {
   };
 }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const currentPath = location.pathname;
+
+  const healthSubItems = [
+    { hash: 'conditions', label: 'Conditions' },
+    { hash: 'allergies', label: 'Allergies' },
+    { hash: 'medications', label: 'Medications' },
+    { hash: 'vaccinations', label: 'Vaccinations' },
+    { hash: 'owners-notes', label: "Owner's Notes" },
+  ];
+
+  const isHealthActive = currentPath.startsWith(`${basePath}/health`);
 
   const healthCount = counts.conditions + counts.allergies + counts.medications + counts.vaccinations;
   const careTeamCount = counts.vets + counts.contacts;
 
-  const navItems: NavItem[] = [
+  const navEntries: NavEntry[] = [
     {
+      type: 'item',
       path: basePath,
       label: 'Overview',
       icon: (
@@ -37,8 +56,20 @@ export default function PetProfileNav({ basePath, counts }: {
       ),
     },
     {
-      path: `${basePath}/health`,
+      type: 'item',
+      path: `${basePath}/documents`,
       label: 'Health Records',
+      count: counts.images || undefined,
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+        </svg>
+      ),
+    },
+    {
+      type: 'item',
+      path: `${basePath}/health`,
+      label: 'Health Profile',
       count: healthCount || undefined,
       icon: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -46,7 +77,9 @@ export default function PetProfileNav({ basePath, counts }: {
         </svg>
       ),
     },
+    { type: 'divider' },
     {
+      type: 'item',
       path: `${basePath}/care-team`,
       label: 'Care Team',
       count: careTeamCount || undefined,
@@ -56,26 +89,20 @@ export default function PetProfileNav({ basePath, counts }: {
         </svg>
       ),
     },
+    { type: 'divider' },
     {
-      path: `${basePath}/documents`,
-      label: 'Documents',
-      count: counts.images || undefined,
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
-        </svg>
-      ),
-    },
-    {
+      type: 'item',
       path: `${basePath}/activity`,
-      label: 'Activity',
+      label: 'Timeline',
       icon: (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+          <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
         </svg>
       ),
     },
   ];
+
+  const navItems = navEntries.filter((e): e is NavItem => e.type === 'item');
 
   const isActive = (itemPath: string) => {
     if (itemPath === basePath) {
@@ -88,19 +115,39 @@ export default function PetProfileNav({ basePath, counts }: {
     <>
       {/* Desktop sidebar */}
       <nav className="pet-profile-sidebar" aria-label="Pet profile navigation">
-        {navItems.map(item => (
-          <Link
-            key={item.path}
-            to={item.path}
-            className={`pet-profile-nav-item ${isActive(item.path) ? 'active' : ''}`}
-          >
-            <span className="pet-profile-nav-icon">{item.icon}</span>
-            <span className="pet-profile-nav-label">{item.label}</span>
-            {item.count !== undefined && item.count > 0 && (
-              <span className="pet-profile-nav-count">{item.count}</span>
-            )}
-          </Link>
-        ))}
+        {navEntries.map((entry, index) => {
+          if (entry.type === 'divider') {
+            return <div key={`divider-${index}`} className="pet-profile-nav-divider" />;
+          }
+          const isHealthProfile = entry.path === `${basePath}/health`;
+          return (
+            <div key={entry.path}>
+              <Link
+                to={entry.path}
+                className={`pet-profile-nav-item ${isActive(entry.path) ? 'active' : ''}`}
+              >
+                <span className="pet-profile-nav-icon">{entry.icon}</span>
+                <span className="pet-profile-nav-label">{entry.label}</span>
+                {entry.count !== undefined && entry.count > 0 && (
+                  <span className="pet-profile-nav-count">{entry.count}</span>
+                )}
+              </Link>
+              {isHealthProfile && isHealthActive && (
+                <div className="pet-profile-nav-sub-items">
+                  {healthSubItems.map(sub => (
+                    <button
+                      key={sub.hash}
+                      className={`pet-profile-nav-sub-item ${location.hash === `#${sub.hash}` ? 'active' : ''}`}
+                      onClick={() => navigate(`${basePath}/health#${sub.hash}`)}
+                    >
+                      {sub.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </nav>
 
       {/* Mobile pill row */}

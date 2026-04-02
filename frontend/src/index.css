@@ -337,6 +337,46 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
 }
 
+.pet-profile-nav-divider {
+  height: 1px;
+  background: var(--color-surface-200);
+  margin: 4px 8px;
+}
+
+.pet-profile-nav-sub-items {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: 38px;
+  padding-bottom: 4px;
+}
+
+.pet-profile-nav-sub-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--color-surface-500);
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: all 0.15s ease;
+}
+
+.pet-profile-nav-sub-item:hover {
+  background: var(--color-surface-100);
+  color: var(--color-navy);
+}
+
+.pet-profile-nav-sub-item.active {
+  color: var(--color-navy);
+  font-weight: 600;
+}
+
 /* Mobile pill row — wrapped for fade affordance */
 .pet-profile-pills-wrapper {
   position: relative;

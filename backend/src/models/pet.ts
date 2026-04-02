@@ -17,8 +17,11 @@ export interface Pet {
   microchip_id: string | null;
   photo_url: string | null;
   special_instructions: string | null;
+  age: number | null;
+  color_markings: string | null;
   created_at: Date;
   updated_at: Date;
+  user_role?: string | null;
 }
 
 export interface CreatePetInput {
@@ -34,14 +37,16 @@ export interface CreatePetInput {
   microchip_id?: string;
   photo_url?: string;
   special_instructions?: string;
+  age?: number;
+  color_markings?: string;
 }
 
 export async function createPet(input: CreatePetInput): Promise<Pet> {
   const shareId = nanoid();
 
   const result = await queryOne<Pet>(
-    `INSERT INTO pets (user_id, share_id, name, species, breed, date_of_birth, weight_kg, weight_unit, sex, is_fixed, microchip_id, photo_url, special_instructions)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+    `INSERT INTO pets (user_id, share_id, name, species, breed, date_of_birth, weight_kg, weight_unit, sex, is_fixed, microchip_id, photo_url, special_instructions, age, color_markings)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
      RETURNING *`,
     [
       input.user_id,
@@ -57,6 +62,8 @@ export async function createPet(input: CreatePetInput): Promise<Pet> {
       input.microchip_id || null,
       input.photo_url || null,
       input.special_instructions || null,
+      input.age ?? null,
+      input.color_markings || null,
     ]
   );
 
@@ -79,7 +86,7 @@ export async function findPetsByUserId(userId: number): Promise<Pet[]> {
 // Get all pets user has access to (via pet_owners junction table)
 export async function findPetsForUser(userId: number): Promise<Pet[]> {
   return query<Pet>(
-    `SELECT p.* FROM pets p
+    `SELECT p.*, po.role as user_role FROM pets p
      JOIN pet_owners po ON po.pet_id = p.id
      WHERE po.user_id = $1 AND po.accepted_at IS NOT NULL
      ORDER BY p.created_at DESC`,
@@ -92,7 +99,7 @@ export async function updatePet(id: number, userId: number, updates: Partial<Cre
   const values: any[] = [];
   let paramCount = 1;
 
-  const allowedFields = ['name', 'species', 'breed', 'date_of_birth', 'weight_kg', 'weight_unit', 'sex', 'is_fixed', 'microchip_id', 'photo_url', 'special_instructions'];
+  const allowedFields = ['name', 'species', 'breed', 'date_of_birth', 'weight_kg', 'weight_unit', 'sex', 'is_fixed', 'microchip_id', 'photo_url', 'special_instructions', 'age', 'color_markings'];
 
   for (const field of allowedFields) {
     if ((updates as any)[field] !== undefined) {

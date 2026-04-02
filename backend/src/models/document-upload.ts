@@ -71,7 +71,7 @@ export async function createDocumentUpload(data: CreateDocumentUploadInput): Pro
 
 export async function getDocumentUploadById(id: number): Promise<DocumentUpload | null> {
   return queryOne<DocumentUpload>(
-    'SELECT * FROM document_uploads WHERE id = $1',
+    'SELECT * FROM document_uploads WHERE id = $1 AND deleted_at IS NULL',
     [id]
   );
 }
@@ -79,12 +79,12 @@ export async function getDocumentUploadById(id: number): Promise<DocumentUpload 
 export async function getDocumentUploadsByPetId(petId: number, mediaType?: MediaType): Promise<DocumentUpload[]> {
   if (mediaType) {
     return query<DocumentUpload>(
-      'SELECT * FROM document_uploads WHERE pet_id = $1 AND media_type = $2 ORDER BY created_at DESC',
+      'SELECT * FROM document_uploads WHERE pet_id = $1 AND media_type = $2 AND deleted_at IS NULL ORDER BY created_at DESC',
       [petId, mediaType]
     );
   }
   return query<DocumentUpload>(
-    'SELECT * FROM document_uploads WHERE pet_id = $1 ORDER BY created_at DESC',
+    'SELECT * FROM document_uploads WHERE pet_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC',
     [petId]
   );
 }
@@ -101,23 +101,23 @@ export async function updateDocumentUploadStatus(
     sql = `UPDATE document_uploads SET
       status = $2,
       processing_started_at = COALESCE(processing_started_at, CURRENT_TIMESTAMP)
-    WHERE id = $1 RETURNING *`;
+    WHERE id = $1 AND deleted_at IS NULL RETURNING *`;
     params = [id, status];
   } else if (status === 'completed') {
     sql = `UPDATE document_uploads SET
       status = $2,
       processing_completed_at = CURRENT_TIMESTAMP
-    WHERE id = $1 RETURNING *`;
+    WHERE id = $1 AND deleted_at IS NULL RETURNING *`;
     params = [id, status];
   } else if (status === 'failed') {
     sql = `UPDATE document_uploads SET
       status = $2,
       processing_completed_at = CURRENT_TIMESTAMP,
       error_message = $3
-    WHERE id = $1 RETURNING *`;
+    WHERE id = $1 AND deleted_at IS NULL RETURNING *`;
     params = [id, status, errorMessage || null];
   } else {
-    sql = `UPDATE document_uploads SET status = $2 WHERE id = $1 RETURNING *`;
+    sql = `UPDATE document_uploads SET status = $2 WHERE id = $1 AND deleted_at IS NULL RETURNING *`;
     params = [id, status];
   }
 
@@ -126,10 +126,43 @@ export async function updateDocumentUploadStatus(
 
 export async function deleteDocumentUpload(id: number, petId: number): Promise<boolean> {
   const result = await query(
-    'DELETE FROM document_uploads WHERE id = $1 AND pet_id = $2 RETURNING id',
+    'UPDATE document_uploads SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1 AND pet_id = $2 AND deleted_at IS NULL RETURNING id',
     [id, petId]
   );
   return result.length > 0;
+}
+
+export async function softDeleteDocumentWithCascade(
+  uploadId: number,
+  petId: number,
+  cascade: boolean
+): Promise<boolean> {
+  // Soft-delete the document upload itself
+  const deleted = await deleteDocumentUpload(uploadId, petId);
+  if (!deleted) return false;
+
+  if (cascade) {
+    // Soft-delete linked document_extraction_items (via document_extractions)
+    await query(
+      `UPDATE document_extraction_items SET deleted_at = CURRENT_TIMESTAMP
+       WHERE extraction_id IN (
+         SELECT id FROM document_extractions WHERE document_upload_id = $1
+       ) AND deleted_at IS NULL`,
+      [uploadId]
+    );
+  }
+
+  // Always remove source document links from health records by nulling created_record_id
+  // on items linked to this upload (regardless of cascade)
+  await query(
+    `UPDATE document_extraction_items SET created_record_id = NULL, created_record_type = NULL
+     WHERE extraction_id IN (
+       SELECT id FROM document_extractions WHERE document_upload_id = $1
+     ) AND created_record_id IS NOT NULL AND deleted_at IS NULL`,
+    [uploadId]
+  );
+
+  return true;
 }
 
 export async function updateDocumentUploadFilename(
@@ -138,7 +171,7 @@ export async function updateDocumentUploadFilename(
   newFilename: string
 ): Promise<DocumentUpload | null> {
   return queryOne<DocumentUpload>(
-    'UPDATE document_uploads SET original_filename = $1 WHERE id = $2 AND pet_id = $3 RETURNING *',
+    'UPDATE document_uploads SET original_filename = $1 WHERE id = $2 AND pet_id = $3 AND deleted_at IS NULL RETURNING *',
     [newFilename, id, petId]
   );
 }
@@ -158,14 +191,14 @@ export async function updateDocumentImageMetadata(
       user_description = COALESCE($3, user_description),
       date_taken = COALESCE($4, date_taken),
       body_area = COALESCE($5, body_area)
-    WHERE id = $1 RETURNING *`,
+    WHERE id = $1 AND deleted_at IS NULL RETURNING *`,
     [id, data.userTag || null, data.userDescription || null, data.dateTaken || null, data.bodyArea || null]
   );
 }
 
 export async function getDocumentGroup(groupId: string): Promise<DocumentUpload[]> {
   return query<DocumentUpload>(
-    'SELECT * FROM document_uploads WHERE document_group_id = $1 ORDER BY page_number ASC',
+    'SELECT * FROM document_uploads WHERE document_group_id = $1 AND deleted_at IS NULL ORDER BY page_number ASC',
     [groupId]
   );
 }
@@ -173,7 +206,7 @@ export async function getDocumentGroup(groupId: string): Promise<DocumentUpload[
 export async function reorderDocumentGroup(groupId: string, uploadIdsInOrder: number[]): Promise<void> {
   for (let i = 0; i < uploadIdsInOrder.length; i++) {
     await query(
-      'UPDATE document_uploads SET page_number = $1 WHERE id = $2 AND document_group_id = $3',
+      'UPDATE document_uploads SET page_number = $1 WHERE id = $2 AND document_group_id = $3 AND deleted_at IS NULL',
       [i + 1, uploadIdsInOrder[i], groupId]
     );
   }
@@ -187,24 +220,24 @@ export async function updateDocumentGroupStatus(
   if (status === 'failed') {
     await query(
       `UPDATE document_uploads SET status = $2, processing_completed_at = CURRENT_TIMESTAMP, error_message = $3
-       WHERE document_group_id = $1`,
+       WHERE document_group_id = $1 AND deleted_at IS NULL`,
       [groupId, status, errorMessage || null]
     );
   } else if (status === 'completed') {
     await query(
       `UPDATE document_uploads SET status = $2, processing_completed_at = CURRENT_TIMESTAMP
-       WHERE document_group_id = $1`,
+       WHERE document_group_id = $1 AND deleted_at IS NULL`,
       [groupId, status]
     );
   } else if (status === 'processing') {
     await query(
       `UPDATE document_uploads SET status = $2, processing_started_at = COALESCE(processing_started_at, CURRENT_TIMESTAMP)
-       WHERE document_group_id = $1`,
+       WHERE document_group_id = $1 AND deleted_at IS NULL`,
       [groupId, status]
     );
   } else {
     await query(
-      'UPDATE document_uploads SET status = $2 WHERE document_group_id = $1',
+      'UPDATE document_uploads SET status = $2 WHERE document_group_id = $1 AND deleted_at IS NULL',
       [groupId, status]
     );
   }

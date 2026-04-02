@@ -138,8 +138,8 @@ async function buildEmergencyCard(pet: any) {
       expiration_date: v.expiration_date,
     })),
 
-    // Veterinarian info
-    veterinarians: vets.map(v => ({
+    // Veterinarian info — only the primary vet appears on the emergency card
+    veterinarians: vets.filter(v => v.is_primary).map(v => ({
       clinic_name: v.clinic_name,
       vet_name: v.vet_name,
       phone: v.phone,

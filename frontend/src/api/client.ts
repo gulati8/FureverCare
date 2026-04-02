@@ -222,8 +222,11 @@ export interface Pet {
   microchip_id: string | null;
   photo_url: string | null;
   special_instructions: string | null;
+  age: number | null;
+  color_markings: string | null;
   created_at: string;
   updated_at: string;
+  user_role?: string;
 }
 
 export interface CreatePetInput {
@@ -238,6 +241,8 @@ export interface CreatePetInput {
   microchip_id?: string;
   photo_url?: string;
   special_instructions?: string;
+  age?: number;
+  color_markings?: string;
 }
 
 export interface PetVet {
@@ -810,8 +815,8 @@ export const documentsApi = {
     api.get<DocumentUpload>(`/api/pets/${petId}/documents/uploads/${uploadId}`, token),
 
   // Delete an upload
-  deleteUpload: (petId: number, uploadId: number, token: string) =>
-    api.delete(`/api/pets/${petId}/documents/uploads/${uploadId}`, token),
+  deleteUpload: (petId: number, uploadId: number, token: string, cascade?: boolean) =>
+    api.delete(`/api/pets/${petId}/documents/uploads/${uploadId}${cascade !== undefined ? `?cascade=${cascade}` : ''}`, token),
 
   // Get extraction results
   getExtraction: (petId: number, uploadId: number, token: string) =>

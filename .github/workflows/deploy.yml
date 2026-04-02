@@ -148,6 +148,8 @@ jobs:
               \"docker compose -f docker-compose.prod.yml run --rm backend npm run db:migrate:date-precision || true\",
               \"docker compose -f docker-compose.prod.yml run --rm backend npm run db:migrate:allergy-show-on-card || true\",
               \"docker compose -f docker-compose.prod.yml run --rm backend npm run db:migrate:document-groups || true\",
+              \"docker compose -f docker-compose.prod.yml run --rm backend npm run db:migrate:soft-delete || true\",
+              \"docker compose -f docker-compose.prod.yml run --rm backend npm run db:migrate:pet-age-color || true\",
               \"docker compose -f docker-compose.prod.yml up -d\",
               \"docker image prune -f\"
             ]" \
@@ -291,7 +293,7 @@ jobs:
               \"echo '${{ secrets.GHCR_PAT }}' | docker login ghcr.io -u gulati8 --password-stdin\",
               \"cd /srv/${APP_NAME} && docker compose pull && docker compose up -d postgres redis --wait\",
               \"test -f /tmp/${APP_NAME}-seeded && echo 'Existing database — skipping seed.' || { echo 'Fresh database — seeding from production...' && docker exec furevercare-db pg_dump -U furevercare furevercare | docker exec -i ${APP_NAME}-db psql -U furevercare furevercare; }\",
-              \"cd /srv/${APP_NAME} && docker compose run --rm backend sh -c 'npm run db:migrate && npm run db:migrate:owners && npm run db:migrate:pdf-import && npm run db:migrate:weight-units && npm run db:migrate:sex-fixed && npm run db:migrate:password-reset && npm run db:migrate:share-tokens && npm run db:migrate:image-import && npm run db:migrate:document-import && npm run db:migrate:image-metadata && npm run db:migrate:alerts && npm run db:migrate:date-precision && npm run db:migrate:allergy-show-on-card && npm run db:migrate:document-groups'\",
+              \"cd /srv/${APP_NAME} && docker compose run --rm backend sh -c 'npm run db:migrate && npm run db:migrate:owners && npm run db:migrate:pdf-import && npm run db:migrate:weight-units && npm run db:migrate:sex-fixed && npm run db:migrate:password-reset && npm run db:migrate:share-tokens && npm run db:migrate:image-import && npm run db:migrate:document-import && npm run db:migrate:image-metadata && npm run db:migrate:alerts && npm run db:migrate:date-precision && npm run db:migrate:allergy-show-on-card && npm run db:migrate:document-groups && npm run db:migrate:soft-delete && npm run db:migrate:pet-age-color'\",
               \"cd /srv/${APP_NAME} && docker compose up -d --remove-orphans\",
               \"cp /srv/proxy/Caddyfile /srv/proxy/Caddyfile.bak\",
               \"grep -q '${APP_NAME}.gulatilabs.me' /srv/proxy/Caddyfile 2>/dev/null || printf '\\\\n${APP_NAME}.gulatilabs.me {\\\\n  handle /api/* {\\\\n    reverse_proxy ${APP_NAME}-api:3001\\\\n  }\\\\n  handle /uploads/* {\\\\n    reverse_proxy ${APP_NAME}-api:3001\\\\n  }\\\\n  handle {\\\\n    reverse_proxy ${APP_NAME}-web:80\\\\n  }\\\\n}\\\\n' >> /srv/proxy/Caddyfile\",
