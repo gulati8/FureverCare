@@ -40,6 +40,11 @@ export interface PetProfileContext {
   // Doc navigation
   pendingDocNav: { uploadId: number; highlightItemId: number } | null;
   setPendingDocNav: (nav: { uploadId: number; highlightItemId: number } | null) => void;
+  // Health scroll-spy
+  healthActiveSection: string | null;
+  setHealthActiveSection: (section: string | null) => void;
+  scrollToHealthSection: (sectionId: string) => void;
+  registerScrollToHealthSection: (fn: (id: string) => void) => void;
 }
 
 export function usePetProfileContext() {
