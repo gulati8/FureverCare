@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation, Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import {
@@ -40,6 +40,12 @@ export default function PetDetail() {
   const [showLinkWallet, setShowLinkWallet] = useState(false);
   const [showAccessModal, setShowAccessModal] = useState(false);
   const [pendingDocNav, setPendingDocNav] = useState<{ uploadId: number; highlightItemId: number } | null>(null);
+
+  // Health scroll-spy
+  const [healthActiveSection, setHealthActiveSection] = useState<string | null>(null);
+  const scrollToHealthRef = useRef<(id: string) => void>(() => {});
+  const registerScrollToHealthSection = useCallback((fn: (id: string) => void) => { scrollToHealthRef.current = fn; }, []);
+  const scrollToHealthSection = (id: string) => scrollToHealthRef.current(id);
 
   const handleNavigateToReview = (uploadId: number, highlightItemId: number) => {
     setPendingDocNav({ uploadId, highlightItemId });
@@ -150,6 +156,10 @@ export default function PetDetail() {
     setShowShareModal,
     pendingDocNav,
     setPendingDocNav,
+    healthActiveSection,
+    setHealthActiveSection,
+    scrollToHealthSection,
+    registerScrollToHealthSection,
   };
 
   return (
@@ -234,6 +244,8 @@ export default function PetDetail() {
             alerts: alerts.filter(a => a.is_active).length,
             images: 0,
           }}
+          healthActiveSection={healthActiveSection}
+          onHealthSubNavClick={(id: string) => scrollToHealthRef.current(id)}
         />
 
         <div className="pet-profile-content">

@@ -14,7 +14,7 @@ interface NavDivider {
 
 type NavEntry = NavItem | NavDivider;
 
-export default function PetProfileNav({ basePath, counts }: {
+export default function PetProfileNav({ basePath, counts, healthActiveSection, onHealthSubNavClick }: {
   basePath: string;
   counts: {
     conditions: number;
@@ -26,6 +26,8 @@ export default function PetProfileNav({ basePath, counts }: {
     alerts: number;
     images: number;
   };
+  healthActiveSection: string | null;
+  onHealthSubNavClick: (sectionId: string) => void;
 }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -137,8 +139,14 @@ export default function PetProfileNav({ basePath, counts }: {
                   {healthSubItems.map(sub => (
                     <button
                       key={sub.hash}
-                      className={`pet-profile-nav-sub-item ${location.hash === `#${sub.hash}` ? 'active' : ''}`}
-                      onClick={() => navigate(`${basePath}/health#${sub.hash}`)}
+                      className={`pet-profile-nav-sub-item ${isHealthActive && healthActiveSection === sub.hash ? 'active' : ''}`}
+                      onClick={() => {
+                        if (isHealthActive) {
+                          onHealthSubNavClick(sub.hash);
+                        } else {
+                          navigate(`${basePath}/health#${sub.hash}`);
+                        }
+                      }}
                     >
                       {sub.label}
                     </button>

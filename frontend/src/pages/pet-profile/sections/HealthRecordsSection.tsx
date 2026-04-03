@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
 import { usePetProfileContext } from '../context';
 import ConditionsTab from '../tabs/ConditionsTab';
 import AllergiesTab from '../tabs/AllergiesTab';
@@ -15,19 +14,58 @@ export default function HealthRecordsSection() {
     medications, setMedications,
     vaccinations, setVaccinations,
     handleNavigateToReview,
+    setHealthActiveSection,
+    registerScrollToHealthSection,
   } = ctx;
 
   const [openSections, setOpenSections] = useState<Set<string>>(new Set(['conditions', 'allergies']));
 
-  const location = useLocation();
   useEffect(() => {
-    const hash = location.hash.replace('#', '');
+    const hash = window.location.hash.replace('#', '');
     if (!hash) return;
-    setOpenSections(new Set([hash]));
-    const el = document.getElementById(hash);
-    if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [location.hash]);
+    setOpenSections(prev => new Set([...prev, hash]));
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const el = document.getElementById(hash);
+        if (!el) return;
+        const y = el.getBoundingClientRect().top + window.scrollY - 24;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+      });
+    });
+  }, []);
+
+  useEffect(() => {
+    const sectionIds = ['conditions', 'allergies', 'medications', 'vaccinations'];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setHealthActiveSection(entry.target.id);
+          }
+        }
+      },
+      { rootMargin: '-20% 0px -70% 0px', threshold: 0 }
+    );
+    for (const id of sectionIds) {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    }
+    return () => observer.disconnect();
+  }, [setHealthActiveSection]);
+
+  useEffect(() => {
+    registerScrollToHealthSection((sectionId: string) => {
+      setOpenSections(prev => new Set([...prev, sectionId]));
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const el = document.getElementById(sectionId);
+          if (!el) return;
+          const y = el.getBoundingClientRect().top + window.scrollY - 24;
+          window.scrollTo({ top: y, behavior: 'smooth' });
+        });
+      });
+    });
+  }, [registerScrollToHealthSection]);
 
   const activeMeds = medications.filter(m => m.is_active);
   const expiringVacs = vaccinations.filter(v => v.expiration_date && new Date(v.expiration_date) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
