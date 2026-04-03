@@ -10,8 +10,6 @@ export default function EmergencyCardPreview({
   alerts,
   contacts,
   vets,
-  onShare,
-  onEdit,
 }: {
   pet: Pet;
   conditions: PetCondition[];
@@ -21,8 +19,6 @@ export default function EmergencyCardPreview({
   alerts: PetAlert[];
   contacts: PetEmergencyContact[];
   vets: PetVet[];
-  onShare: () => void;
-  onEdit: () => void;
 }) {
   const activeConditions = conditions.filter(c => c.show_on_card && c.is_active);
   const activeAllergies = allergies.filter(a => a.show_on_card);
@@ -110,21 +106,6 @@ export default function EmergencyCardPreview({
         <EmergencyCard card={card} />
       </div>
 
-      {/* Actions — outside the card frame */}
-      <div style={{ display: 'flex', gap: '8px', marginTop: '12px', maxWidth: '375px' }}>
-        <button onClick={onShare} className="btn btn-sm" style={{
-          background: 'var(--color-danger)', color: 'white', flex: 1,
-          padding: '8px 12px', fontSize: '0.8125rem',
-        }}>
-          Send Card
-        </button>
-        <button onClick={onEdit} className="btn btn-sm btn-ghost" style={{
-          fontSize: '0.8125rem', padding: '8px 12px',
-          border: '1px solid var(--color-surface-200)',
-        }}>
-          Edit
-        </button>
-      </div>
     </div>
   );
 }

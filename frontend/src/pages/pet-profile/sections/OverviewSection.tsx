@@ -10,7 +10,7 @@ import { formatWeight } from '../utils';
 export default function OverviewSection() {
   const ctx = usePetProfileContext();
   const navigate = useNavigate();
-  const { pet, petId, token, vets, conditions, setConditions, allergies, setAllergies, medications, setMedications, vaccinations, setVaccinations, alerts, setAlerts, emergencyContacts, handlePetUpdated, setShowShareModal } = ctx;
+  const { pet, petId, token, vets, conditions, setConditions, allergies, setAllergies, medications, setMedications, vaccinations, setVaccinations, alerts, setAlerts, emergencyContacts, handlePetUpdated } = ctx;
 
   const [showCardAlertsModal, setShowCardAlertsModal] = useState(false);
 
@@ -62,9 +62,34 @@ export default function OverviewSection() {
           />
         </div>
 
-        {/* Right: Emergency card preview */}
+        {/* Right: Stat blocks + Emergency card preview */}
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Preview</p>
+          {/* Stat blocks */}
+          <div className="pet-profile-stats">
+            <div className="pet-profile-stat" onClick={() => navigate('health#conditions')}>
+              <div className="pet-profile-stat-value" style={{ color: 'var(--color-warning)' }}>{conditions.length}</div>
+              <div className="pet-profile-stat-label">Conditions</div>
+            </div>
+            <div className="pet-profile-stat" onClick={() => navigate('health#allergies')}>
+              <div className="pet-profile-stat-value" style={{ color: 'var(--color-danger)' }}>{allergies.length}</div>
+              <div className="pet-profile-stat-label">Allergies</div>
+            </div>
+            <div className="pet-profile-stat" onClick={() => navigate('health#medications')}>
+              <div className="pet-profile-stat-value" style={{ color: 'var(--color-info)' }}>{medications.filter(m => m.is_active).length}</div>
+              <div className="pet-profile-stat-label">Medications</div>
+            </div>
+            <div className="pet-profile-stat" onClick={() => navigate('health#vaccinations')}>
+              <div className="pet-profile-stat-value" style={{ color: 'var(--color-success)' }}>{vaccinations.length}</div>
+              <div className="pet-profile-stat-label">Vaccinations</div>
+            </div>
+          </div>
+
+          {/* Preview header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400" style={{ margin: 0 }}>Preview</p>
+            <button onClick={() => setShowCardAlertsModal(true)} className="text-xs font-medium text-blue-600 hover:text-blue-800">Edit</button>
+          </div>
+
           <EmergencyCardPreview
             pet={pet}
             conditions={conditions}
@@ -74,29 +99,7 @@ export default function OverviewSection() {
             alerts={alerts}
             contacts={emergencyContacts}
             vets={vets}
-            onShare={() => setShowShareModal(true)}
-            onEdit={() => setShowCardAlertsModal(true)}
           />
-        </div>
-      </div>
-
-      {/* Stat blocks */}
-      <div className="pet-profile-stats">
-        <div className="pet-profile-stat" onClick={() => navigate('health#conditions')}>
-          <div className="pet-profile-stat-value" style={{ color: 'var(--color-warning)' }}>{conditions.length}</div>
-          <div className="pet-profile-stat-label">Conditions</div>
-        </div>
-        <div className="pet-profile-stat" onClick={() => navigate('health#allergies')}>
-          <div className="pet-profile-stat-value" style={{ color: 'var(--color-danger)' }}>{allergies.length}</div>
-          <div className="pet-profile-stat-label">Allergies</div>
-        </div>
-        <div className="pet-profile-stat" onClick={() => navigate('health#medications')}>
-          <div className="pet-profile-stat-value" style={{ color: 'var(--color-info)' }}>{medications.filter(m => m.is_active).length}</div>
-          <div className="pet-profile-stat-label">Medications</div>
-        </div>
-        <div className="pet-profile-stat" onClick={() => navigate('health#vaccinations')}>
-          <div className="pet-profile-stat-value" style={{ color: 'var(--color-success)' }}>{vaccinations.length}</div>
-          <div className="pet-profile-stat-label">Vaccinations</div>
         </div>
       </div>
 
