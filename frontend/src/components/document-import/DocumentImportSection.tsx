@@ -753,19 +753,19 @@ function GridCard({
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-1 group/name">
-              <p className="text-xs md:text-sm font-semibold text-gray-900 truncate flex-1 min-w-0">
-                {item.groupName || upload.original_filename}
-              </p>
+            <div className="flex items-center gap-1">
               <button
                 onClick={startRename}
-                className="flex-shrink-0 p-0.5 text-gray-300 hover:text-gray-600 transition-colors opacity-0 group-hover/name:opacity-100"
+                className="flex-shrink-0 p-0.5 text-gray-400 hover:text-gray-600 transition-colors"
                 title="Rename"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                 </svg>
               </button>
+              <p className="text-xs md:text-sm font-semibold text-gray-900 truncate flex-1 min-w-0">
+                {item.groupName || upload.original_filename}
+              </p>
             </div>
           )}
           <div className="flex items-center gap-1.5 mt-1">
@@ -933,7 +933,16 @@ function ListCard({
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-1 group/name">
+            <div className="flex items-center gap-1">
+              <button
+                onClick={startRename}
+                className="flex-shrink-0 p-0.5 text-gray-400 hover:text-gray-600 transition-colors"
+                title="Rename"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </button>
               {/* For standalone docs: link to file. For groups: just a label */}
               {isGroup ? (
                 <span className="text-sm font-semibold text-gray-900 truncate flex-1 min-w-0">
@@ -950,15 +959,6 @@ function ListCard({
                   {upload.original_filename}
                 </a>
               )}
-              <button
-                onClick={startRename}
-                className="flex-shrink-0 p-0.5 text-gray-300 hover:text-gray-600 transition-colors opacity-0 group-hover/name:opacity-100"
-                title="Rename"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
-              </button>
             </div>
           )}
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
