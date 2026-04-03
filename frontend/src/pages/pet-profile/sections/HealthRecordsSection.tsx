@@ -1,7 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { petsApi } from '../../../api/client';
-import InlineEditForm from '../../../components/InlineEditForm';
 import { usePetProfileContext } from '../context';
 import ConditionsTab from '../tabs/ConditionsTab';
 import AllergiesTab from '../tabs/AllergiesTab';
@@ -11,18 +9,15 @@ import VaccinationsTab from '../tabs/VaccinationsTab';
 export default function HealthRecordsSection() {
   const ctx = usePetProfileContext();
   const {
-    pet, petId, token,
+    petId, token,
     conditions, setConditions,
     allergies, setAllergies,
     medications, setMedications,
     vaccinations, setVaccinations,
     handleNavigateToReview,
-    handlePetUpdated,
   } = ctx;
 
   const location = useLocation();
-  const [editingNotes, setEditingNotes] = useState(false);
-
   useEffect(() => {
     const hash = location.hash.replace('#', '');
     if (!hash) return;
@@ -31,13 +26,6 @@ export default function HealthRecordsSection() {
     el.open = true;
     el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [location.hash]);
-
-  const handleSaveNotes = async (values: Record<string, string | boolean>) => {
-    const payload: Record<string, unknown> = { special_instructions: (values.special_instructions as string) || null };
-    const updated = await petsApi.update(pet.id, payload as Parameters<typeof petsApi.update>[1], token);
-    handlePetUpdated(updated);
-    setEditingNotes(false);
-  };
 
   const activeMeds = medications.filter(m => m.is_active);
   const expiringVacs = vaccinations.filter(v => v.expiration_date && new Date(v.expiration_date) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
@@ -143,47 +131,6 @@ export default function HealthRecordsSection() {
             vaccinations={vaccinations} setVaccinations={setVaccinations}
             onNavigateToReview={handleNavigateToReview}
           />
-        </div>
-      </details>
-
-      {/* Owner's Notes accordion — auto-expand if content exists */}
-      <details id="owners-notes" className="health-accordion" open={!!pet.special_instructions}>
-        <summary className="health-accordion-summary">
-          <div className="health-accordion-title">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-            Owner's Notes
-          </div>
-          <svg className="health-accordion-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </summary>
-        <div className="health-accordion-content">
-          {editingNotes ? (
-            <InlineEditForm
-              fields={[{ key: 'special_instructions', placeholder: 'Any special care instructions for emergency staff...', type: 'textarea', rows: 3 }]}
-              values={{ special_instructions: pet.special_instructions || '' }}
-              onSave={handleSaveNotes}
-              onCancel={() => setEditingNotes(false)}
-            />
-          ) : (
-            <div
-              className="group cursor-pointer rounded-lg p-2 -m-2 hover:bg-gray-50 transition-colors"
-              onClick={() => setEditingNotes(true)}
-            >
-              {pet.special_instructions ? (
-                <p className="text-gray-700 flex items-start gap-1">
-                  {pet.special_instructions}
-                  <svg className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity mt-1 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                </p>
-              ) : (
-                <p className="text-gray-400 text-sm">Click to add owner's notes</p>
-              )}
-            </div>
-          )}
         </div>
       </details>
 

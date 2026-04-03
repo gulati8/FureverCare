@@ -36,7 +36,6 @@ export default function PetProfileNav({ basePath, counts }: {
     { hash: 'allergies', label: 'Allergies' },
     { hash: 'medications', label: 'Medications' },
     { hash: 'vaccinations', label: 'Vaccinations' },
-    { hash: 'owners-notes', label: "Owner's Notes" },
   ];
 
   const isHealthActive = currentPath.startsWith(`${basePath}/health`);
@@ -66,6 +65,7 @@ export default function PetProfileNav({ basePath, counts }: {
         </svg>
       ),
     },
+    { type: 'divider' },
     {
       type: 'item',
       path: `${basePath}/health`,
