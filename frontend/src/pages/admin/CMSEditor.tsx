@@ -9,6 +9,7 @@ const BLOCK_TYPE_LABELS: Record<string, string> = {
   how_it_works: 'How It Works',
   cta: 'Call to Action',
   footer: 'Footer',
+  empty_state: 'Empty State',
 };
 
 const BLOCK_TYPE_COLORS: Record<string, string> = {
@@ -17,6 +18,7 @@ const BLOCK_TYPE_COLORS: Record<string, string> = {
   how_it_works: 'bg-purple-100 text-purple-800',
   cta: 'bg-orange-100 text-orange-800',
   footer: 'bg-gray-100 text-gray-800',
+  empty_state: 'bg-amber-100 text-amber-800',
 };
 
 export default function CMSEditor() {

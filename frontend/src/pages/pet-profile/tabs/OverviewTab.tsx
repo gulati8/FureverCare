@@ -4,7 +4,7 @@ import InlineEditForm, { EditField } from '../../../components/InlineEditForm';
 import { SPECIES_OPTIONS } from '../constants';
 import { formatWeight } from '../utils';
 
-type OverviewField = 'name' | 'species' | 'breed' | 'color_markings' | 'sex' | 'date_of_birth' | 'age' | 'weight' | 'microchip_id';
+type OverviewField = 'name' | 'species' | 'breed' | 'color_markings' | 'sex' | 'date_of_birth' | 'age' | 'weight' | 'microchip_id' | 'special_instructions';
 
 export default function OverviewTab({ pet, token, onPetUpdated }: {
   pet: Pet;
@@ -44,6 +44,9 @@ export default function OverviewTab({ pet, token, onPetUpdated }: {
         break;
       case 'microchip_id':
         payload.microchip_id = (values.microchip_id as string) || null;
+        break;
+      case 'special_instructions':
+        payload.special_instructions = (values.special_instructions as string) || null;
         break;
     }
     const updated = await petsApi.update(pet.id, payload as Parameters<typeof petsApi.update>[1], token);
@@ -93,6 +96,10 @@ export default function OverviewTab({ pet, token, onPetUpdated }: {
     microchip_id: {
       fields: [{ key: 'microchip_id', placeholder: 'Microchip ID', type: 'text' }],
       values: { microchip_id: pet.microchip_id || '' },
+    },
+    special_instructions: {
+      fields: [{ key: 'special_instructions', placeholder: "Add owner's notes", type: 'textarea', rows: 3 }],
+      values: { special_instructions: pet.special_instructions || '' },
     },
   };
 
@@ -150,16 +157,43 @@ export default function OverviewTab({ pet, token, onPetUpdated }: {
         <dl className="grid grid-cols-2 gap-4">
           {renderEditableField('name', 'Name', pet.name)}
           {renderEditableField('species', 'Species', <span className="capitalize">{pet.species}</span>)}
-          {renderEditableField('breed', 'Breed', pet.breed, !!pet.breed)}
-          {renderEditableField('color_markings', 'Color / Markings', pet.color_markings, !!pet.color_markings)}
-          {renderEditableField('sex', 'Sex', <span className="capitalize">{pet.sex}{pet.is_fixed ? ' (Spayed/Neutered)' : ''}</span>, !!pet.sex)}
-          {renderEditableField('date_of_birth', 'Date of Birth', pet.date_of_birth ? new Date(pet.date_of_birth.split('T')[0] + 'T00:00:00').toLocaleDateString() : null, !!pet.date_of_birth)}
+          {renderEditableField('breed', 'Breed', pet.breed || <span className="text-gray-400 text-sm">Add breed</span>)}
+          {renderEditableField('color_markings', 'Color / Markings', pet.color_markings || <span className="text-gray-400 text-sm">Add color or markings</span>)}
+          {renderEditableField('sex', 'Sex', pet.sex ? <span className="capitalize">{pet.sex}{pet.is_fixed ? ' (Spayed/Neutered)' : ''}</span> : <span className="text-gray-400 text-sm">Add sex</span>)}
+          {renderEditableField('date_of_birth', 'Date of Birth', pet.date_of_birth ? new Date(pet.date_of_birth.split('T')[0] + 'T00:00:00').toLocaleDateString() : <span className="text-gray-400 text-sm">Add date of birth</span>)}
           {renderAgeField()}
-          {renderEditableField('weight', 'Weight', pet.weight_kg ? formatWeight(pet.weight_kg, pet.weight_unit) : null, !!pet.weight_kg)}
-          {renderEditableField('microchip_id', 'Microchip ID', <span className="font-mono">{pet.microchip_id}</span>, !!pet.microchip_id)}
+          {renderEditableField('weight', 'Weight', pet.weight_kg ? formatWeight(pet.weight_kg, pet.weight_unit) : <span className="text-gray-400 text-sm">Add weight</span>)}
+          {renderEditableField('microchip_id', 'Microchip ID', pet.microchip_id ? <span className="font-mono">{pet.microchip_id}</span> : <span className="text-gray-400 text-sm">Add microchip ID</span>)}
         </dl>
       </div>
 
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-3">Owner's Notes</h3>
+        {editingField === 'special_instructions' ? (
+          <InlineEditForm
+            fields={fieldConfigs.special_instructions.fields}
+            values={fieldConfigs.special_instructions.values}
+            onSave={(vals) => handleSaveField('special_instructions', vals)}
+            onCancel={() => setEditingField(null)}
+          />
+        ) : (
+          <div
+            className="group cursor-pointer rounded-lg p-2 -m-2 hover:bg-gray-50 transition-colors"
+            onClick={() => setEditingField('special_instructions')}
+          >
+            {pet.special_instructions ? (
+              <p className="text-gray-700 whitespace-pre-wrap flex items-start gap-1">
+                {pet.special_instructions}
+                <svg className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity mt-1 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </p>
+            ) : (
+              <p className="text-gray-400 text-sm">Add owner's notes</p>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

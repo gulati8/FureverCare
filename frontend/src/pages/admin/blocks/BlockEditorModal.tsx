@@ -5,6 +5,7 @@ import FeaturesEditor from './FeaturesEditor';
 import HowItWorksEditor from './HowItWorksEditor';
 import CTAEditor from './CTAEditor';
 import FooterEditor from './FooterEditor';
+import EmptyStateEditor from './EmptyStateEditor';
 
 interface BlockEditorModalProps {
   block: Block;
@@ -18,6 +19,7 @@ const BLOCK_TYPE_LABELS: Record<string, string> = {
   how_it_works: 'How It Works Section',
   cta: 'Call to Action Section',
   footer: 'Footer Section',
+  empty_state: 'Empty State',
 };
 
 export default function BlockEditorModal({ block, onSave, onClose }: BlockEditorModalProps) {
@@ -52,6 +54,8 @@ export default function BlockEditorModal({ block, onSave, onClose }: BlockEditor
         return <CTAEditor content={content as any} onChange={handleContentChange as any} />;
       case 'footer':
         return <FooterEditor content={content as any} onChange={handleContentChange as any} />;
+      case 'empty_state':
+        return <EmptyStateEditor content={content as any} onChange={handleContentChange as any} />;
       default:
         return (
           <div className="p-4 bg-gray-50 rounded-lg">

@@ -39,8 +39,8 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [healthData, setHealthData] = useState<Record<number, PetHealthData>>({});
-  const [emptyStateHeading, setEmptyStateHeading] = useState('No pets yet');
-  const [emptyStateSubheading, setEmptyStateSubheading] = useState('Add your first pet to create an emergency health card.');
+  const [emptyStateHeading, setEmptyStateHeading] = useState('Add your first pet to create their profile');
+  const [emptyStateSubheading, setEmptyStateSubheading] = useState('');
 
   useEffect(() => {
     loadPets();
