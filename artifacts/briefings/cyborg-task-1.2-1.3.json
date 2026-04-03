@@ -1,0 +1,13 @@
+{
+  "agent": "cyborg",
+  "task_id": "task-1.2-1.3",
+  "files_created": [],
+  "files_modified": [
+    "frontend/src/components/document-import/DocumentImportSection.tsx"
+  ],
+  "summary": "Implemented all 10 terminology and workflow changes for document import section. FilterStatus type narrowed from 4 values to 3 ('all' | 'review' | 'processed'). getFilterCategory updated: 'uploaded' status no longer maps to a filter category (falls to 'processed' but is excluded from counts via guard). counts object updated to {review, processed} shape. Filter pills updated to render only All | Needs Review | Processed; badge removed from Processed pill (kept on Needs Review only). Batch action button: 'Finding...' -> 'Processing...', 'Find Records in All' -> 'Process All'. GridCard action button: 'Finding...' -> 'Processing...', 'Find Health Records' -> 'Process'. ListCard action button: same. STATUS_LABELS: 'uploaded' 'Stored' -> 'Uploaded', 'completed' 'Imported' -> 'Processed'. Status overlay badge in GridCard: 'Stored' -> 'Uploaded'. The Process button guard remains (isStored || isFailed) in both card types — completed documents already had no Process button, satisfying item 8 without change.",
+  "notes_for_reviewer": [
+    "The getFilterCategory return type is now 'review' | 'processed'. Uploaded documents still technically map to 'processed' via the fallthrough, but the counts object only increments for non-'uploaded' statuses, so uploaded docs appear only in 'All' filter as spec requires.",
+    "Pre-existing TypeScript errors in OverviewTab.tsx (6 errors) were present before this task — confirmed zero errors in DocumentImportSection.tsx."
+  ]
+}

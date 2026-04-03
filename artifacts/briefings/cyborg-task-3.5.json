@@ -1,0 +1,14 @@
+{
+  "agent": "cyborg",
+  "task_id": "task-3.5",
+  "files_created": [],
+  "files_modified": [
+    "backend/src/routes/public.ts"
+  ],
+  "summary": "Applied .filter(v => v.is_primary) to the veterinarians mapping in buildEmergencyCard (public.ts line 142). The public emergency card endpoint now returns only the primary vet instead of all vets. If no vet has is_primary === true the array is empty, which is correct per the spec. EmergencyCardPreview.tsx was inspected and requires no change — it does not render a vet list at all; it renders conditions, allergies, medications, vaccinations, alerts, and one emergency contact.",
+  "notes_for_reviewer": [
+    "EmergencyCardPreview.tsx has no vet display logic — no change was needed there.",
+    "The buildEmergencyCard function is shared by both the /card/:shareId route and the /token/:token/access route, so both paths now return only the primary vet.",
+    "TypeScript compilation is clean (tsc --noEmit produced no output)."
+  ]
+}

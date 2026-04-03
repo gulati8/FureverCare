@@ -1,0 +1,20 @@
+{
+  "agent": "cyborg",
+  "task_id": "emergency-card-extraction",
+  "files_created": [
+    "frontend/src/components/EmergencyCard.tsx"
+  ],
+  "files_modified": [
+    "frontend/src/components/EmergencyCardView.tsx",
+    "frontend/src/pages/pet-profile/EmergencyCardPreview.tsx",
+    "frontend/src/pages/pet-profile/sections/OverviewSection.tsx"
+  ],
+  "summary": "Extracted shared EmergencyCard component from EmergencyCardView. The new EmergencyCard.tsx accepts card: EmergencyCardData and optional resolvePhotoUrl, renders header through footer with no page-level wrapper. EmergencyCardView.tsx is now a thin shell: full-page background div wrapping <EmergencyCard />. EmergencyCardPreview.tsx was rewritten to accept pet: Pet (full object, replacing petName + specialInstructions) plus existing health arrays, builds an EmergencyCardData-shaped object from those arrays (filtering by show_on_card/is_active), then renders <EmergencyCard /> inside a 375px mobile device frame with rounded corners and shadow. Send Card / Edit buttons sit outside the frame. OverviewSection.tsx updated to pass pet={pet} instead of petName + specialInstructions. TypeScript compilation clean with zero errors.",
+  "notes_for_reviewer": [
+    "EmergencyCardPreview now accepts pet: Pet instead of petName: string + specialInstructions: string | null. OverviewSection was updated accordingly.",
+    "The owner field in the preview card is set to null — the owner is the authenticated viewer, no need to show themselves as a contact in the preview.",
+    "generated_at in the preview uses new Date().toISOString() since it is a live preview, not a snapshot. The footer will show today's date.",
+    "buildAlerts and formatWeight are exported from EmergencyCard.tsx in case other consumers need them later.",
+    "The sticky header inside EmergencyCard uses position: sticky. Inside the overflow:hidden mobile frame in the preview it will not stick (overflow:hidden clips sticky positioning). This is acceptable for a preview frame — the card content is still fully visible."
+  ]
+}

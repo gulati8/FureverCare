@@ -1,0 +1,62 @@
+{
+  "reviewer": "wonder-woman",
+  "timestamp": "2026-04-03T00:00:00Z",
+  "verdict": "pass",
+  "summary": "The implementation honors the plan faithfully across all four files. The hash-based collapse-all race condition is eliminated. IntersectionObserver scroll-spy replaces the stale location.hash active state. Sub-nav clicks use a direct callback when already on the health page, falling back to navigate() for cross-page routing. Deep-link support is preserved via a mount-only effect. Accordion toggle handlers and default open sections are untouched. No critical issues found. Two warnings and two info items noted -- none block merge.",
+  "changes_reviewed": [
+    {
+      "id": "change-1",
+      "title": "context.ts -- Four new scroll-spy fields on PetProfileContext",
+      "status": "pass",
+      "details": "healthActiveSection (string | null), setHealthActiveSection, scrollToHealthSection, and registerScrollToHealthSection added to the interface. Types are correct. The callback registration pattern (registerScrollToHealthSection writes to a ref; scrollToHealthSection reads from it) avoids the useState-with-function-value trap the plan warned about. Clean and minimal."
+    },
+    {
+      "id": "change-2",
+      "title": "PetDetail.tsx -- State, ref plumbing, and prop threading",
+      "status": "pass",
+      "details": "Lines 45-48: healthActiveSection state, scrollToHealthRef, and the two wrapper functions are correctly wired. Lines 159-162: all four values passed to outletContext. Lines 247-248: healthActiveSection and onHealthSubNavClick passed as props to PetProfileNav, bypassing the outlet context boundary since PetProfileNav is a sibling of Outlet, not a child. The plan's correction about PetProfileNav not being inside the Outlet is correctly addressed."
+    },
+    {
+      "id": "change-3",
+      "title": "HealthRecordsSection.tsx -- Collapse-all removed, three new effects added",
+      "status": "pass",
+      "details": "Effect 1 (lines 23-33): Mount-only deep-link handler reads window.location.hash, opens that section additively, and scrolls with 24px offset via requestAnimationFrame. Empty deps array ensures it runs once. Effect 2 (lines 35-52): IntersectionObserver with rootMargin '-20% 0px -70% 0px' and threshold 0 reports the visible section to setHealthActiveSection. Cleanup disconnects the observer. Effect 3 (lines 54-64): Registers the scroll-and-open callback via registerScrollToHealthSection. The callback opens the target section (additive, no collapse), then scrolls with rAF. All four onToggle handlers (lines 72-80, 105-112, 138-145, 171-178) are preserved identically. Default openSections remains Set(['conditions', 'allergies']). useLocation import removed; only window.location.hash used for the one-time read."
+    },
+    {
+      "id": "change-4",
+      "title": "PetProfileNav.tsx -- Scroll-spy active state and callback click handler",
+      "status": "pass",
+      "details": "Props signature extended with healthActiveSection and onHealthSubNavClick (lines 17, 29-30). Active class at line 142 checks isHealthActive && healthActiveSection === sub.hash -- correct guard ensures sub-items never highlight when on a different page. Click handler at lines 143-149 calls onHealthSubNavClick when already on health, falls back to navigate() otherwise. Sub-nav items changed from Link/anchor to button elements, which is semantically correct since they perform actions rather than navigation when on the health page. useNavigate retained for the cross-page fallback. location.hash no longer referenced for active state anywhere."
+    }
+  ],
+  "issues": [
+    {
+      "severity": "warning",
+      "file": "frontend/src/pages/pet-profile/sections/HealthRecordsSection.tsx",
+      "line": 57,
+      "description": "When scrollToHealthSection is called for a currently-closed section, setOpenSections triggers a React state update and requestAnimationFrame fires the scroll calculation. React 18's automatic batching typically flushes state before the next paint, so rAF usually sees the updated DOM. However, this is not guaranteed by the React contract -- if the browser paints before React commits, the scroll target's bounding rect may reflect the collapsed height, causing the scroll to land slightly off.",
+      "suggestion": "For maximum robustness, use a double-rAF pattern (requestAnimationFrame(() => requestAnimationFrame(() => { ... }))) or a short setTimeout(fn, 0) to ensure React's commit phase has completed before measuring. The same applies to the mount-only effect at line 27. This is a resilience concern, not a guaranteed bug -- the current approach works in the majority of cases."
+    },
+    {
+      "severity": "warning",
+      "file": "frontend/src/pages/pet-profile/sections/HealthRecordsSection.tsx",
+      "line": 64,
+      "description": "registerScrollToHealthSection (from PetDetail.tsx line 47) is not wrapped in useCallback, so it is a new function reference on every render. This effect's dependency array [registerScrollToHealthSection] causes it to re-run on every parent render. The re-runs are functionally harmless (they just re-assign the same callback to the ref), but they are unnecessary work.",
+      "suggestion": "Wrap registerScrollToHealthSection in useCallback with an empty deps array in PetDetail.tsx, since it only mutates a ref and has no reactive dependencies. Alternatively, remove registerScrollToHealthSection from this effect's dependency array and suppress the eslint warning with a comment explaining why, since the function's identity does not affect correctness."
+    },
+    {
+      "severity": "info",
+      "file": "frontend/src/pages/pet-profile/context.ts",
+      "line": 46,
+      "description": "The context interface exposes both scrollToHealthSection and registerScrollToHealthSection, but scrollToHealthSection is never consumed by any outlet child -- PetProfileNav receives it as a prop (onHealthSubNavClick) directly from PetDetail, not from context. This means scrollToHealthSection on the context object is dead surface area.",
+      "suggestion": "Consider removing scrollToHealthSection from PetProfileContext if no outlet child needs it. PetDetail already calls scrollToHealthRef.current directly at line 248. This keeps the context interface honest."
+    },
+    {
+      "severity": "info",
+      "file": "frontend/src/pages/pet-profile/PetProfileNav.tsx",
+      "line": 33,
+      "description": "useLocation is still imported and used (line 34: currentPath = location.pathname; line 43: isHealthActive check). useNavigate is also retained for the cross-page fallback. Both are still necessary. No dead imports.",
+      "suggestion": "No action needed. Noting for completeness that the plan's comment about potentially removing useNavigate was correctly evaluated -- it is still required."
+    }
+  ]
+}

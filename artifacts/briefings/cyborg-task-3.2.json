@@ -1,0 +1,18 @@
+{
+  "agent": "cyborg",
+  "task_id": "task-3.2",
+  "files_created": [
+    "frontend/src/components/CardAlertsModal.tsx"
+  ],
+  "files_modified": [
+    "frontend/src/pages/pet-profile/EmergencyCardPreview.tsx",
+    "frontend/src/pages/pet-profile/sections/OverviewSection.tsx"
+  ],
+  "summary": "Complete redesign of EmergencyCardPreview. Removed old red-alerts list and buildPreviewAlerts helper. Card body now renders four sections (Conditions, Allergies, Medications, Vaccinations) filtered by show_on_card/is_active per spec, in compact list format with existing color coding. Owner's Notes displayed in yellow callout (bg #FEFCE8, border #FEF08A) when pet.special_instructions is non-null. Primary vet filtered via is_primary === true; shows nothing if no primary vet. Emergency contact logic unchanged. 'Configure' button replaced with 'Edit' button (opens CardAlertsModal). 'Share Card' renamed 'Send Card'. Props signature updated: added vets: PetVet[], specialInstructions: string | null; onConfigure renamed onEdit. Created CardAlertsModal.tsx as modal wrapper around AlertsTab with title 'Edit Emergency Card', close button, max-h-[90vh] overflow for scroll. OverviewSection wires showCardAlertsModal state to the Edit callback, passes vets and specialInstructions to EmergencyCardPreview, adds 'Preview' label above card div, and conditionally renders CardAlertsModal with all AlertsTab props from context.",
+  "notes_for_reviewer": [
+    "Pre-existing TypeScript errors in Dashboard.tsx and HealthRecordsSection.tsx are unrelated to this task — they existed before and are not caused by these changes.",
+    "The alerts prop is still passed to EmergencyCardPreview (for interface compatibility) but the card no longer renders a custom-alerts section in the preview — only the four health-record sections. Custom alerts are still managed via CardAlertsModal/AlertsTab.",
+    "primaryVet display shows clinic_name and phone (matching existing emergency contact pattern). vet_name is not shown to keep the card compact.",
+    "OverviewSection now pulls setConditions, setAllergies, setMedications, setVaccinations, setAlerts from context (previously unused in this component) to pass through to CardAlertsModal."
+  ]
+}

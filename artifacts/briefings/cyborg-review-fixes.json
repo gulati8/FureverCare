@@ -1,0 +1,15 @@
+{
+  "agent": "cyborg",
+  "task_id": "review-fixes",
+  "files_created": [],
+  "files_modified": [
+    "frontend/src/components/document-import/DocumentImportSection.tsx",
+    "backend/src/models/document-upload.ts"
+  ],
+  "summary": "Applied all four fixes identified in review-prelaunch.md. Fix 1 (CRITICAL): Extended isProcessed check on line 532 of DocumentImportSection.tsx to include pending_review status so DeleteConfirmDialog shows the cascade prompt and sends cascade=true to the API — preventing the guaranteed 400 response. Fix 2: Added 'group' class to the GridCard parent div (line 679), removed the conflicting style={{ opacity: undefined }} and manual onMouseEnter/onMouseLeave handlers; Tailwind group-hover:opacity-100 now solely controls delete button visibility, eliminating the initial-render flash. Fix 3: Added AND deleted_at IS NULL guards to all UPDATE queries in document-upload.ts — updateDocumentUploadStatus (4 branches), updateDocumentUploadFilename, updateDocumentImageMetadata, reorderDocumentGroup, and all 4 branches of updateDocumentGroupStatus. Fix 4: Added AND deleted_at IS NULL to the cascade unlink query in softDeleteDocumentWithCascade that nulls created_record_id/created_record_type on document_extraction_items, preventing redundant writes to already-soft-deleted rows. Verification: both backend and frontend TypeScript compilation clean (no output from tsc --noEmit).",
+  "notes_for_reviewer": [
+    "Fix 2 removes three attributes from the GridCard delete button (style, onMouseEnter, onMouseLeave). The group-hover Tailwind pattern is now the sole mechanism. If the parent card ever loses the 'group' class in a future edit, the button will become permanently invisible — the inline handlers were a safety net for exactly that scenario. Flagging so the reviewer is aware of the trade-off.",
+    "Fix 3 covers all five UPDATE functions called out in the review, including all four conditional branches inside updateDocumentUploadStatus and updateDocumentGroupStatus.",
+    "Fix 4 adds the guard only to the unlink query (created_record_id nulling), not to the soft-delete query immediately above it — that query already has AND deleted_at IS NULL from the original implementation."
+  ]
+}

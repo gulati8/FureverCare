@@ -1,0 +1,16 @@
+{
+  "agent": "cyborg",
+  "task_id": "task-4.2-4.3-4.4",
+  "files_created": [],
+  "files_modified": [
+    "frontend/src/api/client.ts",
+    "frontend/src/components/document-import/DocumentImportSection.tsx"
+  ],
+  "summary": "Implemented Tasks 4.2, 4.3, and 4.4 together in a single pass against the current file state (which already had 1.2 and 1.3 terminology changes applied). Task 4.2: updated deleteUpload in client.ts to accept optional cascade boolean query param; added delete state (deleteTarget, isDeleting) to DocumentImportSection; added handleDeleteRequest, handleDeleteConfirm, handleDeleteCancel handlers; added inline DeleteConfirmDialog component that shows two-option cascade dialog for completed documents and simple OK/Cancel for unprocessed documents; wired onDelete prop to both GridCard and ListCard. Task 4.3: added isRenaming/renameTo/renaming state and renameInputRef to both GridCard and ListCard; pencil icon appears on hover next to document name in both views; clicking pencil switches name display to input field with save (checkmark) and cancel (X) buttons; Enter saves, Escape cancels; max 255 chars; save calls documentsApi.renameUpload then onRenameComplete (which calls loadUploads). Task 4.4: in GridCard meta section, increased document name from text-xs to text-xs md:text-sm, status and date labels from text-[11px] to text-[11px] md:text-xs, and action button from text-xs to text-xs md:text-sm using responsive Tailwind prefixes. TypeScript compilation: clean (no errors).",
+  "notes_for_reviewer": [
+    "The delete button in GridCard uses inline CSS opacity toggling on mouseEnter/Leave since the parent div has overflow-hidden which clips Tailwind group-hover. The ListCard trash button is always visible (no hover-only) for better discoverability in list layout.",
+    "handleDeleteConfirm deletes all pages of a group document (iterates item.pages). For a cascade delete on a multi-page group, this sends one DELETE request per page. The backend should handle each individually since each has its own upload ID.",
+    "The rename for group documents calls renameUpload on the primaryUpload ID only. The backend renameUpload endpoint should handle this as a group rename (renaming the group_name). If the backend only renames a single file and not the group, a backend-side change may be needed separately.",
+    "useRef import was added (useRef) to support focus management on the rename input field."
+  ]
+}

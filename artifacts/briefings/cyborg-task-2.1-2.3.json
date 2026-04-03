@@ -1,0 +1,17 @@
+{
+  "agent": "cyborg",
+  "task_id": "task-2.1-and-2.3",
+  "files_created": [],
+  "files_modified": [
+    "backend/src/models/pet.ts",
+    "backend/src/routes/pets.ts",
+    "frontend/src/api/client.ts"
+  ],
+  "summary": "Added `age` (nullable INTEGER) and `color_markings` (nullable VARCHAR(255)) fields across all three layers. Pet interface in models/pet.ts and client.ts extended with both fields. CreatePetInput in both files extended with optional variants. createPet INSERT expanded from 13 to 15 columns/params; `age` uses nullish coalescing (`?? null`) to correctly pass 0, matching the min(0) constraint. allowedFields in updatePet extended with both field names. createPetSchema and updatePetSchema (via .partial()) in routes/pets.ts extended with z.number().int().min(0).optional() and z.string().max(255).optional().",
+  "notes_for_reviewer": [
+    "Backend TypeScript compilation: clean (no output).",
+    "Frontend TypeScript error in src/components/document-import/DocumentImportSection.tsx (TS2353 on 'stored') is pre-existing and unrelated to these changes — the file was not touched.",
+    "Used `input.age ?? null` (not `input.age || null`) for the INSERT value so that age=0 is not coerced to null.",
+    "The linter auto-added `user_role?: string | null` to the backend Pet interface during editing; that was a pre-existing in-progress change in the working tree, not introduced by this task."
+  ]
+}

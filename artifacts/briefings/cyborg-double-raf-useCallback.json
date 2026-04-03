@@ -1,0 +1,11 @@
+{
+  "agent": "cyborg",
+  "task_id": "double-raf-useCallback",
+  "files_created": [],
+  "files_modified": [
+    "frontend/src/pages/pet-profile/sections/HealthRecordsSection.tsx",
+    "frontend/src/pages/PetDetail.tsx"
+  ],
+  "summary": "Applied two code-review fixes. (1) Replaced both single-rAF scroll patterns in HealthRecordsSection with double-rAF to ensure the scroll offset is computed after React has committed the newly-opened <details> element to the DOM — one in the mount-only hash effect and one in the registerScrollToHealthSection callback. (2) Wrapped registerScrollToHealthSection in useCallback with an empty dependency array in PetDetail.tsx so it is a stable reference and does not retrigger the registration effect in HealthRecordsSection on every parent render. Added useCallback to the existing React import. TypeScript compilation: clean.",
+  "notes_for_reviewer": []
+}

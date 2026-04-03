@@ -1,0 +1,17 @@
+{
+  "agent": "cyborg",
+  "task_id": "alerts-tab-redesign",
+  "files_created": [],
+  "files_modified": [
+    "frontend/src/pages/pet-profile/tabs/AlertsTab.tsx",
+    "frontend/src/components/CardAlertsModal.tsx"
+  ],
+  "summary": "Redesigned AlertsTab.tsx to replace the custom text alert creation form with a two-section UI: Section A shows all items where show_on_card === true grouped by type (Conditions, Allergies, Medications, Vaccinations), each with an X remove button that sets show_on_card: false. Section B is a native <select> with <optgroup> elements listing all eligible items not yet on the card (active conditions, all allergies, active medications, all vaccinations where show_on_card !== true). Selecting an item immediately calls show_on_card: true via useFieldSet, then resets the dropdown. CardAlertsModal.tsx updated to stop forwarding alerts/setAlerts to AlertsTab since those props were removed. CardAlertsModal interface and its own props are unchanged so OverviewSection.tsx required no modifications.",
+  "notes_for_reviewer": [
+    "alerts and setAlerts props are removed from AlertsTab's interface. CardAlertsModal still accepts them in its own interface (so OverviewSection passes them without error), but simply does not forward them to AlertsTab.",
+    "Dropdown uses template-literal encoded values (e.g. 'condition-42') to disambiguate type+id without needing separate state for type.",
+    "useFieldSet is called twice per record type — once with value=false for removal, once with value=true for adding. This is the same hook used by the original code for removal; extended for add.",
+    "Condition and medication candidates are filtered to is_active === true per spec ('active conditions', 'active medications').",
+    "TypeScript compilation: zero errors."
+  ]
+}
