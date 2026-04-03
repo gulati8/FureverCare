@@ -1,0 +1,16 @@
+{
+  "agent": "cyborg",
+  "task_id": "task-6.1",
+  "files_created": [],
+  "files_modified": [
+    "frontend/src/pages/pet-profile/sections/ActivitySection.tsx",
+    "frontend/src/components/MedicalTimeline.tsx"
+  ],
+  "summary": "Removed Change History (HistoryTab) section and its import from ActivitySection.tsx. Removed the duplicate 'Medical Timeline' h3 title from ActivitySection.tsx (the nav breadcrumb label 'Timeline' is sufficient). In MedicalTimeline.tsx, removed the 'Medical Timeline' h3 heading from within the component's return block, replaced the <select> filter dropdown with pill buttons styled to match the document filter pills (px-3 py-1 text-xs font-semibold rounded-full border, navy active state, surface-200 border inactive state). Event count and sort order button moved to a right-aligned flex row beside the pills. Filter logic unchanged — medication_start value maps to both medication_start and medication_end events as before.",
+  "notes_for_reviewer": [
+    "The FilterOption type is declared inside the component function body (just before the return) — this matches the pattern of keeping local helpers close to usage, consistent with the existing codebase style.",
+    "The 'Medications' pill sets filterType to 'medication_start', which the existing filter logic already treats as matching both medication_start and medication_end event types. No logic change needed.",
+    "petId was removed from the ActivitySection destructure since it was only needed by the now-removed HistoryTab.",
+    "TypeScript compilation exits clean with no errors."
+  ]
+}

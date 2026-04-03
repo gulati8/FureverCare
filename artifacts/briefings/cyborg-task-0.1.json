@@ -1,0 +1,17 @@
+{
+  "agent": "cyborg",
+  "task_id": "task-0.1",
+  "files_created": [
+    "backend/src/db/migrate-soft-delete.ts"
+  ],
+  "files_modified": [
+    "backend/package.json",
+    ".github/workflows/deploy.yml"
+  ],
+  "summary": "Created soft-delete migration adding deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL to document_uploads, document_extractions, and document_extraction_items tables. Added an index on document_uploads(deleted_at) for efficient filtering. All ALTER TABLE statements use ADD COLUMN IF NOT EXISTS for idempotency. Registered db:migrate:soft-delete and db:migrate:soft-delete:dev npm scripts following the existing naming pattern. Added the migration step to both the production deploy command list (after document-groups, before docker compose up -d) and the PR environment migration chain in deploy.yml.",
+  "notes_for_reviewer": [
+    "The migration adds deleted_at to all three document tables but only creates an index on document_uploads. The plan spec only requested the one index on document_uploads — no index on document_extractions or document_extraction_items was specified.",
+    "The PR environment migration chain is a single shell string (sh -c '...'), so the new migration was appended with && rather than as a separate quoted array entry — consistent with how that block already works.",
+    "No TypeScript compilation was run locally since the file has no custom types beyond the pool import, which matches all other migration files verbatim."
+  ]
+}

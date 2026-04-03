@@ -44,3 +44,6 @@ eval/
 # Uploaded files (keep directory structure only)
 backend/uploads/**/*.pdf
 playwright-report/
+
+# Playwright auth state
+frontend/.auth/

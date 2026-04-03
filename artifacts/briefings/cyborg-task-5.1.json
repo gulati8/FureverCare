@@ -1,0 +1,15 @@
+{
+  "agent": "cyborg",
+  "task_id": "task-5.1",
+  "files_created": [],
+  "files_modified": [
+    "frontend/src/pages/pet-profile/tabs/OverviewTab.tsx",
+    "frontend/src/pages/pet-profile/sections/HealthRecordsSection.tsx"
+  ],
+  "summary": "Removed Special Instructions from OverviewTab and added Owner's Notes accordion to HealthRecordsSection. In OverviewTab: removed 'special_instructions' from OverviewField union type, removed its case from the switch, removed it from fieldConfigs, and removed the entire Special Instructions JSX section. In HealthRecordsSection: added useState import, petsApi import, InlineEditForm import; destructured pet and handlePetUpdated from context; added editingNotes state and handleSaveNotes handler (using same Record<string, unknown> cast pattern as OverviewTab to satisfy Partial<CreatePetInput> type); added Owner's Notes <details> accordion after Vaccinations with notepad/pencil icon, auto-open when pet.special_instructions has content, inline edit mode via InlineEditForm, and hover-reveal pencil icon on display state.",
+  "notes_for_reviewer": [
+    "Pre-existing TypeScript errors exist in Dashboard.tsx and OverviewSection.tsx — not introduced by this task. The modified files are type-clean.",
+    "The save handler uses Parameters<typeof petsApi.update>[1] cast — identical pattern to OverviewTab — because CreatePetInput.special_instructions is optional (string | undefined) not nullable, but the backend accepts null to clear the field.",
+    "Owner's Notes accordion uses open={!!pet.special_instructions} for auto-expand, matching the task spec."
+  ]
+}

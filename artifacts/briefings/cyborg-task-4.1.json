@@ -1,0 +1,20 @@
+{
+  "agent": "cyborg",
+  "task_id": "task-4.1",
+  "files_created": [],
+  "files_modified": [
+    "backend/src/models/document-upload.ts",
+    "backend/src/models/document-extraction.ts",
+    "backend/src/routes/document-import.ts",
+    "backend/src/routes/pets.ts"
+  ],
+  "summary": "Implemented backend soft-delete for documents. In document-upload.ts: added AND deleted_at IS NULL to getDocumentUploadById, getDocumentUploadsByPetId (both branches), and getDocumentGroup; changed deleteDocumentUpload from DELETE to UPDATE setting deleted_at; added new softDeleteDocumentWithCascade function that soft-deletes the upload, optionally soft-deletes linked extraction items (cascade=true), and always nulls created_record_id/created_record_type on linked items to unlink health records. In document-extraction.ts: added deleted_at IS NULL to getDocumentExtractionByUploadId, getDocumentExtractionById, getDocumentExtractionItems, and getDocumentExtractionItemById. In document-import.ts: imported softDeleteDocumentWithCascade, removed storage deletion from DELETE endpoint, replaced hard-delete with soft-delete logic (cascade param required for processed docs, simple soft-delete for unprocessed), and added deleted_at IS NULL filters to the inline extraction item counts query. In pets.ts: added deleted_at IS NULL filters to the source-document lookup JOIN query.",
+  "notes_for_reviewer": [
+    "The softDeleteDocumentWithCascade always nulls created_record_id/created_record_type on extraction items regardless of cascade flag. This is correct per spec: both cascade=true and cascade=false remove the source links from health records; cascade=true additionally soft-deletes the extraction items themselves.",
+    "The DELETE endpoint now requires the cascade query param when the document status is 'completed' or 'pending_review'. Unprocessed documents (uploaded, failed, processing, pending) do a simple soft-delete with no cascade requirement.",
+    "Storage files are intentionally not deleted -- soft delete preserves everything in storage.",
+    "document-extraction.ts was not listed in the plan's file list but required deleted_at IS NULL filters on its read queries to be consistent. All three read functions (getDocumentExtractionByUploadId, getDocumentExtractionById, getDocumentExtractionItems, getDocumentExtractionItemById) were updated.",
+    "pets.ts source-lookup query was found via grep and updated to exclude soft-deleted documents and items.",
+    "TypeScript compilation is clean (tsc --noEmit, no output)."
+  ]
+}
