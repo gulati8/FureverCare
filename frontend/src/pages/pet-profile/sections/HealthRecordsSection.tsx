@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { usePetProfileContext } from '../context';
 import ConditionsTab from '../tabs/ConditionsTab';
@@ -17,13 +17,15 @@ export default function HealthRecordsSection() {
     handleNavigateToReview,
   } = ctx;
 
+  const [openSections, setOpenSections] = useState<Set<string>>(new Set(['conditions', 'allergies']));
+
   const location = useLocation();
   useEffect(() => {
     const hash = location.hash.replace('#', '');
     if (!hash) return;
-    const el = document.getElementById(hash) as HTMLDetailsElement | null;
+    setOpenSections(new Set([hash]));
+    const el = document.getElementById(hash);
     if (!el) return;
-    el.open = true;
     el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [location.hash]);
 
@@ -33,7 +35,15 @@ export default function HealthRecordsSection() {
   return (
     <div className="space-y-4 fade-in">
       {/* Conditions accordion — default open */}
-      <details id="conditions" className="health-accordion" open>
+      <details id="conditions" className="health-accordion" open={openSections.has('conditions')} onToggle={(e) => {
+        const isOpen = (e.target as HTMLDetailsElement).open;
+        setOpenSections(prev => {
+          const next = new Set(prev);
+          if (isOpen) next.add('conditions');
+          else next.delete('conditions');
+          return next;
+        });
+      }}>
         <summary className="health-accordion-summary">
           <div className="health-accordion-title">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -58,7 +68,15 @@ export default function HealthRecordsSection() {
       </details>
 
       {/* Allergies accordion — default open */}
-      <details id="allergies" className="health-accordion" open>
+      <details id="allergies" className="health-accordion" open={openSections.has('allergies')} onToggle={(e) => {
+        const isOpen = (e.target as HTMLDetailsElement).open;
+        setOpenSections(prev => {
+          const next = new Set(prev);
+          if (isOpen) next.add('allergies');
+          else next.delete('allergies');
+          return next;
+        });
+      }}>
         <summary className="health-accordion-summary">
           <div className="health-accordion-title">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -83,7 +101,15 @@ export default function HealthRecordsSection() {
       </details>
 
       {/* Medications accordion — default collapsed */}
-      <details id="medications" className="health-accordion">
+      <details id="medications" className="health-accordion" open={openSections.has('medications')} onToggle={(e) => {
+        const isOpen = (e.target as HTMLDetailsElement).open;
+        setOpenSections(prev => {
+          const next = new Set(prev);
+          if (isOpen) next.add('medications');
+          else next.delete('medications');
+          return next;
+        });
+      }}>
         <summary className="health-accordion-summary">
           <div className="health-accordion-title">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -108,7 +134,15 @@ export default function HealthRecordsSection() {
       </details>
 
       {/* Vaccinations accordion — default collapsed */}
-      <details id="vaccinations" className="health-accordion">
+      <details id="vaccinations" className="health-accordion" open={openSections.has('vaccinations')} onToggle={(e) => {
+        const isOpen = (e.target as HTMLDetailsElement).open;
+        setOpenSections(prev => {
+          const next = new Set(prev);
+          if (isOpen) next.add('vaccinations');
+          else next.delete('vaccinations');
+          return next;
+        });
+      }}>
         <summary className="health-accordion-summary">
           <div className="health-accordion-title">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

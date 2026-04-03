@@ -1,13 +1,11 @@
 import { SetStateAction } from 'react';
-import { PetAlert, PetCondition, PetAllergy, PetMedication, PetVaccination } from '../api/client';
+import { PetCondition, PetAllergy, PetMedication, PetVaccination } from '../api/client';
 import AlertsTab from '../pages/pet-profile/tabs/AlertsTab';
 
 interface CardAlertsModalProps {
   onClose: () => void;
   petId: number;
   token: string;
-  alerts: PetAlert[];
-  setAlerts: (a: PetAlert[]) => void;
   conditions: PetCondition[];
   setConditions: (value: SetStateAction<PetCondition[]>) => void;
   allergies: PetAllergy[];
@@ -22,8 +20,6 @@ export default function CardAlertsModal({
   onClose,
   petId,
   token,
-  alerts,
-  setAlerts,
   conditions,
   setConditions,
   allergies,
@@ -48,8 +44,6 @@ export default function CardAlertsModal({
         <AlertsTab
           petId={petId}
           token={token}
-          alerts={alerts}
-          setAlerts={setAlerts}
           conditions={conditions}
           setConditions={setConditions}
           allergies={allergies}

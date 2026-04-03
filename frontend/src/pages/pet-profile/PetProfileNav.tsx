@@ -132,7 +132,7 @@ export default function PetProfileNav({ basePath, counts }: {
                   <span className="pet-profile-nav-count">{entry.count}</span>
                 )}
               </Link>
-              {isHealthProfile && isHealthActive && (
+              {isHealthProfile && (
                 <div className="pet-profile-nav-sub-items">
                   {healthSubItems.map(sub => (
                     <button

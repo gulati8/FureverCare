@@ -66,7 +66,7 @@ export default function OverviewSection() {
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Preview</p>
           <EmergencyCardPreview
-            petName={pet.name}
+            pet={pet}
             conditions={conditions}
             allergies={allergies}
             medications={medications}
@@ -74,7 +74,6 @@ export default function OverviewSection() {
             alerts={alerts}
             contacts={emergencyContacts}
             vets={vets}
-            specialInstructions={pet.special_instructions}
             onShare={() => setShowShareModal(true)}
             onEdit={() => setShowCardAlertsModal(true)}
           />
@@ -107,8 +106,6 @@ export default function OverviewSection() {
           onClose={() => setShowCardAlertsModal(false)}
           petId={petId}
           token={token}
-          alerts={alerts}
-          setAlerts={setAlerts}
           conditions={conditions}
           setConditions={setConditions}
           allergies={allergies}
