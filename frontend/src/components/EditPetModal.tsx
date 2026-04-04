@@ -59,10 +59,10 @@ export default function EditPetModal({ pet, onClose, onPetUpdated }: Props) {
       <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-gray-900">Edit {pet.name}</h2>
+            <h2 className="text-xl font-bold text-navy">Edit {pet.name}</h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-surface-400 hover:text-surface-600"
             >
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -80,7 +80,7 @@ export default function EditPetModal({ pet, onClose, onPetUpdated }: Props) {
           </div>
 
           {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+            <div className="mb-4 bg-danger-light border border-danger-light text-danger px-4 py-3 rounded-lg">
               {error}
             </div>
           )}
@@ -157,9 +157,9 @@ export default function EditPetModal({ pet, onClose, onPetUpdated }: Props) {
                 id="is_fixed_edit"
                 checked={formData.is_fixed || false}
                 onChange={(e) => setFormData({ ...formData, is_fixed: e.target.checked })}
-                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-surface-300 rounded"
               />
-              <label htmlFor="is_fixed_edit" className="ml-2 block text-sm text-gray-700">
+              <label htmlFor="is_fixed_edit" className="ml-2 block text-sm text-surface-700">
                 Spayed / Neutered
               </label>
             </div>

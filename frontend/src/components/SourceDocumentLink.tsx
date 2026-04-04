@@ -36,7 +36,7 @@ export default function SourceDocumentLink({ petId, recordType, recordId, onNavi
           onNavigateToReview(source.upload_id, source.extraction_item_id);
         }
       }}
-      className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline mt-0.5"
+      className="inline-flex items-center gap-1 text-xs text-info hover:text-info hover:underline mt-0.5"
       title={`Imported from ${filename}`}
     >
       <svg className="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">

@@ -183,14 +183,14 @@ export default function PhotoUpload({ petId, currentPhotoUrl, onPhotoUpdated, co
           <button
             onClick={handleDeletePhoto}
             disabled={isUploading}
-            className="btn text-sm text-red-600 hover:bg-red-50"
+            className="btn text-sm text-danger hover:bg-danger-light"
           >
             Remove
           </button>
         )}
       </div>
 
-      <p className="text-xs text-gray-400 mt-1">JPEG, PNG, WebP, GIF, HEIC, TIFF, BMP up to 10MB</p>
+      <p className="text-xs text-surface-400 mt-1">JPEG, PNG, WebP, GIF, HEIC, TIFF, BMP up to 10MB</p>
 
       {error && <p className="error-text mt-2">{error}</p>}
     </div>

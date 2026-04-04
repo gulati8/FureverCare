@@ -145,8 +145,8 @@ export default function ManageAccessModal({ petId, petName, onClose }: Props) {
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'owner': return 'bg-purple-100 text-purple-700';
-      case 'editor': return 'bg-blue-100 text-blue-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'editor': return 'bg-info-light text-info';
+      default: return 'bg-surface-100 text-surface-700';
     }
   };
 
@@ -155,8 +155,8 @@ export default function ManageAccessModal({ petId, petName, onClose }: Props) {
       <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-gray-900">Manage Access - {petName}</h2>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <h2 className="text-xl font-bold text-navy">Manage Access - {petName}</h2>
+            <button onClick={onClose} className="text-surface-400 hover:text-surface-600">
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -164,13 +164,13 @@ export default function ManageAccessModal({ petId, petName, onClose }: Props) {
           </div>
 
           {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+            <div className="mb-4 bg-danger-light border border-danger-light text-danger px-4 py-3 rounded-lg">
               {error}
             </div>
           )}
 
           {inviteSuccess && (
-            <div className="mb-4 bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-lg text-sm break-all">
+            <div className="mb-4 bg-success-light border border-success-light text-success px-4 py-3 rounded-lg text-sm break-all">
               {inviteSuccess}
             </div>
           )}
@@ -183,13 +183,13 @@ export default function ManageAccessModal({ petId, petName, onClose }: Props) {
             <>
               {/* Current Users */}
               <div className="mb-6">
-                <h3 className="text-sm font-medium text-gray-700 mb-3">People with access</h3>
+                <h3 className="text-sm font-medium text-surface-700 mb-3">People with access</h3>
                 <ul className="space-y-2">
                   {owners.map((owner) => (
-                    <li key={owner.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <li key={owner.id} className="flex items-center justify-between p-3 bg-surface rounded-lg">
                       <div>
-                        <p className="font-medium text-gray-900">{owner.user_name}</p>
-                        <p className="text-sm text-gray-500">{owner.user_email}</p>
+                        <p className="font-medium text-navy">{owner.user_name}</p>
+                        <p className="text-sm text-surface-500">{owner.user_email}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         {owner.role === 'owner' ? (
@@ -208,7 +208,7 @@ export default function ManageAccessModal({ petId, petName, onClose }: Props) {
                             </select>
                             <button
                               onClick={() => handleRemoveUser(owner.user_id)}
-                              className="text-red-600 hover:text-red-800 text-sm"
+                              className="text-danger hover:text-danger-dark text-sm"
                             >
                               Remove
                             </button>
@@ -227,19 +227,19 @@ export default function ManageAccessModal({ petId, petName, onClose }: Props) {
               {/* Pending Invitations */}
               {isOwner && invitations.length > 0 && (
                 <div className="mb-6">
-                  <h3 className="text-sm font-medium text-gray-700 mb-3">Pending invitations</h3>
+                  <h3 className="text-sm font-medium text-surface-700 mb-3">Pending invitations</h3>
                   <ul className="space-y-2">
                     {invitations.map((inv) => (
-                      <li key={inv.id} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                      <li key={inv.id} className="flex items-center justify-between p-3 bg-warning-light rounded-lg">
                         <div>
-                          <p className="font-medium text-gray-900">{inv.email}</p>
-                          <p className="text-xs text-gray-500">
+                          <p className="font-medium text-navy">{inv.email}</p>
+                          <p className="text-xs text-surface-500">
                             {inv.role} • Expires {new Date(inv.expires_at).toLocaleDateString()}
                           </p>
                         </div>
                         <button
                           onClick={() => handleCancelInvitation(inv.id)}
-                          className="text-red-600 hover:text-red-800 text-sm"
+                          className="text-danger hover:text-danger-dark text-sm"
                         >
                           Cancel
                         </button>
@@ -252,7 +252,7 @@ export default function ManageAccessModal({ petId, petName, onClose }: Props) {
               {/* Invite Form */}
               {isOwner && (
                 <div className="border-t pt-4">
-                  <h3 className="text-sm font-medium text-gray-700 mb-3">Invite someone</h3>
+                  <h3 className="text-sm font-medium text-surface-700 mb-3">Invite someone</h3>
                   <div className="flex gap-2">
                     <input
                       type="email"
@@ -277,7 +277,7 @@ export default function ManageAccessModal({ petId, petName, onClose }: Props) {
                       {isInviting ? '...' : 'Invite'}
                     </button>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">
+                  <p className="text-xs text-surface-500 mt-2">
                     Viewers can see all pet info. Editors can also add/edit health records.
                   </p>
                 </div>

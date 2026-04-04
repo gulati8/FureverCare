@@ -178,21 +178,21 @@ function SortableFeature({
     <div
       ref={setNodeRef}
       style={style}
-      className={`border border-gray-200 rounded-lg overflow-hidden ${isDragging ? 'shadow-lg' : ''}`}
+      className={`border border-surface-200 rounded-lg overflow-hidden ${isDragging ? 'shadow-lg' : ''}`}
     >
       {/* Feature header - always visible */}
-      <div className="px-4 py-3 bg-gray-50 flex items-center justify-between">
+      <div className="px-4 py-3 bg-surface flex items-center justify-between">
         <div className="flex items-center space-x-3">
           {/* Drag handle */}
           <button
             type="button"
-            className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 touch-none"
+            className="cursor-grab active:cursor-grabbing text-surface-400 hover:text-surface-600 touch-none"
             {...attributes}
             {...listeners}
           >
             <DragHandleIcon />
           </button>
-          <span className="text-gray-400 font-mono text-sm">
+          <span className="text-surface-400 font-mono text-sm">
             {String(index + 1).padStart(2, '0')}
           </span>
           {/* Highlighted icon matching the selected style */}
@@ -200,7 +200,7 @@ function SortableFeature({
             <IconPreview icon={feature.icon} className="w-6 h-6" />
           </div>
           <span
-            className="font-medium text-gray-900 cursor-pointer hover:text-primary-600"
+            className="font-medium text-navy cursor-pointer hover:text-primary-600"
             onClick={onToggleEdit}
           >
             {feature.title || 'Untitled Feature'}
@@ -209,10 +209,10 @@ function SortableFeature({
         <button
           type="button"
           onClick={onToggleEdit}
-          className="p-1 hover:bg-gray-200 rounded"
+          className="p-1 hover:bg-surface-200 rounded"
         >
           <svg
-            className={`w-5 h-5 text-gray-400 transition-transform ${isEditing ? 'rotate-180' : ''}`}
+            className={`w-5 h-5 text-surface-400 transition-transform ${isEditing ? 'rotate-180' : ''}`}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -224,12 +224,12 @@ function SortableFeature({
 
       {/* Feature editor - expandable */}
       {isEditing && (
-        <div className="p-4 space-y-4 border-t border-gray-200">
+        <div className="p-4 space-y-4 border-t border-surface-200">
           <div>
             <label className="label">Icon</label>
             <div
               ref={scrollContainerRef}
-              className="flex gap-2 p-3 bg-gray-50 rounded-lg overflow-x-auto"
+              className="flex gap-2 p-3 bg-surface rounded-lg overflow-x-auto"
             >
               {ICON_KEYS.map((key) => {
                 const isSelected = getNormalizedIconKey(feature.icon) === key;
@@ -242,7 +242,7 @@ function SortableFeature({
                     className={`p-3 rounded-lg flex-shrink-0 transition-all ${
                       isSelected
                         ? 'bg-primary-500 ring-2 ring-primary-600 ring-offset-2 text-white shadow-md'
-                        : 'bg-white hover:bg-gray-100 text-gray-500 hover:text-gray-700 border border-gray-200'
+                        : 'bg-white hover:bg-surface-100 text-surface-500 hover:text-surface-700 border border-surface-200'
                     }`}
                   >
                     <IconPreview icon={key} className="w-7 h-7" />
@@ -363,7 +363,7 @@ export default function FeaturesEditor({ content, onChange }: FeaturesEditorProp
       {/* Features list */}
       <div>
         <label className="label mb-3">Features ({features.length})</label>
-        <p className="text-sm text-gray-500 mb-3">Drag features to reorder them</p>
+        <p className="text-sm text-surface-500 mb-3">Drag features to reorder them</p>
 
         <DndContext
           sensors={sensors}
@@ -388,7 +388,7 @@ export default function FeaturesEditor({ content, onChange }: FeaturesEditorProp
         </DndContext>
 
         {features.length === 0 && (
-          <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
+          <div className="text-center py-8 text-surface-500 bg-surface rounded-lg">
             No features defined yet.
           </div>
         )}

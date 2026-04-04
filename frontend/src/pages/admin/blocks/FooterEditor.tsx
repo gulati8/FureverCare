@@ -78,7 +78,7 @@ export default function FooterEditor({ content, onChange }: FooterEditorProps) {
           {links.map((link, index) => (
             <div
               key={index}
-              className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg"
+              className="flex items-center space-x-2 p-3 bg-surface rounded-lg"
             >
               {/* Reorder buttons */}
               <div className="flex flex-col">
@@ -86,7 +86,7 @@ export default function FooterEditor({ content, onChange }: FooterEditorProps) {
                   type="button"
                   onClick={() => handleMoveLink(index, 'up')}
                   disabled={index === 0}
-                  className="text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="text-surface-400 hover:text-surface-600 disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
@@ -96,7 +96,7 @@ export default function FooterEditor({ content, onChange }: FooterEditorProps) {
                   type="button"
                   onClick={() => handleMoveLink(index, 'down')}
                   disabled={index === links.length - 1}
-                  className="text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="text-surface-400 hover:text-surface-600 disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -126,7 +126,7 @@ export default function FooterEditor({ content, onChange }: FooterEditorProps) {
               <button
                 type="button"
                 onClick={() => handleRemoveLink(index)}
-                className="text-red-400 hover:text-red-600 p-1"
+                className="text-danger hover:text-danger-dark p-1"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -136,15 +136,15 @@ export default function FooterEditor({ content, onChange }: FooterEditorProps) {
           ))}
 
           {links.length === 0 && (
-            <div className="text-center py-4 text-gray-500 bg-gray-50 rounded-lg text-sm">
+            <div className="text-center py-4 text-surface-500 bg-surface rounded-lg text-sm">
               No footer links yet. Add one below.
             </div>
           )}
         </div>
 
         {/* Add new link */}
-        <div className="p-4 border border-dashed border-gray-300 rounded-lg">
-          <h4 className="text-sm font-medium text-gray-700 mb-3">Add New Link</h4>
+        <div className="p-4 border border-dashed border-surface-300 rounded-lg">
+          <h4 className="text-sm font-medium text-surface-700 mb-3">Add New Link</h4>
           <div className="flex items-end space-x-2">
             <div className="flex-1">
               <label className="label text-xs">Label</label>

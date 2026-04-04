@@ -22,7 +22,7 @@ export default function ShareModal({ petName, shareUrl, onClose, onManageLinks }
       <div className="bg-white rounded-xl max-w-md w-full p-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold">Share {petName}'s Card</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} className="text-surface-400 hover:text-surface-600">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -34,7 +34,7 @@ export default function ShareModal({ petName, shareUrl, onClose, onManageLinks }
             <QRCodeSVG value={shareUrl} size={200} />
           </div>
 
-          <p className="text-sm text-gray-600 mb-4">
+          <p className="text-sm text-surface-600 mb-4">
             Scan this QR code or share the link below to give ER staff instant access to {petName}'s health information.
           </p>
 
@@ -53,7 +53,7 @@ export default function ShareModal({ petName, shareUrl, onClose, onManageLinks }
             </button>
           </div>
 
-          <p className="text-xs text-gray-400 mb-4">
+          <p className="text-xs text-surface-400 mb-4">
             This link provides read-only access. No login required.
           </p>
 

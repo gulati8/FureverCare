@@ -118,7 +118,7 @@ export default function PetDetail() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: 'var(--color-navy)' }}></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-navy"></div>
       </div>
     );
   }
@@ -195,36 +195,35 @@ export default function PetDetail() {
               species={pet.species}
             />
             <div>
-              <h1 className="text-2xl" style={{ color: 'var(--color-navy)', fontWeight: 700 }}>{pet.name}</h1>
-              <p className="capitalize" style={{ color: 'var(--color-surface-500)' }}>
+              <h1 className="text-2xl text-navy font-bold">{pet.name}</h1>
+              <p className="capitalize text-surface-500">
                 {pet.breed ? `${pet.breed} ${pet.species}` : pet.species}
                 {pet.sex && ` \u2022 ${pet.sex}${pet.is_fixed ? ' (Fixed)' : ''}`}
               </p>
-              {pet.weight_kg && <p className="text-sm" style={{ color: 'var(--color-surface-400)' }}>{formatWeight(pet.weight_kg, pet.weight_unit)}</p>}
+              {pet.weight_kg && <p className="text-sm text-surface-400">{formatWeight(pet.weight_kg, pet.weight_unit)}</p>}
             </div>
           </div>
 
           <div className="flex gap-2">
             <button
               onClick={() => setShowAccessModal(true)}
-              className={`btn btn-ghost btn-sm ${!isPremium ? 'opacity-50' : ''}`}
-              title={!isPremium ? 'Premium feature - Upgrade to share pet access with others' : undefined}
-              style={{ border: '1px solid var(--color-surface-200)' }}
+              className={`btn btn-ghost btn-sm border border-surface-200 ${!isPremium ? 'opacity-50' : ''}`}
+              title={!isPremium ? 'Premium feature - Upgrade to share pet access with others' : 'Share Profile'}
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline sm:mr-[6px] align-middle">
                 <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
               </svg>
-              Share Profile
+              <span className="hidden sm:inline">Share Profile</span>
             </button>
             <button
               onClick={() => setShowShareModal(true)}
-              className="btn btn-ghost btn-sm"
-              style={{ border: '1px solid var(--color-surface-200)' }}
+              className="btn btn-ghost btn-sm border border-surface-200"
+              title="Send Card"
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline sm:mr-[6px] align-middle">
                 <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
               </svg>
-              Send Card
+              <span className="hidden sm:inline">Send Card</span>
             </button>
           </div>
         </div>
@@ -286,9 +285,9 @@ export default function PetDetail() {
         ) : (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Share Pet Access</h2>
+              <h2 className="text-lg font-semibold text-navy mb-4">Share Pet Access</h2>
               <UpgradeBanner type="feature" feature="shared_ownership" />
-              <p className="text-gray-600 text-sm mt-4">
+              <p className="text-surface-600 text-sm mt-4">
                 With premium, you can invite family members or pet sitters to view and manage your pet's health records.
               </p>
               <button

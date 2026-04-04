@@ -58,14 +58,14 @@ export default function UserDetailModal({ userId, onClose }: Props) {
           {/* Header */}
           <div className="flex justify-between items-start mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">User Details</h2>
+              <h2 className="text-2xl font-bold text-navy">User Details</h2>
               {user && (
-                <p className="text-sm text-gray-500 mt-1">ID: {user.id}</p>
+                <p className="text-sm text-surface-500 mt-1">ID: {user.id}</p>
               )}
             </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-surface-400 hover:text-surface-600 transition-colors"
             >
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -74,7 +74,7 @@ export default function UserDetailModal({ userId, onClose }: Props) {
           </div>
 
           {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+            <div className="mb-6 bg-danger-light border border-danger-light text-danger px-4 py-3 rounded-lg">
               {error}
             </div>
           )}
@@ -86,30 +86,30 @@ export default function UserDetailModal({ userId, onClose }: Props) {
           ) : user ? (
             <div className="space-y-6">
               {/* User Profile */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Profile</h3>
+              <div className="bg-surface rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-navy mb-3">Profile</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Name</label>
-                    <p className="text-gray-900">{user.name}</p>
+                    <label className="text-sm font-medium text-surface-500">Name</label>
+                    <p className="text-navy">{user.name}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Email</label>
-                    <p className="text-gray-900">{user.email}</p>
+                    <label className="text-sm font-medium text-surface-500">Email</label>
+                    <p className="text-navy">{user.email}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Phone</label>
-                    <p className="text-gray-900">{user.phone || '—'}</p>
+                    <label className="text-sm font-medium text-surface-500">Phone</label>
+                    <p className="text-navy">{user.phone || '—'}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Admin Status</label>
+                    <label className="text-sm font-medium text-surface-500">Admin Status</label>
                     <p>
                       {user.is_admin ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-success-light text-success">
                           Admin
                         </span>
                       ) : (
-                        <span className="text-gray-600">Regular User</span>
+                        <span className="text-surface-600">Regular User</span>
                       )}
                     </p>
                   </div>
@@ -117,42 +117,42 @@ export default function UserDetailModal({ userId, onClose }: Props) {
               </div>
 
               {/* Subscription Info */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Subscription</h3>
+              <div className="bg-surface rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-navy mb-3">Subscription</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Plan</label>
-                    <p className="text-gray-900 capitalize">{user.subscription_tier}</p>
+                    <label className="text-sm font-medium text-surface-500">Plan</label>
+                    <p className="text-navy capitalize">{user.subscription_tier}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Status</label>
+                    <label className="text-sm font-medium text-surface-500">Status</label>
                     <p>
                       {user.subscription_tier === 'premium' ? (
                         <>
                           {user.subscription_status === 'active' && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Active</span>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-success-light text-success">Active</span>
                           )}
                           {user.subscription_status === 'trialing' && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">Trial</span>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-info-light text-info">Trial</span>
                           )}
                           {user.subscription_status === 'past_due' && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">Past Due</span>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-warning-light text-warning-dark">Past Due</span>
                           )}
                           {user.subscription_status === 'canceled' && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">Canceled</span>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-danger-light text-danger">Canceled</span>
                           )}
                         </>
                       ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">Free</span>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface-100 text-surface-600">Free</span>
                       )}
                     </p>
                   </div>
                   {user.subscription_current_period_end && (
                     <div className="md:col-span-2">
-                      <label className="text-sm font-medium text-gray-500">
+                      <label className="text-sm font-medium text-surface-500">
                         {user.subscription_status === 'canceled' ? 'Access Until' : 'Current Period Ends'}
                       </label>
-                      <p className="text-gray-900">
+                      <p className="text-navy">
                         {new Date(user.subscription_current_period_end).toLocaleDateString('en-US', {
                           year: 'numeric',
                           month: 'long',
@@ -165,32 +165,32 @@ export default function UserDetailModal({ userId, onClose }: Props) {
               </div>
 
               {/* Account Info */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Account Info</h3>
+              <div className="bg-surface rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-navy mb-3">Account Info</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Created</label>
-                    <p className="text-gray-900">{new Date(user.created_at).toLocaleString()}</p>
+                    <label className="text-sm font-medium text-surface-500">Created</label>
+                    <p className="text-navy">{new Date(user.created_at).toLocaleString()}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Last Updated</label>
-                    <p className="text-gray-900">{new Date(user.updated_at).toLocaleString()}</p>
+                    <label className="text-sm font-medium text-surface-500">Last Updated</label>
+                    <p className="text-navy">{new Date(user.updated_at).toLocaleString()}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Owned Pets</label>
-                    <p className="text-gray-900 font-semibold">{user.owned_pet_count}</p>
+                    <label className="text-sm font-medium text-surface-500">Owned Pets</label>
+                    <p className="text-navy font-semibold">{user.owned_pet_count}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Shared Pets</label>
-                    <p className="text-gray-900 font-semibold">{user.shared_pet_count}</p>
+                    <label className="text-sm font-medium text-surface-500">Shared Pets</label>
+                    <p className="text-navy font-semibold">{user.shared_pet_count}</p>
                   </div>
                 </div>
               </div>
 
               {/* Pets List */}
               {user.pets && user.pets.length > 0 && (
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                <div className="bg-surface rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-navy mb-3">
                     Pets ({user.pets.length})
                   </h3>
                   <div className="space-y-3">
@@ -213,14 +213,14 @@ export default function UserDetailModal({ userId, onClose }: Props) {
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-900">{pet.name}</p>
-                          <p className="text-sm text-gray-500 capitalize">{pet.species}</p>
+                          <p className="text-sm font-semibold text-navy">{pet.name}</p>
+                          <p className="text-sm text-surface-500 capitalize">{pet.species}</p>
                         </div>
                         <div>
                           <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                             pet.role === 'owner'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-gray-100 text-gray-800'
+                              ? 'bg-info-light text-info'
+                              : 'bg-surface-100 text-navy'
                           }`}>
                             {pet.role}
                           </span>
@@ -232,7 +232,7 @@ export default function UserDetailModal({ userId, onClose }: Props) {
               )}
 
               {user.pets && user.pets.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-surface-500">
                   <p>This user has no pets.</p>
                 </div>
               )}

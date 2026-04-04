@@ -59,13 +59,13 @@ export function FieldEditor({
   };
 
   return (
-    <div className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
+    <div className="flex items-center gap-3 py-2 border-b border-surface-100 last:border-0">
       <div className="flex items-center gap-1.5 w-36 flex-shrink-0">
-        <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+        <span className="text-xs font-medium text-surface-500 uppercase tracking-wider">
           {label}
         </span>
         {isModified && (
-          <span className="text-[10px] text-blue-600 font-medium uppercase">Modified</span>
+          <span className="text-[10px] text-info font-medium uppercase">Modified</span>
         )}
       </div>
       <div className="flex-1">
@@ -73,7 +73,7 @@ export function FieldEditor({
           <select
             value={localValue}
             onChange={handleSelectChange}
-            className="block w-full px-2 py-1 text-sm border border-gray-200 rounded bg-white focus:ring-blue-500 focus:border-blue-500"
+            className="block w-full px-2 py-1 text-sm border border-surface-200 rounded bg-white focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="true">Yes</option>
             <option value="false">No</option>
@@ -82,7 +82,7 @@ export function FieldEditor({
           <select
             value={localValue}
             onChange={handleSelectChange}
-            className="block w-full px-2 py-1 text-sm border border-gray-200 rounded bg-white focus:ring-blue-500 focus:border-blue-500"
+            className="block w-full px-2 py-1 text-sm border border-surface-200 rounded bg-white focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="">-</option>
             {options.map((opt) => (
@@ -98,7 +98,7 @@ export function FieldEditor({
             onChange={(e) => setLocalValue(e.target.value)}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
-            className="block w-full px-2 py-1 text-sm border border-gray-200 rounded bg-white focus:ring-blue-500 focus:border-blue-500"
+            className="block w-full px-2 py-1 text-sm border border-surface-200 rounded bg-white focus:ring-blue-500 focus:border-blue-500"
           />
         )}
       </div>

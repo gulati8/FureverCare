@@ -3,9 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { usePetProfileContext } from '../context';
 import OverviewTab from '../tabs/OverviewTab';
 import EmergencyCardPreview from '../EmergencyCardPreview';
-import PhotoUpload from '../../../components/PhotoUpload';
 import CardAlertsModal from '../../../components/CardAlertsModal';
-import { formatWeight } from '../utils';
 
 export default function OverviewSection() {
   const ctx = usePetProfileContext();
@@ -13,6 +11,7 @@ export default function OverviewSection() {
   const { pet, petId, token, vets, conditions, setConditions, allergies, setAllergies, medications, setMedications, vaccinations, setVaccinations, alerts, setAlerts, emergencyContacts, handlePetUpdated } = ctx;
 
   const [showCardAlertsModal, setShowCardAlertsModal] = useState(false);
+  const [cardPreviewOpen, setCardPreviewOpen] = useState(false);
 
   return (
     <div className="space-y-6 fade-in">
@@ -20,41 +19,6 @@ export default function OverviewSection() {
       <div className="pet-profile-overview-grid">
         {/* Left: Pet info card */}
         <div className="card">
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
-            <PhotoUpload
-              petId={petId}
-              currentPhotoUrl={pet.photo_url}
-              onPhotoUpdated={(photoUrl) => handlePetUpdated({ ...pet, photo_url: photoUrl })}
-              compact
-              species={pet.species}
-            />
-            <div style={{ textAlign: 'center' }}>
-              <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-navy)' }}>
-                {pet.name}
-              </h2>
-              <p className="capitalize" style={{ color: 'var(--color-surface-500)', marginTop: '2px' }}>
-                {pet.breed ? `${pet.breed} \u2022 ${pet.species}` : pet.species}
-                {pet.color_markings && ` \u2022 ${pet.color_markings}`}
-                {(() => {
-                  if (pet.date_of_birth) {
-                    const age = Math.floor((Date.now() - new Date(pet.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000));
-                    return ` \u2022 ${age} ${age === 1 ? 'year' : 'years'}`;
-                  }
-                  if (pet.age != null) {
-                    return ` \u2022 ${pet.age} ${pet.age === 1 ? 'year' : 'years'}`;
-                  }
-                  return null;
-                })()}
-                {pet.sex && ` \u2022 ${pet.sex}${pet.is_fixed ? ' (Fixed)' : ''}`}
-              </p>
-              {pet.weight_kg && (
-                <p className="text-sm" style={{ color: 'var(--color-surface-400)', marginTop: '4px' }}>
-                  {formatWeight(pet.weight_kg, pet.weight_unit)}
-                </p>
-              )}
-            </div>
-          </div>
-
           <OverviewTab
             pet={pet}
             token={token}
@@ -67,39 +31,77 @@ export default function OverviewSection() {
           {/* Stat blocks */}
           <div className="pet-profile-stats">
             <div className="pet-profile-stat" onClick={() => navigate('health#conditions')}>
-              <div className="pet-profile-stat-value" style={{ color: 'var(--color-warning)' }}>{conditions.length}</div>
+              <div className="pet-profile-stat-value text-warning">{conditions.length}</div>
               <div className="pet-profile-stat-label">Conditions</div>
             </div>
             <div className="pet-profile-stat" onClick={() => navigate('health#allergies')}>
-              <div className="pet-profile-stat-value" style={{ color: 'var(--color-danger)' }}>{allergies.length}</div>
+              <div className="pet-profile-stat-value text-danger">{allergies.length}</div>
               <div className="pet-profile-stat-label">Allergies</div>
             </div>
             <div className="pet-profile-stat" onClick={() => navigate('health#medications')}>
-              <div className="pet-profile-stat-value" style={{ color: 'var(--color-info)' }}>{medications.filter(m => m.is_active).length}</div>
+              <div className="pet-profile-stat-value text-info">{medications.filter(m => m.is_active).length}</div>
               <div className="pet-profile-stat-label">Medications</div>
             </div>
             <div className="pet-profile-stat" onClick={() => navigate('health#vaccinations')}>
-              <div className="pet-profile-stat-value" style={{ color: 'var(--color-success)' }}>{vaccinations.length}</div>
+              <div className="pet-profile-stat-value text-success">{vaccinations.length}</div>
               <div className="pet-profile-stat-label">Vaccinations</div>
             </div>
           </div>
 
-          {/* Preview header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400" style={{ margin: 0 }}>Preview</p>
-            <button onClick={() => setShowCardAlertsModal(true)} className="text-xs font-medium text-blue-600 hover:text-blue-800">Edit</button>
-          </div>
+          {/* Mobile toggle - only visible < lg */}
+          <button
+            className="lg:hidden w-full flex items-center justify-between p-3 rounded-lg bg-navy border border-surface-700 mb-2"
+            onClick={() => setCardPreviewOpen(!cardPreviewOpen)}
+          >
+            <span className="text-xs font-semibold uppercase tracking-wide text-surface-400">Card Preview</span>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className={`transition-transform text-surface-400 ${cardPreviewOpen ? 'rotate-180' : ''}`}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+          {cardPreviewOpen && (
+            <div className="lg:hidden mb-2">
+              <div className="flex justify-between items-center mb-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-surface-400 m-0">Preview</p>
+                <button onClick={() => setShowCardAlertsModal(true)} className="text-xs font-medium text-info hover:text-info">Edit</button>
+              </div>
+              <EmergencyCardPreview
+                pet={pet}
+                conditions={conditions}
+                allergies={allergies}
+                medications={medications}
+                vaccinations={vaccinations}
+                alerts={alerts}
+                contacts={emergencyContacts}
+                vets={vets}
+              />
+            </div>
+          )}
 
-          <EmergencyCardPreview
-            pet={pet}
-            conditions={conditions}
-            allergies={allergies}
-            medications={medications}
-            vaccinations={vaccinations}
-            alerts={alerts}
-            contacts={emergencyContacts}
-            vets={vets}
-          />
+          {/* Desktop - always visible */}
+          <div className="hidden lg:block">
+            <div className="flex justify-between items-center mb-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-surface-400 m-0">Preview</p>
+              <button onClick={() => setShowCardAlertsModal(true)} className="text-xs font-medium text-info hover:text-info">Edit</button>
+            </div>
+            <EmergencyCardPreview
+              pet={pet}
+              conditions={conditions}
+              allergies={allergies}
+              medications={medications}
+              vaccinations={vaccinations}
+              alerts={alerts}
+              contacts={emergencyContacts}
+              vets={vets}
+            />
+          </div>
         </div>
       </div>
 

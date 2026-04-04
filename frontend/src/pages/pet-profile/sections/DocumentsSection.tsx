@@ -19,7 +19,7 @@ export default function DocumentsSection() {
         ) : (
           <div className="space-y-4">
             <UpgradeBanner type="feature" feature="upload" />
-            <p className="text-gray-500 text-center py-4">
+            <p className="text-surface-500 text-center py-4">
               Upgrade to premium to import medical records from PDFs and photos.
             </p>
           </div>

@@ -46,9 +46,9 @@ const eventTypeConfig: Record<EventType, { label: string; icon: string; bgColor:
   medication_start: {
     label: 'Medication Started',
     icon: '💊',
-    bgColor: 'bg-blue-50',
-    textColor: 'text-blue-700',
-    borderColor: 'border-blue-300',
+    bgColor: 'bg-info-light',
+    textColor: 'text-info',
+    borderColor: 'border-info',
   },
   medication_end: {
     label: 'Medication Ended',
@@ -67,9 +67,9 @@ const eventTypeConfig: Record<EventType, { label: string; icon: string; bgColor:
   allergy: {
     label: 'Allergy Identified',
     icon: '⚠️',
-    bgColor: 'bg-red-50',
-    textColor: 'text-red-700',
-    borderColor: 'border-red-300',
+    bgColor: 'bg-danger-light',
+    textColor: 'text-danger',
+    borderColor: 'border-danger-light',
   },
 };
 
@@ -236,8 +236,8 @@ export function MedicalTimeline({ conditions, allergies, medications, vaccinatio
     return (
       <div className="text-center py-12">
         <div className="text-4xl mb-4">📋</div>
-        <p className="text-gray-500">No medical events recorded yet</p>
-        <p className="text-sm text-gray-400 mt-2">
+        <p className="text-surface-500">No medical events recorded yet</p>
+        <p className="text-sm text-surface-400 mt-2">
           Add vaccinations, medications, conditions, or allergies to see them on the timeline
         </p>
       </div>
@@ -280,7 +280,7 @@ export function MedicalTimeline({ conditions, allergies, medications, vaccinatio
                 className={`px-3 py-1 text-xs font-semibold rounded-full border transition-colors ${
                   isActive
                     ? 'text-white border-transparent'
-                    : 'bg-white text-gray-500 hover:text-gray-700'
+                    : 'bg-white text-surface-500 hover:text-surface-700'
                 }`}
                 style={isActive ? {
                   background: 'var(--color-navy, #1B2A4A)',
@@ -295,7 +295,7 @@ export function MedicalTimeline({ conditions, allergies, medications, vaccinatio
           })}
         </div>
         <div className="flex items-center gap-3">
-          <p className="text-sm text-gray-500">{events.length} event{events.length !== 1 ? 's' : ''}</p>
+          <p className="text-sm text-surface-500">{events.length} event{events.length !== 1 ? 's' : ''}</p>
           <button
             onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
             className="btn-secondary text-sm py-1.5 px-3 flex items-center gap-1"
@@ -308,14 +308,14 @@ export function MedicalTimeline({ conditions, allergies, medications, vaccinatio
       {/* Timeline */}
       <div className="relative">
         {/* Vertical line */}
-        <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200" />
+        <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-surface-200" />
 
         {groupedEvents.map((group) => (
           <div key={group.label} className="mb-6">
             {/* Month/Year header */}
             <div className="relative flex items-center mb-4">
-              <div className="absolute left-2.5 w-3 h-3 rounded-full bg-gray-300 border-2 border-white" />
-              <span className="ml-10 text-sm font-medium text-gray-500">{group.label}</span>
+              <div className="absolute left-2.5 w-3 h-3 rounded-full bg-surface-300 border-2 border-white" />
+              <span className="ml-10 text-sm font-medium text-surface-500">{group.label}</span>
             </div>
 
             {/* Events in this group */}
@@ -339,10 +339,10 @@ export function MedicalTimeline({ conditions, allergies, medications, vaccinatio
                           {event.severity && (
                             <span className={`text-xs px-1.5 py-0.5 rounded capitalize ${
                               event.severity === 'severe' || event.severity === 'life-threatening'
-                                ? 'bg-red-100 text-red-700'
+                                ? 'bg-danger-light text-danger'
                                 : event.severity === 'moderate'
-                                ? 'bg-yellow-100 text-yellow-700'
-                                : 'bg-gray-100 text-gray-600'
+                                ? 'bg-warning-light text-warning-dark'
+                                : 'bg-surface-100 text-surface-600'
                             }`}>
                               {event.severity}
                             </span>
@@ -350,34 +350,34 @@ export function MedicalTimeline({ conditions, allergies, medications, vaccinatio
                           {event.isActive !== undefined && (
                             <span className={`text-xs px-1.5 py-0.5 rounded ${
                               event.isActive
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-gray-100 text-gray-500'
+                                ? 'bg-success-light text-success'
+                                : 'bg-surface-100 text-surface-500'
                             }`}>
                               {event.isActive ? 'Active' : 'Inactive'}
                             </span>
                           )}
                           {event.isExpired && (
-                            <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-700">
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-danger-light text-danger">
                               Expired
                             </span>
                           )}
                         </div>
-                        <p className="font-medium text-gray-900 mt-1">{event.title}</p>
+                        <p className="font-medium text-navy mt-1">{event.title}</p>
                         {event.subtitle && (
-                          <p className="text-sm text-gray-600">{event.subtitle}</p>
+                          <p className="text-sm text-surface-600">{event.subtitle}</p>
                         )}
                         {event.details && event.details.length > 0 && (
-                          <ul className="text-sm text-gray-500 mt-1 space-y-0.5">
+                          <ul className="text-sm text-surface-500 mt-1 space-y-0.5">
                             {event.details.map((detail, i) => (
                               <li key={i}>{detail}</li>
                             ))}
                           </ul>
                         )}
                       </div>
-                      <div className="text-right text-sm text-gray-500 whitespace-nowrap">
+                      <div className="text-right text-sm text-surface-500 whitespace-nowrap">
                         <div>{formatFlexibleDate(event.dateStr, event.datePrecision)}</div>
                         {parsedDob && event.date >= parsedDob && (
-                          <div className="text-xs text-gray-400">
+                          <div className="text-xs text-surface-400">
                             {calculateAge(parsedDob, event.date)}
                           </div>
                         )}

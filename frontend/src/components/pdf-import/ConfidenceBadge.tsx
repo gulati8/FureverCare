@@ -5,7 +5,7 @@ interface ConfidenceBadgeProps {
 export function ConfidenceBadge({ score }: ConfidenceBadgeProps) {
   if (score === null) {
     return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface-100 text-surface-600">
         Unknown
       </span>
     );
@@ -18,13 +18,13 @@ export function ConfidenceBadge({ score }: ConfidenceBadgeProps) {
   let label: string;
 
   if (score >= 0.8) {
-    colorClass = 'bg-green-100 text-green-800';
+    colorClass = 'bg-success-light text-success';
     label = 'High';
   } else if (score >= 0.5) {
-    colorClass = 'bg-yellow-100 text-yellow-800';
+    colorClass = 'bg-warning-light text-warning-dark';
     label = 'Medium';
   } else {
-    colorClass = 'bg-red-100 text-red-800';
+    colorClass = 'bg-danger-light text-danger';
     label = 'Low';
   }
 

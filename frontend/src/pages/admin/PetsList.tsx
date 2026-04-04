@@ -104,7 +104,7 @@ export default function PetsList() {
   const SortIcon = ({ column }: { column: string }) => {
     if (sortBy !== column) {
       return (
-        <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-4 h-4 text-surface-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
         </svg>
       );
@@ -124,14 +124,14 @@ export default function PetsList() {
     <div className="max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Pets</h1>
-        <p className="text-gray-600 mt-1">View all pet profiles and health records</p>
+        <h1 className="text-2xl font-bold text-navy">Pets</h1>
+        <p className="text-surface-600 mt-1">View all pet profiles and health records</p>
       </div>
 
       {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg flex items-center justify-between">
+        <div className="mb-6 bg-danger-light border border-danger-light text-danger px-4 py-3 rounded-lg flex items-center justify-between">
           <span>{error}</span>
-          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600">
+          <button onClick={() => setError(null)} className="text-danger hover:text-danger-dark">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -176,31 +176,31 @@ export default function PetsList() {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
           </div>
         ) : pets.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-surface-500">
             <p>No pets found.</p>
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-surface border-b border-surface-200">
                   <tr>
                     <th className="px-4 py-3 text-left">
                       <button
                         onClick={() => handleSort('id')}
-                        className="flex items-center space-x-1 text-xs font-medium text-gray-700 uppercase tracking-wider hover:text-primary-600"
+                        className="flex items-center space-x-1 text-xs font-medium text-surface-700 uppercase tracking-wider hover:text-primary-600"
                       >
                         <span>ID</span>
                         <SortIcon column="id" />
                       </button>
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-surface-700 uppercase tracking-wider">
                       Photo
                     </th>
                     <th className="px-4 py-3 text-left">
                       <button
                         onClick={() => handleSort('name')}
-                        className="flex items-center space-x-1 text-xs font-medium text-gray-700 uppercase tracking-wider hover:text-primary-600"
+                        className="flex items-center space-x-1 text-xs font-medium text-surface-700 uppercase tracking-wider hover:text-primary-600"
                       >
                         <span>Name</span>
                         <SortIcon column="name" />
@@ -209,7 +209,7 @@ export default function PetsList() {
                     <th className="px-4 py-3 text-left">
                       <button
                         onClick={() => handleSort('species')}
-                        className="flex items-center space-x-1 text-xs font-medium text-gray-700 uppercase tracking-wider hover:text-primary-600"
+                        className="flex items-center space-x-1 text-xs font-medium text-surface-700 uppercase tracking-wider hover:text-primary-600"
                       >
                         <span>Species</span>
                         <SortIcon column="species" />
@@ -218,19 +218,19 @@ export default function PetsList() {
                     <th className="px-4 py-3 text-left">
                       <button
                         onClick={() => handleSort('owner_name')}
-                        className="flex items-center space-x-1 text-xs font-medium text-gray-700 uppercase tracking-wider hover:text-primary-600"
+                        className="flex items-center space-x-1 text-xs font-medium text-surface-700 uppercase tracking-wider hover:text-primary-600"
                       >
                         <span>Owner</span>
                         <SortIcon column="owner_name" />
                       </button>
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-surface-700 uppercase tracking-wider">
                       Records
                     </th>
                     <th className="px-4 py-3 text-left">
                       <button
                         onClick={() => handleSort('created_at')}
-                        className="flex items-center space-x-1 text-xs font-medium text-gray-700 uppercase tracking-wider hover:text-primary-600"
+                        className="flex items-center space-x-1 text-xs font-medium text-surface-700 uppercase tracking-wider hover:text-primary-600"
                       >
                         <span>Created</span>
                         <SortIcon column="created_at" />
@@ -238,14 +238,14 @@ export default function PetsList() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-surface-100">
                   {pets.map((pet) => (
                     <tr
                       key={pet.id}
                       onClick={() => setSelectedPetId(pet.id)}
-                      className="hover:bg-gray-50 cursor-pointer transition-colors"
+                      className="hover:bg-surface cursor-pointer transition-colors"
                     >
-                      <td className="px-4 py-3 text-sm font-mono text-gray-500">{pet.id}</td>
+                      <td className="px-4 py-3 text-sm font-mono text-surface-500">{pet.id}</td>
                       <td className="px-4 py-3">
                         <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center overflow-hidden">
                           {pet.photo_url ? (
@@ -262,27 +262,27 @@ export default function PetsList() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-sm font-medium text-gray-900">{pet.name}</span>
+                        <span className="text-sm font-medium text-navy">{pet.name}</span>
                       </td>
                       <td className="px-4 py-3">
                         <div>
-                          <span className="text-sm text-gray-900 capitalize">{pet.species}</span>
+                          <span className="text-sm text-navy capitalize">{pet.species}</span>
                           {pet.breed && (
-                            <span className="text-sm text-gray-500"> • {pet.breed}</span>
+                            <span className="text-sm text-surface-500"> • {pet.breed}</span>
                           )}
                         </div>
                       </td>
                       <td className="px-4 py-3">
                         <div>
-                          <div className="text-sm text-gray-900">{pet.owner_name}</div>
-                          <div className="text-xs text-gray-500">{pet.owner_email}</div>
+                          <div className="text-sm text-navy">{pet.owner_name}</div>
+                          <div className="text-xs text-surface-500">{pet.owner_email}</div>
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-sm text-gray-900">{getTotalRecords(pet)}</span>
+                        <span className="text-sm text-navy">{getTotalRecords(pet)}</span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-sm text-gray-600">{formatRelativeDate(pet.created_at)}</span>
+                        <span className="text-sm text-surface-600">{formatRelativeDate(pet.created_at)}</span>
                       </td>
                     </tr>
                   ))}
@@ -291,22 +291,22 @@ export default function PetsList() {
             </div>
 
             {/* Pagination */}
-            <div className="px-4 py-3 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="text-sm text-gray-700 text-center sm:text-left">
+            <div className="px-4 py-3 border-t border-surface-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="text-sm text-surface-700 text-center sm:text-left">
                 Showing {page * limit + 1} to {Math.min((page + 1) * limit, total)} of {total} pets
               </div>
               <div className="flex space-x-2">
                 <button
                   onClick={handlePrevPage}
                   disabled={page === 0}
-                  className="px-3 py-1.5 rounded border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1.5 rounded border border-surface-300 text-sm font-medium text-surface-700 hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Previous
                 </button>
                 <button
                   onClick={handleNextPage}
                   disabled={(page + 1) * limit >= total}
-                  className="px-3 py-1.5 rounded border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1.5 rounded border border-surface-300 text-sm font-medium text-surface-700 hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next
                 </button>

@@ -45,7 +45,7 @@ export default function AnalyticsDashboard() {
   if (error) {
     return (
       <div className="max-w-7xl mx-auto">
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+        <div className="bg-danger-light border border-danger-light text-danger px-4 py-3 rounded-lg">
           {error}
         </div>
       </div>
@@ -56,8 +56,8 @@ export default function AnalyticsDashboard() {
     <div className="max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Analytics Dashboard</h1>
-        <p className="text-gray-600 mt-1">Platform metrics and insights</p>
+        <h1 className="text-2xl font-bold text-navy">Analytics Dashboard</h1>
+        <p className="text-surface-600 mt-1">Platform metrics and insights</p>
       </div>
 
       {/* Overview Cards */}
@@ -66,11 +66,11 @@ export default function AnalyticsDashboard() {
           <div className="bg-white rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Users</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{overview.total_users.toLocaleString()}</p>
+                <p className="text-sm font-medium text-surface-600">Total Users</p>
+                <p className="text-3xl font-bold text-navy mt-2">{overview.total_users.toLocaleString()}</p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="w-12 h-12 bg-info-light rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-info" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
               </div>
@@ -80,11 +80,11 @@ export default function AnalyticsDashboard() {
           <div className="bg-white rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Pets</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{overview.total_pets.toLocaleString()}</p>
+                <p className="text-sm font-medium text-surface-600">Total Pets</p>
+                <p className="text-3xl font-bold text-navy mt-2">{overview.total_pets.toLocaleString()}</p>
               </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="w-12 h-12 bg-success-light rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
@@ -94,8 +94,8 @@ export default function AnalyticsDashboard() {
           <div className="bg-white rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">New Users (7d)</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{overview.new_users_this_week.toLocaleString()}</p>
+                <p className="text-sm font-medium text-surface-600">New Users (7d)</p>
+                <p className="text-3xl font-bold text-navy mt-2">{overview.new_users_this_week.toLocaleString()}</p>
               </div>
               <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
                 <svg className="w-6 h-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -108,8 +108,8 @@ export default function AnalyticsDashboard() {
           <div className="bg-white rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">New Pets (7d)</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{overview.new_pets_this_week.toLocaleString()}</p>
+                <p className="text-sm font-medium text-surface-600">New Pets (7d)</p>
+                <p className="text-3xl font-bold text-navy mt-2">{overview.new_pets_this_week.toLocaleString()}</p>
               </div>
               <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center">
                 <svg className="w-6 h-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -122,8 +122,8 @@ export default function AnalyticsDashboard() {
           <div className="bg-white rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Most Common Species</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2 capitalize">
+                <p className="text-sm font-medium text-surface-600">Most Common Species</p>
+                <p className="text-3xl font-bold text-navy mt-2 capitalize">
                   {overview.most_common_species || 'N/A'}
                 </p>
               </div>
@@ -138,9 +138,9 @@ export default function AnalyticsDashboard() {
           <div className="bg-white rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Adoption Rate</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{overview.adoption_rate.toFixed(1)}%</p>
-                <p className="text-xs text-gray-500 mt-1">Users with pets</p>
+                <p className="text-sm font-medium text-surface-600">Adoption Rate</p>
+                <p className="text-3xl font-bold text-navy mt-2">{overview.adoption_rate.toFixed(1)}%</p>
+                <p className="text-xs text-surface-500 mt-1">Users with pets</p>
               </div>
               <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center">
                 <svg className="w-6 h-6 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -157,58 +157,58 @@ export default function AnalyticsDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Most Common Conditions */}
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Most Common Conditions</h2>
+            <h2 className="text-lg font-semibold text-navy mb-4">Most Common Conditions</h2>
             {healthInsights.most_common_conditions.length > 0 ? (
               <div className="space-y-3">
                 {healthInsights.most_common_conditions.map((condition, index) => (
                   <div key={index} className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <span className="text-sm font-medium text-gray-500 w-6">{index + 1}.</span>
-                      <span className="text-sm text-gray-900">{condition.name}</span>
+                      <span className="text-sm font-medium text-surface-500 w-6">{index + 1}.</span>
+                      <span className="text-sm text-navy">{condition.name}</span>
                     </div>
-                    <span className="text-sm font-semibold text-gray-700">{condition.count}</span>
+                    <span className="text-sm font-semibold text-surface-700">{condition.count}</span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-500">No conditions recorded</p>
+              <p className="text-sm text-surface-500">No conditions recorded</p>
             )}
           </div>
 
           {/* Most Common Medications */}
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Most Common Medications</h2>
+            <h2 className="text-lg font-semibold text-navy mb-4">Most Common Medications</h2>
             {healthInsights.most_common_medications.length > 0 ? (
               <div className="space-y-3">
                 {healthInsights.most_common_medications.map((medication, index) => (
                   <div key={index} className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <span className="text-sm font-medium text-gray-500 w-6">{index + 1}.</span>
-                      <span className="text-sm text-gray-900">{medication.name}</span>
+                      <span className="text-sm font-medium text-surface-500 w-6">{index + 1}.</span>
+                      <span className="text-sm text-navy">{medication.name}</span>
                     </div>
-                    <span className="text-sm font-semibold text-gray-700">{medication.count}</span>
+                    <span className="text-sm font-semibold text-surface-700">{medication.count}</span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-500">No medications recorded</p>
+              <p className="text-sm text-surface-500">No medications recorded</p>
             )}
           </div>
 
           {/* Allergy and Microchip Stats */}
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Pet Health Stats</h2>
+            <h2 className="text-lg font-semibold text-navy mb-4">Pet Health Stats</h2>
             <div className="space-y-4">
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-700">Pets with Allergies</span>
-                  <span className="text-sm font-semibold text-gray-900">
+                  <span className="text-sm text-surface-700">Pets with Allergies</span>
+                  <span className="text-sm font-semibold text-navy">
                     {healthInsights.pets_with_allergies_pct.toFixed(1)}%
                   </span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-surface-200 rounded-full h-2">
                   <div
-                    className="bg-red-600 h-2 rounded-full"
+                    className="bg-danger h-2 rounded-full"
                     style={{ width: `${healthInsights.pets_with_allergies_pct}%` }}
                   ></div>
                 </div>
@@ -216,14 +216,14 @@ export default function AnalyticsDashboard() {
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-700">Pets with Microchips</span>
-                  <span className="text-sm font-semibold text-gray-900">
+                  <span className="text-sm text-surface-700">Pets with Microchips</span>
+                  <span className="text-sm font-semibold text-navy">
                     {healthInsights.pets_with_microchips_pct.toFixed(1)}%
                   </span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-surface-200 rounded-full h-2">
                   <div
-                    className="bg-blue-600 h-2 rounded-full"
+                    className="bg-info h-2 rounded-full"
                     style={{ width: `${healthInsights.pets_with_microchips_pct}%` }}
                   ></div>
                 </div>

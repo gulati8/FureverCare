@@ -91,7 +91,7 @@ export function ImageUploadList({
 
   if (uploads.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
+      <div className="text-center py-8 text-surface-500">
         <p>No photo uploads yet</p>
         <p className="text-sm mt-1">Take a photo of a pet document or label to get started</p>
       </div>
@@ -99,7 +99,7 @@ export function ImageUploadList({
   }
 
   return (
-    <div className="divide-y divide-gray-200">
+    <div className="divide-y divide-surface-200">
       {uploads.map((upload) => (
         <div key={upload.id} className="py-4 flex items-center justify-between">
           <div className="flex-1 min-w-0">
@@ -114,10 +114,10 @@ export function ImageUploadList({
                 }}
               />
               <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
+                <p className="text-sm font-medium text-navy truncate">
                   {upload.original_filename}
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-surface-500">
                   {formatFileSize(upload.file_size)} • {formatDocType(upload.document_type)} • {formatDate(upload.created_at)}
                 </p>
               </div>
@@ -132,7 +132,7 @@ export function ImageUploadList({
                 <button
                   onClick={() => handleProcess(upload)}
                   disabled={processingIds.has(upload.id)}
-                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                  className="px-3 py-1 text-sm bg-info text-white rounded hover:bg-info disabled:opacity-50"
                 >
                   {processingIds.has(upload.id) ? 'Processing...' : 'Extract Data'}
                 </button>
@@ -141,7 +141,7 @@ export function ImageUploadList({
               {upload.status === 'completed' && (
                 <button
                   onClick={() => onUploadSelect(upload)}
-                  className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+                  className="px-3 py-1 text-sm bg-success text-white rounded hover:bg-success"
                 >
                   Review
                 </button>
@@ -160,7 +160,7 @@ export function ImageUploadList({
               <button
                 onClick={() => handleDelete(upload.id)}
                 disabled={deletingIds.has(upload.id)}
-                className="p-1 text-gray-400 hover:text-red-500 disabled:opacity-50"
+                className="p-1 text-surface-400 hover:text-danger disabled:opacity-50"
                 title="Delete"
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

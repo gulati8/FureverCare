@@ -3,6 +3,7 @@ import { petsApi, PetCondition } from '../../../api/client';
 import InlineEditForm from '../../../components/InlineEditForm';
 import { formatFlexibleDate } from '../../../components/FlexibleDateInput';
 import SourceDocumentLink from '../../../components/SourceDocumentLink';
+import EmptyState from '../../../components/EmptyState';
 import { useFieldToggle } from '../../../hooks/useFieldToggle';
 import { CONDITION_FIELDS } from '../constants';
 
@@ -74,32 +75,32 @@ export default function ConditionsTab({ petId, token, conditions, setConditions,
             <div className="flex items-center gap-2">
               <p className={`font-medium ${isInactive ? 'line-through' : ''}`}>{c.name}</p>
               {c.show_on_card && (
-                <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-semibold">ALERT</span>
+                <span className="text-[10px] bg-danger-light text-danger px-1.5 py-0.5 rounded font-semibold">ALERT</span>
               )}
             </div>
-            <div className="flex gap-2 text-sm text-gray-500">
+            <div className="flex gap-2 text-sm text-surface-500">
               {c.severity && <span className="capitalize">{c.severity}</span>}
               {c.diagnosed_date && <span>Diagnosed: {formatFlexibleDate(c.diagnosed_date, c.diagnosed_date_precision)}</span>}
             </div>
-            {c.notes && <p className="text-sm text-gray-600 mt-1">{c.notes}</p>}
+            {c.notes && <p className="text-sm text-surface-600 mt-1">{c.notes}</p>}
             <SourceDocumentLink petId={petId} recordType="pet_conditions" recordId={c.id} onNavigateToReview={onNavigateToReview} />
           </div>
           <div className="flex gap-2 flex-shrink-0">
-            <button onClick={() => handleToggleShowOnCard(c)} className={`text-sm ${c.show_on_card ? 'text-red-600 hover:text-red-800' : 'text-gray-400 hover:text-gray-600'}`} title={c.show_on_card ? 'Remove from card' : 'Show on card'}>
+            <button onClick={() => handleToggleShowOnCard(c)} className={`text-sm ${c.show_on_card ? 'text-danger hover:text-danger-dark' : 'text-surface-400 hover:text-surface-600'}`} title={c.show_on_card ? 'Remove from card' : 'Show on card'}>
               {c.show_on_card ? '\u{1F514}' : '\u{1F515}'}
             </button>
             <button onClick={() => setEditingId(c.id)} className="text-navy hover:text-primary-800 text-sm">Edit</button>
-            <button onClick={() => handleToggleActive(c)} className={`text-sm ${isInactive ? 'text-navy hover:text-primary-800' : 'text-gray-600 hover:text-gray-800'}`}>
+            <button onClick={() => handleToggleActive(c)} className={`text-sm ${isInactive ? 'text-navy hover:text-primary-800' : 'text-surface-600 hover:text-navy'}`}>
               {isInactive ? 'Reactivate' : 'Discontinue'}
             </button>
             {deletingId === c.id ? (
               <>
-                <span className="text-sm text-gray-500">Sure?</span>
-                <button onClick={() => handleDelete(c.id)} className="text-red-600 hover:text-red-800 text-sm font-semibold">Yes</button>
-                <button onClick={() => setDeletingId(null)} className="text-gray-600 hover:text-gray-800 text-sm">No</button>
+                <span className="text-sm text-surface-500">Sure?</span>
+                <button onClick={() => handleDelete(c.id)} className="text-danger hover:text-danger-dark text-sm font-semibold">Yes</button>
+                <button onClick={() => setDeletingId(null)} className="text-surface-600 hover:text-navy text-sm">No</button>
               </>
             ) : (
-              <button onClick={() => setDeletingId(c.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
+              <button onClick={() => setDeletingId(c.id)} className="text-danger hover:text-danger-dark text-sm">Delete</button>
             )}
           </div>
         </div>
@@ -110,7 +111,7 @@ export default function ConditionsTab({ petId, token, conditions, setConditions,
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold">Medical Conditions</h3>
+        <h3 className="section-title">Medical Conditions</h3>
         <button onClick={() => setShowForm(!showForm)} className="btn-primary text-sm">+ Add Condition</button>
       </div>
 
@@ -126,7 +127,7 @@ export default function ConditionsTab({ petId, token, conditions, setConditions,
 
       {active.length > 0 && (
         <div className="mb-6">
-          <h4 className="text-sm font-medium text-gray-500 mb-2">Active Conditions</h4>
+          <h4 className="text-sm font-medium text-surface-500 mb-2">Active Conditions</h4>
           <ul className="divide-y border rounded-lg">
             {active.map(c => renderConditionRow(c))}
           </ul>
@@ -135,7 +136,7 @@ export default function ConditionsTab({ petId, token, conditions, setConditions,
 
       {inactive.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium text-gray-500 mb-2">Discontinued Conditions</h4>
+          <h4 className="text-sm font-medium text-surface-500 mb-2">Discontinued Conditions</h4>
           <ul className="divide-y border rounded-lg opacity-60">
             {inactive.map(c => renderConditionRow(c, true))}
           </ul>
@@ -143,7 +144,7 @@ export default function ConditionsTab({ petId, token, conditions, setConditions,
       )}
 
       {conditions.length === 0 && (
-        <p className="text-gray-500 text-center py-8">No medical conditions recorded</p>
+        <EmptyState title="No medical conditions recorded" compact />
       )}
     </div>
   );

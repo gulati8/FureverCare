@@ -134,9 +134,9 @@ export default function ShareWallet({ petId, petName, onClose }: ShareWalletProp
         <div className="flex justify-between items-center p-6 border-b">
           <div>
             <h2 className="text-xl font-bold">Custom Share Links</h2>
-            <p className="text-sm text-gray-500">Create time-limited or PIN-protected links for {petName}</p>
+            <p className="text-sm text-surface-500">Create time-limited or PIN-protected links for {petName}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} className="text-surface-400 hover:text-surface-600">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -149,7 +149,7 @@ export default function ShareWallet({ petId, petName, onClose }: ShareWalletProp
             <div className="space-y-4">
               {/* Create New Link Button */}
               <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-surface-600">
                   Create links for pet sitters, boarding, or temporary access.
                 </p>
                 <button
@@ -161,9 +161,9 @@ export default function ShareWallet({ petId, petName, onClose }: ShareWalletProp
               </div>
 
               {isLoading ? (
-                <div className="text-center py-8 text-gray-500">Loading...</div>
+                <div className="text-center py-8 text-surface-500">Loading...</div>
               ) : tokens.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
+                <div className="text-center py-12 text-surface-500">
                   <p className="mb-2">No custom share links yet</p>
                   <p className="text-sm">Use these for pet sitters, boarding facilities, or anyone who needs temporary access.</p>
                 </div>
@@ -176,23 +176,23 @@ export default function ShareWallet({ petId, petName, onClose }: ShareWalletProp
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div>
-                          <h4 className="font-medium text-gray-900">
+                          <h4 className="font-medium text-navy">
                             {t.label || 'Unnamed Link'}
                           </h4>
-                          <div className="flex items-center gap-2 text-xs text-gray-500">
-                            {t.has_pin && <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">PIN</span>}
+                          <div className="flex items-center gap-2 text-xs text-surface-500">
+                            {t.has_pin && <span className="bg-info-light text-info px-1.5 py-0.5 rounded">PIN</span>}
                             <span>{formatExpiry(t.expires_at)}</span>
                           </div>
                         </div>
                         {t.is_expired ? (
-                          <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">Expired</span>
+                          <span className="text-xs bg-danger-light text-danger px-2 py-1 rounded">Expired</span>
                         ) : !t.is_active ? (
-                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">Deactivated</span>
+                          <span className="text-xs bg-surface-100 text-surface-600 px-2 py-1 rounded">Deactivated</span>
                         ) : (
-                          <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">Active</span>
+                          <span className="text-xs bg-success-light text-success px-2 py-1 rounded">Active</span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-400 mb-3">
+                      <p className="text-xs text-surface-400 mb-3">
                         {formatLastAccess(t.last_accessed_at, t.access_count)}
                       </p>
                       <div className="flex gap-2">
@@ -213,7 +213,7 @@ export default function ShareWallet({ petId, petName, onClose }: ShareWalletProp
                         </button>
                         <button
                           onClick={() => handleDelete(t.id)}
-                          className="text-red-600 hover:text-red-800 text-sm px-2"
+                          className="text-danger hover:text-danger-dark text-sm px-2"
                         >
                           Delete
                         </button>
@@ -229,7 +229,7 @@ export default function ShareWallet({ petId, petName, onClose }: ShareWalletProp
             <div className="space-y-4">
               <button
                 onClick={() => setViewMode('list')}
-                className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1"
+                className="text-sm text-surface-600 hover:text-navy flex items-center gap-1"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -238,11 +238,11 @@ export default function ShareWallet({ petId, petName, onClose }: ShareWalletProp
               </button>
 
               <div>
-                <h3 className="font-medium text-gray-900 mb-4">Create Custom Share Link</h3>
+                <h3 className="font-medium text-navy mb-4">Create Custom Share Link</h3>
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-surface-700 mb-1">
                       Label (optional)
                     </label>
                     <input
@@ -255,7 +255,7 @@ export default function ShareWallet({ petId, petName, onClose }: ShareWalletProp
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-surface-700 mb-1">
                       Expiration
                     </label>
                     <select
@@ -272,7 +272,7 @@ export default function ShareWallet({ petId, petName, onClose }: ShareWalletProp
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-surface-700 mb-1">
                       PIN Protection (optional)
                     </label>
                     <input
@@ -283,7 +283,7 @@ export default function ShareWallet({ petId, petName, onClose }: ShareWalletProp
                       maxLength={20}
                       className="input"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-surface-500 mt-1">
                       4-20 characters. Viewers must enter this PIN to see the card.
                     </p>
                   </div>
@@ -309,7 +309,7 @@ export default function ShareWallet({ petId, petName, onClose }: ShareWalletProp
                   setSelectedToken(null);
                   setViewMode('list');
                 }}
-                className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1"
+                className="text-sm text-surface-600 hover:text-navy flex items-center gap-1"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -318,12 +318,12 @@ export default function ShareWallet({ petId, petName, onClose }: ShareWalletProp
               </button>
 
               <div className="text-center">
-                <h3 className="font-medium text-gray-900 mb-1">
+                <h3 className="font-medium text-navy mb-1">
                   {selectedToken.label || 'Share Link'}
                 </h3>
-                <div className="flex items-center justify-center gap-2 text-sm text-gray-500 mb-4">
+                <div className="flex items-center justify-center gap-2 text-sm text-surface-500 mb-4">
                   {selectedToken.has_pin && (
-                    <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs">PIN Protected</span>
+                    <span className="bg-info-light text-info px-2 py-0.5 rounded text-xs">PIN Protected</span>
                   )}
                   <span>{formatExpiry(selectedToken.expires_at)}</span>
                 </div>
@@ -332,7 +332,7 @@ export default function ShareWallet({ petId, petName, onClose }: ShareWalletProp
                   <QRCodeSVG value={getShareUrl(selectedToken.token)} size={200} />
                 </div>
 
-                <p className="text-sm text-gray-600 mb-4">
+                <p className="text-sm text-surface-600 mb-4">
                   Scan this QR code to access {petName}'s emergency health card.
                   {selectedToken.has_pin && ' A PIN will be required.'}
                 </p>
@@ -352,7 +352,7 @@ export default function ShareWallet({ petId, petName, onClose }: ShareWalletProp
                   </button>
                 </div>
 
-                <p className="text-xs text-gray-400 mt-4">
+                <p className="text-xs text-surface-400 mt-4">
                   {formatLastAccess(selectedToken.last_accessed_at, selectedToken.access_count)}
                 </p>
               </div>

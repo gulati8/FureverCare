@@ -151,7 +151,7 @@ export function ExtractionReview({ petId, upload, onBack, onApprovalComplete }: 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <svg className="animate-spin h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24">
+        <svg className="animate-spin h-8 w-8 text-info" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
         </svg>
@@ -161,9 +161,9 @@ export function ExtractionReview({ petId, upload, onBack, onApprovalComplete }: 
 
   if (error && !extraction) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <p className="text-red-600">{error}</p>
-        <button onClick={onBack} className="mt-2 text-sm text-red-600 hover:text-red-700 underline">
+      <div className="bg-danger-light border border-danger-light rounded-lg p-4">
+        <p className="text-danger">{error}</p>
+        <button onClick={onBack} className="mt-2 text-sm text-danger hover:text-danger underline">
           Go back
         </button>
       </div>
@@ -173,8 +173,8 @@ export function ExtractionReview({ petId, upload, onBack, onApprovalComplete }: 
   if (!extraction || extraction.items.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-500">No data was extracted from this document.</p>
-        <button onClick={onBack} className="mt-4 text-blue-600 hover:text-blue-700">
+        <p className="text-surface-500">No data was extracted from this document.</p>
+        <button onClick={onBack} className="mt-4 text-info hover:text-info">
           Go back
         </button>
       </div>
@@ -195,42 +195,42 @@ export function ExtractionReview({ petId, upload, onBack, onApprovalComplete }: 
         <div>
           <button
             onClick={onBack}
-            className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+            className="text-sm text-surface-500 hover:text-surface-700 flex items-center gap-1"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
             Back to uploads
           </button>
-          <h3 className="mt-2 text-lg font-medium text-gray-900">
+          <h3 className="mt-2 text-lg font-medium text-navy">
             Review Extracted Data
           </h3>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-surface-500">
             From: {upload.original_filename}
           </p>
         </div>
       </div>
 
       {/* Confidence legend */}
-      <div className="bg-gray-50 rounded-lg p-3 flex items-center gap-4 text-xs">
-        <span className="text-gray-500">Confidence:</span>
+      <div className="bg-surface rounded-lg p-3 flex items-center gap-4 text-xs">
+        <span className="text-surface-500">Confidence:</span>
         <span className="flex items-center gap-1">
-          <span className="w-3 h-3 rounded bg-green-500"></span>
+          <span className="w-3 h-3 rounded bg-success"></span>
           High (80%+)
         </span>
         <span className="flex items-center gap-1">
-          <span className="w-3 h-3 rounded bg-yellow-500"></span>
+          <span className="w-3 h-3 rounded bg-warning"></span>
           Medium (50-80%)
         </span>
         <span className="flex items-center gap-1">
-          <span className="w-3 h-3 rounded bg-red-500"></span>
+          <span className="w-3 h-3 rounded bg-danger"></span>
           Low (&lt;50%)
         </span>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-          <p className="text-sm text-red-600">{error}</p>
+        <div className="bg-danger-light border border-danger-light rounded-lg p-3">
+          <p className="text-sm text-danger">{error}</p>
         </div>
       )}
 
@@ -238,15 +238,15 @@ export function ExtractionReview({ petId, upload, onBack, onApprovalComplete }: 
       {pendingItems.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h4 className="font-medium text-gray-900">
+            <h4 className="font-medium text-navy">
               Items to Review ({pendingItems.length})
             </h4>
             <div className="flex items-center gap-2 text-sm">
-              <button onClick={selectAll} className="text-blue-600 hover:text-blue-700">
+              <button onClick={selectAll} className="text-info hover:text-info">
                 Select all
               </button>
-              <span className="text-gray-300">|</span>
-              <button onClick={selectNone} className="text-blue-600 hover:text-blue-700">
+              <span className="text-surface-300">|</span>
+              <button onClick={selectNone} className="text-info hover:text-info">
                 Select none
               </button>
             </div>
@@ -269,7 +269,7 @@ export function ExtractionReview({ petId, upload, onBack, onApprovalComplete }: 
             <button
               onClick={handleApprove}
               disabled={selectedIds.size === 0 || isApproving}
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-4 py-2 bg-success text-white rounded-md hover:bg-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isApproving ? (
                 <>
@@ -292,7 +292,7 @@ export function ExtractionReview({ petId, upload, onBack, onApprovalComplete }: 
             <button
               onClick={handleReject}
               disabled={selectedIds.size === 0 || isRejecting}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-4 py-2 bg-danger text-white rounded-md hover:bg-danger disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isRejecting ? 'Rejecting...' : `Reject Selected (${selectedIds.size})`}
             </button>
@@ -303,7 +303,7 @@ export function ExtractionReview({ petId, upload, onBack, onApprovalComplete }: 
       {/* Processed items */}
       {processedItems.length > 0 && (
         <div className="mt-8">
-          <h4 className="font-medium text-gray-900 mb-3">
+          <h4 className="font-medium text-navy mb-3">
             Already Processed ({processedItems.length})
           </h4>
           <div className="space-y-3 opacity-75">
@@ -322,17 +322,17 @@ export function ExtractionReview({ petId, upload, onBack, onApprovalComplete }: 
 
       {/* All done */}
       {pendingItems.length === 0 && processedItems.length > 0 && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-          <svg className="mx-auto h-12 w-12 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="bg-success-light border border-success-light rounded-lg p-4 text-center">
+          <svg className="mx-auto h-12 w-12 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <h3 className="mt-2 text-lg font-medium text-green-900">All items processed!</h3>
-          <p className="text-sm text-green-600 mt-1">
+          <h3 className="mt-2 text-lg font-medium text-success">All items processed!</h3>
+          <p className="text-sm text-success mt-1">
             The extracted data has been reviewed and added to your pet's records.
           </p>
           <button
             onClick={onBack}
-            className="mt-4 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+            className="mt-4 px-4 py-2 bg-success text-white rounded-md hover:bg-success"
           >
             Back to uploads
           </button>

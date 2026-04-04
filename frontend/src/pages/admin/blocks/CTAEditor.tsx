@@ -54,8 +54,8 @@ export default function CTAEditor({ content, onChange }: CTAEditorProps) {
       </div>
 
       {/* Button */}
-      <div className="p-4 bg-gray-50 rounded-lg">
-        <h3 className="text-sm font-medium text-gray-700 mb-3">Call to Action Button</h3>
+      <div className="p-4 bg-surface rounded-lg">
+        <h3 className="text-sm font-medium text-surface-700 mb-3">Call to Action Button</h3>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="label">Button Text</label>

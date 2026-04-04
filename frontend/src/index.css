@@ -19,6 +19,7 @@
   --color-danger-dark: #922B21;
   --color-danger-light: #FDECEB;
   --color-warning: #E6A817;
+  --color-warning-dark: #8B6914;
   --color-warning-light: #FFF8E1;
   --color-success: #27AE60;
   --color-success-light: #EAFAF1;
@@ -66,6 +67,22 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ========== Component Classes ========== */
 @layer components {
+  .page-title {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-navy);
+    line-height: 1.2;
+  }
+
+  .section-title {
+    font-family: var(--font-heading);
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--color-navy);
+    line-height: 1.3;
+  }
+
   .btn {
     @apply inline-flex items-center justify-center gap-2 font-semibold transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
     font-family: var(--font-body);
@@ -139,7 +156,7 @@ h1, h2, h3, h4, h5, h6 {
   .input {
     @apply w-full border focus:outline-none focus:ring-2 focus:border-transparent;
     font-family: var(--font-body);
-    padding: 10px 14px;
+    padding: 12px 16px;
     border-color: var(--color-surface-200);
     border-radius: var(--radius-sm);
     font-size: 0.9375rem;
@@ -157,9 +174,17 @@ h1, h2, h3, h4, h5, h6 {
     border: 1px solid var(--color-surface-200);
     border-radius: var(--radius-lg);
     padding: 24px;
-    transition: box-shadow 0.15s ease;
   }
-  .card:hover {
+
+  .card-interactive {
+    background: var(--color-white);
+    border: 1px solid var(--color-surface-200);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    transition: box-shadow 0.15s ease;
+    cursor: pointer;
+  }
+  .card-interactive:hover {
     box-shadow: var(--shadow-md);
   }
 
@@ -171,7 +196,7 @@ h1, h2, h3, h4, h5, h6 {
   /* Badge system */
   .badge {
     @apply inline-flex items-center gap-1 whitespace-nowrap;
-    padding: 3px 10px;
+    padding: 4px 12px;
     border-radius: 100px;
     font-size: 0.75rem;
     font-weight: 600;
@@ -222,14 +247,14 @@ h1, h2, h3, h4, h5, h6 {
   }
   .data-table th {
     @apply text-left text-xs font-semibold uppercase tracking-wider;
-    padding: 10px 16px;
+    padding: 12px 16px;
     color: var(--color-surface-500);
     border-bottom: 2px solid var(--color-surface-200);
     background: var(--color-surface);
   }
   .data-table td {
     @apply text-sm;
-    padding: 14px 16px;
+    padding: 16px;
     border-bottom: 1px solid var(--color-surface-100);
   }
   .data-table tr:hover td {
@@ -289,8 +314,8 @@ h1, h2, h3, h4, h5, h6 {
 .pet-profile-nav-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
+  gap: 12px;
+  padding: 12px 16px;
   border-radius: var(--radius-sm);
   font-size: 0.875rem;
   font-weight: 500;
@@ -357,7 +382,7 @@ h1, h2, h3, h4, h5, h6 {
   text-align: left;
   background: none;
   border: none;
-  padding: 5px 10px;
+  padding: 4px 12px;
   border-radius: var(--radius-sm);
   font-size: 0.8125rem;
   font-weight: 400;
@@ -393,8 +418,8 @@ h1, h2, h3, h4, h5, h6 {
   position: absolute;
   top: 0;
   right: 0;
-  width: 72px;
-  height: 36px; /* match pill height */
+  width: 56px;
+  height: 100%; /* match container height */
   background: linear-gradient(to right, transparent 0%, var(--color-surface) 60%);
   pointer-events: none;
   z-index: 1;
@@ -412,7 +437,7 @@ h1, h2, h3, h4, h5, h6 {
   overflow-x: auto;
   padding-bottom: 16px;
   margin-bottom: 16px;
-  padding-right: 48px; /* space so last pill isn't under the fade */
+  padding-right: 64px; /* space so last pill isn't under the fade */
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
@@ -557,7 +582,7 @@ h1, h2, h3, h4, h5, h6 {
 .health-accordion-title {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   font-weight: 600;
   font-size: 0.9375rem;
   color: var(--color-navy);
@@ -589,7 +614,7 @@ h1, h2, h3, h4, h5, h6 {
 .emergency-card-preview-header {
   background: var(--color-danger);
   color: white;
-  padding: 10px 16px;
+  padding: 12px 16px;
   display: flex;
   align-items: center;
   gap: 8px;

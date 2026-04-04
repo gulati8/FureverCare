@@ -64,7 +64,7 @@ export default function Homepage() {
         </div>
       ) : error ? (
         <div className="py-20 text-center max-w-md mx-auto px-4">
-          <p className="text-gray-600 mb-4">Some content couldn't be loaded.</p>
+          <p className="text-surface-600 mb-4">Some content couldn't be loaded.</p>
           <button
             onClick={() => window.location.reload()}
             className="btn-primary px-6 py-2"
@@ -83,9 +83,9 @@ export default function Homepage() {
 
       {/* Fallback footer if no CMS footer block */}
       {!footerContent && (
-        <footer className="bg-gray-900 py-8">
+        <footer className="bg-navy py-8">
           <div className="max-w-7xl mx-auto px-4 text-center">
-            <p className="text-gray-400 text-sm">
+            <p className="text-surface-400 text-sm">
               {new Date().getFullYear()} FureverCare. All rights reserved.
             </p>
           </div>

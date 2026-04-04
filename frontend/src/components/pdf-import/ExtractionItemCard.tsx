@@ -32,10 +32,10 @@ const RECORD_TYPE_CONFIG: Record<RecordType, { label: string; icon: string }> = 
 
 function getConfidenceColor(score: number | null, isDuplicate: boolean): string {
   if (isDuplicate) return 'bg-amber-50 border-amber-300';
-  if (score === null) return 'bg-gray-50 border-gray-200';
-  if (score >= 0.8) return 'bg-green-50 border-green-200';
-  if (score >= 0.5) return 'bg-yellow-50 border-yellow-200';
-  return 'bg-red-50 border-red-200';
+  if (score === null) return 'bg-surface border-surface-200';
+  if (score >= 0.8) return 'bg-success-light border-success-light';
+  if (score >= 0.5) return 'bg-warning-light border-warning-light';
+  return 'bg-danger-light border-danger-light';
 }
 
 const SEVERITY_OPTIONS = [
@@ -197,11 +197,11 @@ export function ExtractionItemCard({
   const statusBadge = () => {
     switch (item.status) {
       case 'approved':
-        return <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">Approved</span>;
+        return <span className="text-xs bg-success-light text-success px-2 py-0.5 rounded">Approved</span>;
       case 'rejected':
-        return <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded">Rejected</span>;
+        return <span className="text-xs bg-danger-light text-danger px-2 py-0.5 rounded">Rejected</span>;
       case 'modified':
-        return <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Modified</span>;
+        return <span className="text-xs bg-info-light text-info px-2 py-0.5 rounded">Modified</span>;
       default:
         return null;
     }
@@ -241,8 +241,8 @@ export function ExtractionItemCard({
 
   /** Get match score badge color */
   const getMatchScoreBadgeColor = (score: number): string => {
-    if (score > 0.9) return 'bg-green-100 text-green-800';
-    if (score >= 0.7) return 'bg-yellow-100 text-yellow-800';
+    if (score > 0.9) return 'bg-success-light text-success';
+    if (score >= 0.7) return 'bg-warning-light text-warning-dark';
     return 'bg-orange-100 text-orange-800';
   };
 
@@ -291,11 +291,11 @@ export function ExtractionItemCard({
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="border-b border-amber-200">
-              <th className="text-left py-2 px-2 text-gray-600 font-medium w-1/4">Field</th>
-              <th className="text-left py-2 px-2 text-gray-600 font-medium w-5/16">Existing</th>
-              <th className="text-left py-2 px-2 text-gray-600 font-medium w-5/16">Imported</th>
+              <th className="text-left py-2 px-2 text-surface-600 font-medium w-1/4">Field</th>
+              <th className="text-left py-2 px-2 text-surface-600 font-medium w-5/16">Existing</th>
+              <th className="text-left py-2 px-2 text-surface-600 font-medium w-5/16">Imported</th>
               {onFieldOverrideChange && mergeAction === 'smart_merge' && (
-                <th className="text-center py-2 px-2 text-gray-600 font-medium w-3/16">Keep</th>
+                <th className="text-center py-2 px-2 text-surface-600 font-medium w-3/16">Keep</th>
               )}
             </tr>
           </thead>
@@ -309,12 +309,12 @@ export function ExtractionItemCard({
               const currentOverride = fieldOverrides?.[field];
 
               return (
-                <tr key={field} className={`border-b border-gray-100 ${hasChange ? 'bg-amber-50/50' : ''}`}>
-                  <td className="py-2 px-2 text-gray-700 font-medium">{label}</td>
-                  <td className={`py-2 px-2 ${hasChange ? 'text-red-700' : 'text-gray-600'}`}>
+                <tr key={field} className={`border-b border-surface-100 ${hasChange ? 'bg-amber-50/50' : ''}`}>
+                  <td className="py-2 px-2 text-surface-700 font-medium">{label}</td>
+                  <td className={`py-2 px-2 ${hasChange ? 'text-danger' : 'text-surface-600'}`}>
                     {existingStr}
                   </td>
-                  <td className={`py-2 px-2 ${hasChange ? 'text-green-700 font-medium' : 'text-gray-600'}`}>
+                  <td className={`py-2 px-2 ${hasChange ? 'text-success font-medium' : 'text-surface-600'}`}>
                     {importedStr}
                   </td>
                   {/* Phase 4: Per-field radio controls */}
@@ -329,7 +329,7 @@ export function ExtractionItemCard({
                             onChange={() => onFieldOverrideChange(field, 'existing')}
                             className="text-amber-600 focus:ring-amber-500"
                           />
-                          <span className="text-xs text-gray-600">Existing</span>
+                          <span className="text-xs text-surface-600">Existing</span>
                         </label>
                         <label className="flex items-center gap-1 cursor-pointer">
                           <input
@@ -337,15 +337,15 @@ export function ExtractionItemCard({
                             name={`field-${item.id}-${field}`}
                             checked={currentOverride !== 'existing'}
                             onChange={() => onFieldOverrideChange(field, 'imported')}
-                            className="text-green-600 focus:ring-green-500"
+                            className="text-success focus:ring-green-500"
                           />
-                          <span className="text-xs text-gray-600">Imported</span>
+                          <span className="text-xs text-surface-600">Imported</span>
                         </label>
                       </div>
                     </td>
                   )}
                   {onFieldOverrideChange && mergeAction === 'smart_merge' && !hasChange && (
-                    <td className="py-2 px-2 text-center text-xs text-gray-400">
+                    <td className="py-2 px-2 text-center text-xs text-surface-400">
                       Same
                     </td>
                   )}
@@ -373,7 +373,7 @@ export function ExtractionItemCard({
               checked={isSelected}
               onClick={(e) => e.stopPropagation()}
               onChange={() => onToggleSelect()}
-              className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+              className="h-4 w-4 text-info rounded border-surface-300 focus:ring-blue-500"
             />
           )}
           {/* Duplicate badge indicator */}
@@ -387,15 +387,15 @@ export function ExtractionItemCard({
           <span className="text-xl">{config.icon}</span>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-gray-500 uppercase">{config.label}</span>
+              <span className="text-xs font-medium text-surface-500 uppercase">{config.label}</span>
               {isDuplicate && !isDisabled && (
                 <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-medium">Duplicate</span>
               )}
               {statusBadge()}
               {mergeAction && !isDisabled && (
                 <span className={`text-xs px-2 py-0.5 rounded font-medium ${
-                  mergeAction === 'smart_merge' ? 'bg-blue-100 text-blue-800' :
-                  mergeAction === 'skip' ? 'bg-gray-100 text-gray-700' :
+                  mergeAction === 'smart_merge' ? 'bg-info-light text-info' :
+                  mergeAction === 'skip' ? 'bg-surface-100 text-surface-700' :
                   'bg-purple-100 text-purple-800'
                 }`}>
                   {mergeAction === 'smart_merge' ? 'Merge' :
@@ -403,13 +403,13 @@ export function ExtractionItemCard({
                 </span>
               )}
             </div>
-            <p className="font-medium text-gray-900">{getMainValue()}</p>
+            <p className="font-medium text-navy">{getMainValue()}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <ConfidenceBadge score={item.confidence_score} />
           <svg
-            className={`h-5 w-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+            className={`h-5 w-5 text-surface-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -460,8 +460,8 @@ export function ExtractionItemCard({
             onClick={(e) => { e.stopPropagation(); onMergeActionChange('smart_merge'); }}
             className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
               mergeAction === 'smart_merge'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                ? 'bg-info text-white'
+                : 'bg-surface-100 text-surface-700 hover:bg-info-light hover:text-info'
             }`}
           >
             Approve (Smart Merge)
@@ -470,8 +470,8 @@ export function ExtractionItemCard({
             onClick={(e) => { e.stopPropagation(); onMergeActionChange('skip'); }}
             className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
               mergeAction === 'skip'
-                ? 'bg-gray-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-surface-600 text-white'
+                : 'bg-surface-100 text-surface-700 hover:bg-surface-200'
             }`}
           >
             Skip / Keep Existing
@@ -481,7 +481,7 @@ export function ExtractionItemCard({
             className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
               mergeAction === 'create_new'
                 ? 'bg-purple-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-purple-50 hover:text-purple-700'
+                : 'bg-surface-100 text-surface-700 hover:bg-purple-50 hover:text-purple-700'
             }`}
           >
             Create New

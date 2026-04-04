@@ -72,23 +72,23 @@ export default function HowItWorksEditor({ content, onChange }: HowItWorksEditor
           {steps.map((step, index) => (
             <div
               key={index}
-              className="border border-gray-200 rounded-lg overflow-hidden"
+              className="border border-surface-200 rounded-lg overflow-hidden"
             >
               {/* Step header - always visible */}
               <div
-                className="px-4 py-3 bg-gray-50 flex items-center justify-between cursor-pointer hover:bg-gray-100"
+                className="px-4 py-3 bg-surface flex items-center justify-between cursor-pointer hover:bg-surface-100"
                 onClick={() => setEditingIndex(editingIndex === index ? null : index)}
               >
                 <div className="flex items-center space-x-3">
                   <span className="w-7 h-7 rounded-full bg-primary-600 text-white flex items-center justify-center text-sm font-bold">
                     {index + 1}
                   </span>
-                  <span className="font-medium text-gray-900">
+                  <span className="font-medium text-navy">
                     {step.title || 'Untitled Step'}
                   </span>
                 </div>
                 <svg
-                  className={`w-5 h-5 text-gray-400 transition-transform ${
+                  className={`w-5 h-5 text-surface-400 transition-transform ${
                     editingIndex === index ? 'rotate-180' : ''
                   }`}
                   fill="none"
@@ -101,7 +101,7 @@ export default function HowItWorksEditor({ content, onChange }: HowItWorksEditor
 
               {/* Step editor - expandable */}
               {editingIndex === index && (
-                <div className="p-4 space-y-4 border-t border-gray-200">
+                <div className="p-4 space-y-4 border-t border-surface-200">
                   <div>
                     <label className="label">Step Title</label>
                     <input
@@ -124,7 +124,7 @@ export default function HowItWorksEditor({ content, onChange }: HowItWorksEditor
                     />
                   </div>
 
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-surface-500">
                     Step number is auto-assigned based on order.
                   </p>
                 </div>
@@ -134,7 +134,7 @@ export default function HowItWorksEditor({ content, onChange }: HowItWorksEditor
         </div>
 
         {steps.length === 0 && (
-          <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
+          <div className="text-center py-8 text-surface-500 bg-surface rounded-lg">
             No steps defined yet.
           </div>
         )}

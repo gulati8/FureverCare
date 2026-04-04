@@ -2,6 +2,7 @@ import { useState, SetStateAction } from 'react';
 import { petsApi, PetAllergy } from '../../../api/client';
 import InlineEditForm from '../../../components/InlineEditForm';
 import SourceDocumentLink from '../../../components/SourceDocumentLink';
+import EmptyState from '../../../components/EmptyState';
 import { useFieldToggle } from '../../../hooks/useFieldToggle';
 import { ALLERGY_FIELDS } from '../constants';
 
@@ -44,7 +45,7 @@ export default function AllergiesTab({ petId, token, allergies, setAllergies, on
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold">Allergies</h3>
+        <h3 className="section-title">Allergies</h3>
         <button onClick={() => setShowForm(!showForm)} className="btn-primary text-sm">+ Add Allergy</button>
       </div>
 
@@ -59,7 +60,7 @@ export default function AllergiesTab({ petId, token, allergies, setAllergies, on
       )}
 
       {allergies.length === 0 ? (
-        <p className="text-gray-500 text-center py-8">No allergies recorded</p>
+        <EmptyState title="No allergies recorded" compact />
       ) : (
         <ul className="divide-y">
           {allergies.map(a => (
@@ -77,26 +78,26 @@ export default function AllergiesTab({ petId, token, allergies, setAllergies, on
                     <div className="flex items-center gap-2">
                       <p className="font-medium">{a.allergen}</p>
                       {a.show_on_card && (
-                        <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-semibold">ALERT</span>
+                        <span className="text-[10px] bg-danger-light text-danger px-1.5 py-0.5 rounded font-semibold">ALERT</span>
                       )}
                     </div>
-                    {a.severity && <span className={`text-sm capitalize ${a.severity === 'life-threatening' ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>{a.severity}</span>}
-                    {a.reaction && <p className="text-sm text-gray-600 mt-1">Reaction: {a.reaction}</p>}
+                    {a.severity && <span className={`text-sm capitalize ${a.severity === 'life-threatening' ? 'text-danger font-semibold' : 'text-surface-500'}`}>{a.severity}</span>}
+                    {a.reaction && <p className="text-sm text-surface-600 mt-1">Reaction: {a.reaction}</p>}
                     <SourceDocumentLink petId={petId} recordType="pet_allergies" recordId={a.id} onNavigateToReview={onNavigateToReview} />
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => handleToggleShowOnCard(a)} className={`text-sm ${a.show_on_card ? 'text-red-600 hover:text-red-800' : 'text-gray-400 hover:text-gray-600'}`} title={a.show_on_card ? 'Remove from card' : 'Show on card'}>
+                    <button onClick={() => handleToggleShowOnCard(a)} className={`text-sm ${a.show_on_card ? 'text-danger hover:text-danger-dark' : 'text-surface-400 hover:text-surface-600'}`} title={a.show_on_card ? 'Remove from card' : 'Show on card'}>
                       {a.show_on_card ? '\u{1F514}' : '\u{1F515}'}
                     </button>
                     <button onClick={() => setEditingId(a.id)} className="text-navy hover:text-primary-800 text-sm">Edit</button>
                     {deletingId === a.id ? (
                       <>
-                        <span className="text-sm text-gray-500">Sure?</span>
-                        <button onClick={() => handleDelete(a.id)} className="text-red-600 hover:text-red-800 text-sm font-semibold">Yes</button>
-                        <button onClick={() => setDeletingId(null)} className="text-gray-600 hover:text-gray-800 text-sm">No</button>
+                        <span className="text-sm text-surface-500">Sure?</span>
+                        <button onClick={() => handleDelete(a.id)} className="text-danger hover:text-danger-dark text-sm font-semibold">Yes</button>
+                        <button onClick={() => setDeletingId(null)} className="text-surface-600 hover:text-navy text-sm">No</button>
                       </>
                     ) : (
-                      <button onClick={() => setDeletingId(a.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                      <button onClick={() => setDeletingId(a.id)} className="text-danger hover:text-danger-dark text-sm">Delete</button>
                     )}
                   </div>
                 </div>

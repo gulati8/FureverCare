@@ -18,7 +18,7 @@ export default function AdminLayout() {
   const closeSidebar = () => setSidebarOpen(false);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-surface flex">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
@@ -154,7 +154,7 @@ export default function AdminLayout() {
               {/* Hamburger menu button for mobile */}
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                className="lg:hidden p-2 rounded-lg text-surface-600 hover:text-navy hover:bg-surface-100 transition-colors"
                 aria-label="Open sidebar"
               >
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -166,10 +166,10 @@ export default function AdminLayout() {
               </span>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-4">
-              <span className="text-gray-600 text-sm sm:text-base hidden sm:inline">Hi, {user?.name}</span>
+              <span className="text-surface-600 text-sm sm:text-base hidden sm:inline">Hi, {user?.name}</span>
               <button
                 onClick={handleLogout}
-                className="text-gray-600 hover:text-gray-900 text-sm sm:text-base"
+                className="text-surface-600 hover:text-navy text-sm sm:text-base"
               >
                 Logout
               </button>

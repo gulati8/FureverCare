@@ -27,7 +27,7 @@ export default function PublicCard() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
       </div>
     );
@@ -35,13 +35,13 @@ export default function PublicCard() {
 
   if (error || !card) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-surface flex items-center justify-center p-4">
         <div className="text-center">
-          <svg className="mx-auto w-16 h-16 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="mx-auto w-16 h-16 text-surface-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 2a10 10 0 110 20 10 10 0 010-20z" />
           </svg>
-          <h1 className="mt-4 text-xl font-semibold text-gray-900">Card Not Found</h1>
-          <p className="mt-2 text-gray-500">{error}</p>
+          <h1 className="mt-4 text-xl font-semibold text-navy">Card Not Found</h1>
+          <p className="mt-2 text-surface-500">{error}</p>
           <Link to="/" className="mt-4 inline-block btn-primary">
             Go to FureverCare
           </Link>

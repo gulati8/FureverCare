@@ -3,6 +3,7 @@ import { petsApi, PetMedication } from '../../../api/client';
 import InlineEditForm from '../../../components/InlineEditForm';
 import { formatFlexibleDate } from '../../../components/FlexibleDateInput';
 import SourceDocumentLink from '../../../components/SourceDocumentLink';
+import EmptyState from '../../../components/EmptyState';
 import { useFieldToggle } from '../../../hooks/useFieldToggle';
 import { MEDICATION_FIELDS } from '../constants';
 
@@ -69,30 +70,30 @@ export default function MedicationsTab({ petId, token, medications, setMedicatio
             <div className="flex items-center gap-2">
               <p className={`font-medium ${isInactive ? 'line-through' : ''}`}>{m.name}</p>
               {m.show_on_card && (
-                <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-semibold">ALERT</span>
+                <span className="text-[10px] bg-danger-light text-danger px-1.5 py-0.5 rounded font-semibold">ALERT</span>
               )}
             </div>
-            {m.dosage && <span className="text-sm text-gray-500">{m.dosage}</span>}
-            {m.frequency && <span className="text-sm text-gray-500"> - {m.frequency}</span>}
-            {m.start_date && <p className="text-sm text-gray-500">Started: {formatFlexibleDate(m.start_date, m.start_date_precision)}</p>}
+            {m.dosage && <span className="text-sm text-surface-500">{m.dosage}</span>}
+            {m.frequency && <span className="text-sm text-surface-500"> - {m.frequency}</span>}
+            {m.start_date && <p className="text-sm text-surface-500">Started: {formatFlexibleDate(m.start_date, m.start_date_precision)}</p>}
             <SourceDocumentLink petId={petId} recordType="pet_medications" recordId={m.id} onNavigateToReview={onNavigateToReview} />
           </div>
           <div className="flex gap-2">
-            <button onClick={() => handleToggleShowOnCard(m)} className={`text-sm ${m.show_on_card ? 'text-red-600 hover:text-red-800' : 'text-gray-400 hover:text-gray-600'}`} title={m.show_on_card ? 'Remove from card' : 'Show on card'}>
+            <button onClick={() => handleToggleShowOnCard(m)} className={`text-sm ${m.show_on_card ? 'text-danger hover:text-danger-dark' : 'text-surface-400 hover:text-surface-600'}`} title={m.show_on_card ? 'Remove from card' : 'Show on card'}>
               {m.show_on_card ? '\u{1F514}' : '\u{1F515}'}
             </button>
             <button onClick={() => setEditingId(m.id)} className="text-navy hover:text-primary-800 text-sm">Edit</button>
-            <button onClick={() => handleToggleActive(m)} className={`text-sm ${isInactive ? 'text-navy hover:text-primary-800' : 'text-gray-600 hover:text-gray-800'}`}>
+            <button onClick={() => handleToggleActive(m)} className={`text-sm ${isInactive ? 'text-navy hover:text-primary-800' : 'text-surface-600 hover:text-navy'}`}>
               {isInactive ? 'Reactivate' : 'Discontinue'}
             </button>
             {deletingId === m.id ? (
               <>
-                <span className="text-sm text-gray-500">Sure?</span>
-                <button onClick={() => handleDelete(m.id)} className="text-red-600 hover:text-red-800 text-sm font-semibold">Yes</button>
-                <button onClick={() => setDeletingId(null)} className="text-gray-600 hover:text-gray-800 text-sm">No</button>
+                <span className="text-sm text-surface-500">Sure?</span>
+                <button onClick={() => handleDelete(m.id)} className="text-danger hover:text-danger-dark text-sm font-semibold">Yes</button>
+                <button onClick={() => setDeletingId(null)} className="text-surface-600 hover:text-navy text-sm">No</button>
               </>
             ) : (
-              <button onClick={() => setDeletingId(m.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
+              <button onClick={() => setDeletingId(m.id)} className="text-danger hover:text-danger-dark text-sm">Delete</button>
             )}
           </div>
         </div>
@@ -103,7 +104,7 @@ export default function MedicationsTab({ petId, token, medications, setMedicatio
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold">Medications</h3>
+        <h3 className="section-title">Medications</h3>
         <button onClick={() => setShowForm(!showForm)} className="btn-primary text-sm">+ Add Medication</button>
       </div>
 
@@ -119,7 +120,7 @@ export default function MedicationsTab({ petId, token, medications, setMedicatio
 
       {active.length > 0 && (
         <div className="mb-6">
-          <h4 className="text-sm font-medium text-gray-500 mb-2">Active Medications</h4>
+          <h4 className="text-sm font-medium text-surface-500 mb-2">Active Medications</h4>
           <ul className="divide-y border rounded-lg">
             {active.map(m => renderMedRow(m))}
           </ul>
@@ -128,7 +129,7 @@ export default function MedicationsTab({ petId, token, medications, setMedicatio
 
       {inactive.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium text-gray-500 mb-2">Past Medications</h4>
+          <h4 className="text-sm font-medium text-surface-500 mb-2">Past Medications</h4>
           <ul className="divide-y border rounded-lg opacity-60">
             {inactive.map(m => renderMedRow(m, true))}
           </ul>
@@ -136,7 +137,7 @@ export default function MedicationsTab({ petId, token, medications, setMedicatio
       )}
 
       {medications.length === 0 && (
-        <p className="text-gray-500 text-center py-8">No medications recorded</p>
+        <EmptyState title="No medications recorded" compact />
       )}
     </div>
   );

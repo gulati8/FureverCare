@@ -132,20 +132,20 @@ export default function SubscriptionSettings() {
     <div className="max-w-4xl mx-auto">
       {/* Page header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Subscription Settings</h1>
-        <p className="text-gray-600 mt-1">Manage pricing, trial periods, and Stripe configuration</p>
+        <h1 className="text-2xl font-bold text-navy">Subscription Settings</h1>
+        <p className="text-surface-600 mt-1">Manage pricing, trial periods, and Stripe configuration</p>
       </div>
 
       {/* Success message */}
       {successMessage && (
-        <div className="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center justify-between">
+        <div className="mb-6 bg-success-light border border-success-light text-success px-4 py-3 rounded-lg flex items-center justify-between">
           <span className="flex items-center">
             <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
             {successMessage}
           </span>
-          <button onClick={() => setSuccessMessage(null)} className="text-green-500 hover:text-green-700">
+          <button onClick={() => setSuccessMessage(null)} className="text-success hover:text-success">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -155,9 +155,9 @@ export default function SubscriptionSettings() {
 
       {/* Error message */}
       {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg flex items-center justify-between">
+        <div className="mb-6 bg-danger-light border border-danger-light text-danger px-4 py-3 rounded-lg flex items-center justify-between">
           <span>{error}</span>
-          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600">
+          <button onClick={() => setError(null)} className="text-danger hover:text-danger-dark">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -167,14 +167,14 @@ export default function SubscriptionSettings() {
 
       {/* Pricing Section */}
       <div className="bg-white rounded-lg shadow-sm mb-6">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-medium text-gray-900">Pricing</h2>
-          <p className="text-sm text-gray-500 mt-1">Set subscription prices for monthly and annual plans</p>
+        <div className="px-6 py-4 border-b border-surface-100">
+          <h2 className="text-lg font-medium text-navy">Pricing</h2>
+          <p className="text-sm text-surface-500 mt-1">Set subscription prices for monthly and annual plans</p>
         </div>
         <form onSubmit={handleSavePricing} className="p-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label htmlFor="monthly_price" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="monthly_price" className="block text-sm font-medium text-surface-700 mb-1">
                 Monthly Price ($)
               </label>
               <input
@@ -189,10 +189,10 @@ export default function SubscriptionSettings() {
                 className="input w-full"
                 placeholder="9.99"
               />
-              <p className="text-xs text-gray-500 mt-1">{pricing.monthly_price_cents} cents</p>
+              <p className="text-xs text-surface-500 mt-1">{pricing.monthly_price_cents} cents</p>
             </div>
             <div>
-              <label htmlFor="annual_price" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="annual_price" className="block text-sm font-medium text-surface-700 mb-1">
                 Annual Price ($)
               </label>
               <input
@@ -207,10 +207,10 @@ export default function SubscriptionSettings() {
                 className="input w-full"
                 placeholder="99.99"
               />
-              <p className="text-xs text-gray-500 mt-1">{pricing.annual_price_cents} cents</p>
+              <p className="text-xs text-surface-500 mt-1">{pricing.annual_price_cents} cents</p>
             </div>
             <div>
-              <label htmlFor="currency" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="currency" className="block text-sm font-medium text-surface-700 mb-1">
                 Currency
               </label>
               <select
@@ -249,14 +249,14 @@ export default function SubscriptionSettings() {
 
       {/* Trial Section */}
       <div className="bg-white rounded-lg shadow-sm mb-6">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-medium text-gray-900">Trial Period</h2>
-          <p className="text-sm text-gray-500 mt-1">Configure free trial settings for new users</p>
+        <div className="px-6 py-4 border-b border-surface-100">
+          <h2 className="text-lg font-medium text-navy">Trial Period</h2>
+          <p className="text-sm text-surface-500 mt-1">Configure free trial settings for new users</p>
         </div>
         <form onSubmit={handleSaveTrial} className="p-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="trial_days" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="trial_days" className="block text-sm font-medium text-surface-700 mb-1">
                 Trial Days
               </label>
               <input
@@ -269,7 +269,7 @@ export default function SubscriptionSettings() {
                 className="input w-full"
                 placeholder="14"
               />
-              <p className="text-xs text-gray-500 mt-1">Number of days for free trial (0 to disable)</p>
+              <p className="text-xs text-surface-500 mt-1">Number of days for free trial (0 to disable)</p>
             </div>
             <div className="flex items-center pt-6">
               <label className="flex items-center cursor-pointer">
@@ -277,11 +277,11 @@ export default function SubscriptionSettings() {
                   type="checkbox"
                   checked={trial.require_card}
                   onChange={(e) => setTrial({ ...trial, require_card: e.target.checked })}
-                  className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                  className="w-4 h-4 text-primary-600 border-surface-300 rounded focus:ring-primary-500"
                 />
                 <span className="ml-3">
-                  <span className="text-sm font-medium text-gray-700">Require card for trial</span>
-                  <p className="text-xs text-gray-500">Users must enter payment info to start trial</p>
+                  <span className="text-sm font-medium text-surface-700">Require card for trial</span>
+                  <p className="text-xs text-surface-500">Users must enter payment info to start trial</p>
                 </span>
               </label>
             </div>
@@ -308,14 +308,14 @@ export default function SubscriptionSettings() {
 
       {/* Stripe Section */}
       <div className="bg-white rounded-lg shadow-sm">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-medium text-gray-900">Stripe Configuration</h2>
-          <p className="text-sm text-gray-500 mt-1">Connect your Stripe price IDs and webhook secret</p>
+        <div className="px-6 py-4 border-b border-surface-100">
+          <h2 className="text-lg font-medium text-navy">Stripe Configuration</h2>
+          <p className="text-sm text-surface-500 mt-1">Connect your Stripe price IDs and webhook secret</p>
         </div>
         <form onSubmit={handleSaveStripe} className="p-6 space-y-4">
           <div className="grid grid-cols-1 gap-4">
             <div>
-              <label htmlFor="price_id_monthly" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="price_id_monthly" className="block text-sm font-medium text-surface-700 mb-1">
                 Monthly Price ID
               </label>
               <input
@@ -326,10 +326,10 @@ export default function SubscriptionSettings() {
                 className="input w-full font-mono text-sm"
                 placeholder="price_1A2B3C4D5E6F7G8H9I0J"
               />
-              <p className="text-xs text-gray-500 mt-1">Find this in your Stripe dashboard under Products</p>
+              <p className="text-xs text-surface-500 mt-1">Find this in your Stripe dashboard under Products</p>
             </div>
             <div>
-              <label htmlFor="price_id_annual" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="price_id_annual" className="block text-sm font-medium text-surface-700 mb-1">
                 Annual Price ID
               </label>
               <input
@@ -342,7 +342,7 @@ export default function SubscriptionSettings() {
               />
             </div>
             <div>
-              <label htmlFor="webhook_secret" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="webhook_secret" className="block text-sm font-medium text-surface-700 mb-1">
                 Webhook Secret
               </label>
               <input
@@ -353,7 +353,7 @@ export default function SubscriptionSettings() {
                 className="input w-full font-mono text-sm"
                 placeholder="whsec_..."
               />
-              <p className="text-xs text-gray-500 mt-1">Find this in Stripe Webhooks settings</p>
+              <p className="text-xs text-surface-500 mt-1">Find this in Stripe Webhooks settings</p>
             </div>
           </div>
           <div className="pt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

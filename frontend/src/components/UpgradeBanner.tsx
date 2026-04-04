@@ -56,7 +56,7 @@ export default function UpgradeBanner({ type, feature, petCount, petLimit }: Upg
 
         <Link
           to="/pricing"
-          className="flex-shrink-0 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-accent-500 shadow-sm transition-all hover:bg-gray-50 hover:shadow-md"
+          className="flex-shrink-0 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-accent-500 shadow-sm transition-all hover:bg-surface hover:shadow-md"
         >
           Upgrade
         </Link>

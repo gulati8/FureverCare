@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { petsApi, PetVet } from '../../../api/client';
 import InlineEditForm from '../../../components/InlineEditForm';
+import EmptyState from '../../../components/EmptyState';
 import { VET_FIELDS } from '../constants';
 
 export default function VetsTab({ petId, token, vets, setVets }: {
@@ -46,7 +47,7 @@ export default function VetsTab({ petId, token, vets, setVets }: {
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold">Veterinarians</h3>
+        <h3 className="section-title">Veterinarians</h3>
         <button onClick={() => setShowForm(!showForm)} className="btn-primary text-sm">+ Add Vet</button>
       </div>
 
@@ -61,7 +62,7 @@ export default function VetsTab({ petId, token, vets, setVets }: {
       )}
 
       {vets.length === 0 ? (
-        <p className="text-gray-500 text-center py-8">No veterinarians recorded</p>
+        <EmptyState title="No veterinarians recorded" compact />
       ) : (
         <ul className="divide-y">
           {vets.map(v => (
@@ -77,8 +78,8 @@ export default function VetsTab({ petId, token, vets, setVets }: {
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="font-medium">{v.clinic_name} {v.is_primary && <span className="text-xs bg-navy-50 text-primary-700 px-2 py-0.5 rounded">Primary</span>}</p>
-                    {v.vet_name && <p className="text-sm text-gray-600">Dr. {v.vet_name}</p>}
-                    {v.phone && <p className="text-sm text-gray-500">{v.phone}</p>}
+                    {v.vet_name && <p className="text-sm text-surface-600">Dr. {v.vet_name}</p>}
+                    {v.phone && <p className="text-sm text-surface-500">{v.phone}</p>}
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => setEditingId(v.id)} className="text-navy hover:text-primary-800 text-sm">Edit</button>
@@ -87,12 +88,12 @@ export default function VetsTab({ petId, token, vets, setVets }: {
                     )}
                     {deletingId === v.id ? (
                       <>
-                        <span className="text-sm text-gray-500">Sure?</span>
-                        <button onClick={() => handleDelete(v.id)} className="text-red-600 hover:text-red-800 text-sm font-semibold">Yes</button>
-                        <button onClick={() => setDeletingId(null)} className="text-gray-600 hover:text-gray-800 text-sm">No</button>
+                        <span className="text-sm text-surface-500">Sure?</span>
+                        <button onClick={() => handleDelete(v.id)} className="text-danger hover:text-danger-dark text-sm font-semibold">Yes</button>
+                        <button onClick={() => setDeletingId(null)} className="text-surface-600 hover:text-navy text-sm">No</button>
                       </>
                     ) : (
-                      <button onClick={() => setDeletingId(v.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                      <button onClick={() => setDeletingId(v.id)} className="text-danger hover:text-danger-dark text-sm">Delete</button>
                     )}
                   </div>
                 </div>

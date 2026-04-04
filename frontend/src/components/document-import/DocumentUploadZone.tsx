@@ -208,19 +208,19 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
     <div className="space-y-4">
       {/* Multi-file grouping dialog */}
       {pendingFiles && (
-        <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-          <p className="font-medium text-gray-900 mb-3">
+        <div className="bg-white border border-surface-200 rounded-lg p-5 shadow-sm">
+          <p className="font-medium text-navy mb-3">
             {pendingFiles.length + pendingPdfs.length} files selected
           </p>
 
           {/* PDF info banner */}
           {pendingPdfs.length > 0 && (
-            <div className="mb-4 bg-gray-50 border border-gray-200 rounded-md px-3 py-2.5 flex items-start gap-2.5">
-              <svg className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="currentColor">
+            <div className="mb-4 bg-surface border border-surface-200 rounded-md px-3 py-2.5 flex items-start gap-2.5">
+              <svg className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M6 2h8l6 6v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/>
               </svg>
               <div>
-                <p className="text-sm text-gray-700">
+                <p className="text-sm text-surface-700">
                   {pendingPdfs.length === 1
                     ? <><span className="font-medium">{pendingPdfs[0].name}</span> will upload as a separate document.</>
                     : <><span className="font-medium">{pendingPdfs.length} PDFs</span> will each upload as separate documents.</>
@@ -231,7 +231,7 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
           )}
 
           {/* Image grouping options */}
-          {pendingFiles.length > 1 && <p className="text-xs text-gray-500 mb-2">{pendingFiles.length} images:</p>}
+          {pendingFiles.length > 1 && <p className="text-xs text-surface-500 mb-2">{pendingFiles.length} images:</p>}
 
           {/* Radio options (only when 2+ images — 1 image doesn't need grouping choice) */}
           {pendingFiles.length > 1 && (
@@ -245,10 +245,10 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
                   className="mt-0.5"
                 />
                 <div>
-                  <p className="text-sm font-medium text-gray-900">
+                  <p className="text-sm font-medium text-navy">
                     Upload as one document ({pendingFiles.length} pages)
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-surface-500">
                     Combine into a single multi-page document that gets scanned together.
                   </p>
                 </div>
@@ -262,10 +262,10 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
                   className="mt-0.5"
                 />
                 <div>
-                  <p className="text-sm font-medium text-gray-900">
+                  <p className="text-sm font-medium text-navy">
                     Upload as {pendingFiles.length} separate documents
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-surface-500">
                     Each file is its own document.
                   </p>
                 </div>
@@ -277,22 +277,22 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
           {groupMode === 'one' && (
             <>
               <div className="mb-4">
-                <label className="block text-sm text-gray-700 mb-1">Document name</label>
+                <label className="block text-sm text-surface-700 mb-1">Document name</label>
                 <input
                   type="text"
                   ref={groupNameRef}
                   placeholder="e.g., Wednesday ER Visit Notes"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border border-surface-300 rounded-md px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
                   maxLength={255}
                 />
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm text-gray-700 mb-2">Page order</label>
+                <label className="block text-sm text-surface-700 mb-2">Page order</label>
                 <div className="flex gap-2 overflow-x-auto pb-1">
                   {pendingFiles.map((file, idx) => (
                     <div key={previewUrls[idx]} className="flex-shrink-0 flex flex-col items-center" style={{ width: '88px' }}>
-                      <div className="relative w-20 h-20 rounded-md overflow-hidden bg-gray-100 border border-gray-200">
+                      <div className="relative w-20 h-20 rounded-md overflow-hidden bg-surface-100 border border-surface-200">
                         <img
                           src={previewUrls[idx]}
                           alt={file.name}
@@ -307,19 +307,19 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
                           type="button"
                           onClick={() => movePage(idx, idx - 1)}
                           disabled={idx === 0}
-                          className="p-0.5 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-gray-400"
+                          className="p-0.5 rounded text-surface-400 hover:text-surface-700 hover:bg-surface-100 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-surface-400"
                           title="Move left"
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                           </svg>
                         </button>
-                        <span className="text-[10px] text-gray-400 tabular-nums">{idx + 1}/{pendingFiles.length}</span>
+                        <span className="text-[10px] text-surface-400 tabular-nums">{idx + 1}/{pendingFiles.length}</span>
                         <button
                           type="button"
                           onClick={() => movePage(idx, idx + 1)}
                           disabled={idx === pendingFiles.length - 1}
-                          className="p-0.5 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-gray-400"
+                          className="p-0.5 rounded text-surface-400 hover:text-surface-700 hover:bg-surface-100 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-surface-400"
                           title="Move right"
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -338,7 +338,7 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
           {groupMode === 'separate' && (
             <div className="flex flex-wrap gap-2 mb-4">
               {pendingFiles.slice(0, 8).map((file, i) => (
-                <div key={i} className="w-12 h-12 rounded bg-gray-100 flex items-center justify-center text-xs text-gray-500 overflow-hidden">
+                <div key={i} className="w-12 h-12 rounded bg-surface-100 flex items-center justify-center text-xs text-surface-500 overflow-hidden">
                   <img
                     src={previewUrls[i]}
                     alt={file.name}
@@ -347,7 +347,7 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
                 </div>
               ))}
               {pendingFiles.length > 8 && (
-                <div className="w-12 h-12 rounded bg-gray-100 flex items-center justify-center text-xs text-gray-500">
+                <div className="w-12 h-12 rounded bg-surface-100 flex items-center justify-center text-xs text-surface-500">
                   +{pendingFiles.length - 8}
                 </div>
               )}
@@ -357,13 +357,13 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
           <div className="flex justify-end gap-2">
             <button
               onClick={handleGroupCancel}
-              className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              className="px-4 py-2 text-sm text-surface-700 bg-white border border-surface-300 rounded-md hover:bg-surface"
             >
               Cancel
             </button>
             <button
               onClick={handleGroupConfirm}
-              className="px-4 py-2 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-700"
+              className="px-4 py-2 text-sm text-white bg-info rounded-md hover:bg-info"
             >
               Upload
             </button>
@@ -379,27 +379,27 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
           onDrop={handleDrop}
           className={`
             border-2 border-dashed rounded-lg p-8 text-center transition-colors duration-200
-            ${isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
+            ${isDragOver ? 'border-info bg-info-light' : 'border-surface-300 hover:border-surface-400'}
             ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
           `}
         >
           {isUploading ? (
             <div className="flex flex-col items-center">
-              <svg className="animate-spin h-10 w-10 text-blue-500 mb-3" fill="none" viewBox="0 0 24 24">
+              <svg className="animate-spin h-10 w-10 text-info mb-3" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>
-              <p className="text-gray-600">Uploading...</p>
-              <div className="w-48 h-2 bg-gray-200 rounded-full mt-2">
+              <p className="text-surface-600">Uploading...</p>
+              <div className="w-48 h-2 bg-surface-200 rounded-full mt-2">
                 <div
-                  className="h-full bg-blue-500 rounded-full transition-all duration-200"
+                  className="h-full bg-info rounded-full transition-all duration-200"
                   style={{ width: `${uploadProgress}%` }}
                 />
               </div>
             </div>
           ) : (
             <>
-              <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+              <svg className="mx-auto h-12 w-12 text-surface-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
                 <path
                   d="M28 8H12a4 4 0 00-4 4v20m0 0v4a4 4 0 004 4h24a4 4 0 004-4V24M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4-4m4-12h8m-4-4v8"
                   strokeWidth="2"
@@ -407,8 +407,8 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
                   strokeLinejoin="round"
                 />
               </svg>
-              <p className="mt-2 text-sm text-gray-600">
-                <label className={`text-blue-600 hover:text-blue-500 ${isDisabled ? '' : 'cursor-pointer'}`}>
+              <p className="mt-2 text-sm text-surface-600">
+                <label className={`text-info hover:text-info ${isDisabled ? '' : 'cursor-pointer'}`}>
                   <span>Upload documents</span>
                   <input
                     ref={fileInputRef}
@@ -422,7 +422,7 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
                 </label>
                 {' '}or drag and drop
               </p>
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-surface-500">
                 PDFs and images (JPEG, PNG, WebP, GIF, HEIC, TIFF, BMP) — images are compressed automatically
               </p>
             </>
@@ -431,8 +431,8 @@ export function DocumentUploadZone({ petId, onUploadComplete, disabled }: Docume
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-3">
-          <p className="text-sm text-red-600">{error}</p>
+        <div className="bg-danger-light border border-danger-light rounded-md p-3">
+          <p className="text-sm text-danger">{error}</p>
         </div>
       )}
     </div>

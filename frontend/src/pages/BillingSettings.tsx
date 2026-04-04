@@ -1,11 +1,49 @@
-import { useState } from 'react';
+import { useState, Component, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { billingApi } from '../api/billing';
 import PaymentMethodList from '../components/PaymentMethodList';
 import AddPaymentMethodModal from '../components/AddPaymentMethodModal';
 
-export default function BillingSettings() {
+// Simple error boundary to prevent a render crash from blanking the entire page
+interface ErrorBoundaryProps {
+  children: ReactNode;
+}
+interface ErrorBoundaryState {
+  hasError: boolean;
+  message: string;
+}
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, message: '' };
+  }
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, message: error.message };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="max-w-2xl mx-auto">
+          <h1 className="text-2xl font-bold text-navy mb-4">Billing Settings</h1>
+          <div className="card">
+            <p className="text-danger font-medium mb-2">Something went wrong loading this page.</p>
+            <p className="text-surface-600 text-sm">{this.state.message}</p>
+            <button
+              className="btn btn-secondary mt-4"
+              onClick={() => window.location.reload()}
+            >
+              Reload
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function BillingSettingsContent() {
   const { token, subscription, refreshSubscription } = useAuth();
   const [isLoadingCancel, setIsLoadingCancel] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -35,19 +73,19 @@ export default function BillingSettings() {
 
   const getStatusBadge = () => {
     if (!subscription) {
-      return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Free</span>;
+      return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-100 text-navy">Free</span>;
     }
     switch (subscription.status) {
       case 'active':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Active</span>;
+        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-light text-success">Active</span>;
       case 'trialing':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Trial</span>;
+        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-info-light text-info">Trial</span>;
       case 'past_due':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Past Due</span>;
+        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning-light text-warning-dark">Past Due</span>;
       case 'canceled':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Canceled</span>;
+        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-danger-light text-danger">Canceled</span>;
       default:
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Free</span>;
+        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-100 text-navy">Free</span>;
     }
   };
 
@@ -60,40 +98,47 @@ export default function BillingSettings() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-900 mb-8">Billing Settings</h1>
+      <div className="breadcrumb">
+        <Link to="/dashboard">Dashboard</Link>
+        <span className="sep">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+        </span>
+        <span className="current">Billing</span>
+      </div>
+      <h1 className="page-title mb-8">Billing Settings</h1>
 
       {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+        <div className="mb-6 bg-danger-light border border-danger-light text-danger px-4 py-3 rounded-lg">
           {error}
         </div>
       )}
 
       {successMessage && (
-        <div className="mb-6 bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-lg">
+        <div className="mb-6 bg-success-light border border-success-light text-success px-4 py-3 rounded-lg">
           {successMessage}
         </div>
       )}
 
       <div className="card">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Current Subscription</h2>
+        <h2 className="text-lg font-semibold text-navy mb-4">Current Subscription</h2>
 
         <div className="space-y-4">
-          <div className="flex justify-between items-center py-3 border-b border-gray-200">
-            <span className="text-gray-600">Plan</span>
-            <span className="font-medium text-gray-900">{getTierDisplay()}</span>
+          <div className="flex justify-between items-center py-3 border-b border-surface-200">
+            <span className="text-surface-600">Plan</span>
+            <span className="font-medium text-navy">{getTierDisplay()}</span>
           </div>
 
-          <div className="flex justify-between items-center py-3 border-b border-gray-200">
-            <span className="text-gray-600">Status</span>
+          <div className="flex justify-between items-center py-3 border-b border-surface-200">
+            <span className="text-surface-600">Status</span>
             {getStatusBadge()}
           </div>
 
           {isPremium && subscription?.currentPeriodEnd && (
-            <div className="flex justify-between items-center py-3 border-b border-gray-200">
-              <span className="text-gray-600">
+            <div className="flex justify-between items-center py-3 border-b border-surface-200">
+              <span className="text-surface-600">
                 {subscription.status === 'canceled' ? 'Access Until' : 'Next Billing Date'}
               </span>
-              <span className="font-medium text-gray-900">
+              <span className="font-medium text-navy">
                 {subscription.currentPeriodEnd.toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'long',
@@ -121,15 +166,15 @@ export default function BillingSettings() {
               {isActive && subscription?.status !== 'canceled' && (
                 <button
                   onClick={() => setShowCancelConfirm(true)}
-                  className="w-full btn-outline text-red-600 border-red-300 hover:bg-red-50"
+                  className="w-full btn btn-ghost border border-danger text-danger hover:bg-danger-light"
                 >
                   Cancel Subscription
                 </button>
               )}
 
               {subscription?.status === 'canceled' && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <p className="text-sm text-yellow-800">
+                <div className="bg-warning-light border border-warning-light rounded-lg p-4">
+                  <p className="text-sm text-warning-dark">
                     Your subscription is canceled but you still have access until{' '}
                     {subscription.currentPeriodEnd?.toLocaleDateString('en-US', {
                       year: 'numeric',
@@ -145,8 +190,8 @@ export default function BillingSettings() {
               )}
 
               {subscription?.status === 'past_due' && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <p className="text-sm text-yellow-800 mb-2">
+                <div className="bg-warning-light border border-warning-light rounded-lg p-4">
+                  <p className="text-sm text-warning-dark mb-2">
                     Your payment is past due. Please update your payment method to continue your subscription.
                   </p>
                   <button
@@ -184,22 +229,22 @@ export default function BillingSettings() {
       {showCancelConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Cancel Subscription?</h3>
-            <p className="text-gray-600 mb-6">
+            <h3 className="text-lg font-semibold text-navy mb-2">Cancel Subscription?</h3>
+            <p className="text-surface-600 mb-6">
               Are you sure you want to cancel your Premium subscription? You will retain access to
               premium features until the end of your current billing period.
             </p>
             <div className="flex space-x-3">
               <button
                 onClick={() => setShowCancelConfirm(false)}
-                className="flex-1 btn-outline"
+                className="flex-1 btn btn-secondary"
               >
                 Keep Subscription
               </button>
               <button
                 onClick={handleCancelSubscription}
                 disabled={isLoadingCancel}
-                className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                className="flex-1 btn btn-danger disabled:opacity-50"
               >
                 {isLoadingCancel ? 'Canceling...' : 'Yes, Cancel'}
               </button>
@@ -208,5 +253,13 @@ export default function BillingSettings() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function BillingSettings() {
+  return (
+    <ErrorBoundary>
+      <BillingSettingsContent />
+    </ErrorBoundary>
   );
 }

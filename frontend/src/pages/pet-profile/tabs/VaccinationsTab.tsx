@@ -3,6 +3,7 @@ import { petsApi, PetVaccination } from '../../../api/client';
 import InlineEditForm from '../../../components/InlineEditForm';
 import { formatFlexibleDate } from '../../../components/FlexibleDateInput';
 import SourceDocumentLink from '../../../components/SourceDocumentLink';
+import EmptyState from '../../../components/EmptyState';
 import { useFieldToggle } from '../../../hooks/useFieldToggle';
 import { VACCINATION_FIELDS } from '../constants';
 
@@ -63,7 +64,7 @@ export default function VaccinationsTab({ petId, token, vaccinations, setVaccina
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold">Vaccinations</h3>
+        <h3 className="section-title">Vaccinations</h3>
         <button onClick={() => setShowForm(!showForm)} className="btn-primary text-sm">+ Add Vaccination</button>
       </div>
 
@@ -78,7 +79,7 @@ export default function VaccinationsTab({ petId, token, vaccinations, setVaccina
       )}
 
       {vaccinations.length === 0 ? (
-        <p className="text-gray-500 text-center py-8">No vaccinations recorded</p>
+        <EmptyState title="No vaccinations recorded" compact />
       ) : (
         <ul className="divide-y">
           {vaccinations.map(v => (
@@ -96,32 +97,32 @@ export default function VaccinationsTab({ petId, token, vaccinations, setVaccina
                     <div className="flex items-center gap-2">
                       <p className="font-medium">{v.name}</p>
                       {v.show_on_card && (
-                        <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-semibold">ALERT</span>
+                        <span className="text-[10px] bg-danger-light text-danger px-1.5 py-0.5 rounded font-semibold">ALERT</span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-surface-500">
                       Administered: {formatFlexibleDate(v.administered_date, v.administered_date_precision)}
                     </p>
                     {v.expiration_date && (
-                      <p className={`text-sm ${isExpired(v.expiration_date) ? 'text-red-600' : 'text-gray-500'}`}>
+                      <p className={`text-sm ${isExpired(v.expiration_date) ? 'text-danger' : 'text-surface-500'}`}>
                         {isExpired(v.expiration_date) ? 'Expired' : 'Expires'}: {formatFlexibleDate(v.expiration_date, v.expiration_date_precision)}
                       </p>
                     )}
                     <SourceDocumentLink petId={petId} recordType="pet_vaccinations" recordId={v.id} onNavigateToReview={onNavigateToReview} />
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => handleToggleShowOnCard(v)} className={`text-sm ${v.show_on_card ? 'text-red-600 hover:text-red-800' : 'text-gray-400 hover:text-gray-600'}`} title={v.show_on_card ? 'Remove from card' : 'Show on card'}>
+                    <button onClick={() => handleToggleShowOnCard(v)} className={`text-sm ${v.show_on_card ? 'text-danger hover:text-danger-dark' : 'text-surface-400 hover:text-surface-600'}`} title={v.show_on_card ? 'Remove from card' : 'Show on card'}>
                       {v.show_on_card ? '\u{1F514}' : '\u{1F515}'}
                     </button>
                     <button onClick={() => setEditingId(v.id)} className="text-navy hover:text-primary-800 text-sm">Edit</button>
                     {deletingId === v.id ? (
                       <>
-                        <span className="text-sm text-gray-500">Sure?</span>
-                        <button onClick={() => handleDelete(v.id)} className="text-red-600 hover:text-red-800 text-sm font-semibold">Yes</button>
-                        <button onClick={() => setDeletingId(null)} className="text-gray-600 hover:text-gray-800 text-sm">No</button>
+                        <span className="text-sm text-surface-500">Sure?</span>
+                        <button onClick={() => handleDelete(v.id)} className="text-danger hover:text-danger-dark text-sm font-semibold">Yes</button>
+                        <button onClick={() => setDeletingId(null)} className="text-surface-600 hover:text-navy text-sm">No</button>
                       </>
                     ) : (
-                      <button onClick={() => setDeletingId(v.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                      <button onClick={() => setDeletingId(v.id)} className="text-danger hover:text-danger-dark text-sm">Delete</button>
                     )}
                   </div>
                 </div>

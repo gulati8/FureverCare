@@ -77,26 +77,26 @@ export default function PaymentMethodList() {
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-base font-semibold text-gray-900">Payment Methods</h3>
+        <h3 className="text-base font-semibold text-navy">Payment Methods</h3>
         <button onClick={() => setShowAddModal(true)} className="text-sm text-primary-600 hover:text-primary-500 font-medium">
           Add method
         </button>
       </div>
 
       {error && (
-        <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+        <div className="mb-4 bg-danger-light border border-danger-light text-danger px-4 py-3 rounded-lg text-sm">
           {error}
         </div>
       )}
 
       {methods.length === 0 ? (
-        <p className="text-gray-500 text-sm">No payment methods on file.</p>
+        <p className="text-surface-500 text-sm">No payment methods on file.</p>
       ) : (
-        <ul className="divide-y divide-gray-200">
+        <ul className="divide-y divide-surface-200">
           {methods.map((method) => (
             <li key={method.id} className="py-3 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-900">{formatMethod(method)}</span>
+                <span className="text-sm text-navy">{formatMethod(method)}</span>
                 {method.isDefault && (
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
                     Default
@@ -116,7 +116,7 @@ export default function PaymentMethodList() {
                 <button
                   onClick={() => handleRemove(method.id)}
                   disabled={actionLoading === method.id}
-                  className="text-xs text-red-600 hover:text-red-500 font-medium disabled:opacity-50"
+                  className="text-xs text-danger hover:text-danger-dark font-medium disabled:opacity-50"
                 >
                   Remove
                 </button>

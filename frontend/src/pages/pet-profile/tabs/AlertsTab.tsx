@@ -1,5 +1,6 @@
 import { useState, SetStateAction } from 'react';
 import { petsApi, PetCondition, PetAllergy, PetMedication, PetVaccination } from '../../../api/client';
+import EmptyState from '../../../components/EmptyState';
 import { useFieldSet } from '../../../hooks/useFieldToggle';
 
 type DropdownValue = '' | `condition-${number}` | `allergy-${number}` | `medication-${number}` | `vaccination-${number}`;
@@ -72,10 +73,10 @@ export default function AlertsTab({ petId, token, conditions, setConditions, all
       {/* Section A: On Card */}
       <div>
         <h3 className="text-base font-semibold mb-1">On Card</h3>
-        <p className="text-sm text-gray-500 mb-3">Items currently shown on the emergency card</p>
+        <p className="text-sm text-surface-500 mb-3">Items currently shown on the emergency card</p>
 
         {totalOnCard === 0 ? (
-          <p className="text-gray-400 text-sm text-center py-4 border border-dashed rounded-lg">No items on card yet</p>
+          <EmptyState title="No alerts configured" compact />
         ) : (
           <div className="space-y-3">
             {conditionsOnCard.length > 0 && (
@@ -86,11 +87,11 @@ export default function AlertsTab({ petId, token, conditions, setConditions, all
                     <li key={c.id} className="px-3 py-2 flex justify-between items-center">
                       <div>
                         <p className="text-sm font-medium">{c.name}</p>
-                        {c.severity && <span className="text-xs text-gray-500 capitalize">{c.severity}</span>}
+                        {c.severity && <span className="text-xs text-surface-500 capitalize">{c.severity}</span>}
                       </div>
                       <button
                         onClick={() => handleRemoveCondition(c)}
-                        className="text-gray-400 hover:text-red-600 text-sm ml-3 flex-shrink-0"
+                        className="text-surface-400 hover:text-danger text-sm ml-3 flex-shrink-0"
                         title="Remove from card"
                       >
                         &times;
@@ -103,21 +104,21 @@ export default function AlertsTab({ petId, token, conditions, setConditions, all
 
             {allergiesOnCard.length > 0 && (
               <div>
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-red-700 mb-1">Allergies</h4>
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-danger mb-1">Allergies</h4>
                 <ul className="divide-y border rounded-lg">
                   {allergiesOnCard.map(a => (
                     <li key={a.id} className="px-3 py-2 flex justify-between items-center">
                       <div>
                         <p className="text-sm font-medium">{a.allergen}</p>
                         {a.severity && (
-                          <span className={`text-xs capitalize ${a.severity === 'life-threatening' ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+                          <span className={`text-xs capitalize ${a.severity === 'life-threatening' ? 'text-danger font-semibold' : 'text-surface-500'}`}>
                             {a.severity}
                           </span>
                         )}
                       </div>
                       <button
                         onClick={() => handleRemoveAllergy(a)}
-                        className="text-gray-400 hover:text-red-600 text-sm ml-3 flex-shrink-0"
+                        className="text-surface-400 hover:text-danger text-sm ml-3 flex-shrink-0"
                         title="Remove from card"
                       >
                         &times;
@@ -130,17 +131,17 @@ export default function AlertsTab({ petId, token, conditions, setConditions, all
 
             {medicationsOnCard.length > 0 && (
               <div>
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-blue-700 mb-1">Medications</h4>
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-info mb-1">Medications</h4>
                 <ul className="divide-y border rounded-lg">
                   {medicationsOnCard.map(m => (
                     <li key={m.id} className="px-3 py-2 flex justify-between items-center">
                       <div>
                         <p className="text-sm font-medium">{m.name}</p>
-                        {m.dosage && <span className="text-xs text-gray-500">{m.dosage}</span>}
+                        {m.dosage && <span className="text-xs text-surface-500">{m.dosage}</span>}
                       </div>
                       <button
                         onClick={() => handleRemoveMedication(m)}
-                        className="text-gray-400 hover:text-red-600 text-sm ml-3 flex-shrink-0"
+                        className="text-surface-400 hover:text-danger text-sm ml-3 flex-shrink-0"
                         title="Remove from card"
                       >
                         &times;
@@ -153,14 +154,14 @@ export default function AlertsTab({ petId, token, conditions, setConditions, all
 
             {vaccinationsOnCard.length > 0 && (
               <div>
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-green-700 mb-1">Vaccinations</h4>
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-success mb-1">Vaccinations</h4>
                 <ul className="divide-y border rounded-lg">
                   {vaccinationsOnCard.map(v => (
                     <li key={v.id} className="px-3 py-2 flex justify-between items-center">
                       <p className="text-sm font-medium">{v.name}</p>
                       <button
                         onClick={() => handleRemoveVaccination(v)}
-                        className="text-gray-400 hover:text-red-600 text-sm ml-3 flex-shrink-0"
+                        className="text-surface-400 hover:text-danger text-sm ml-3 flex-shrink-0"
                         title="Remove from card"
                       >
                         &times;
@@ -177,7 +178,7 @@ export default function AlertsTab({ petId, token, conditions, setConditions, all
       {/* Section B: Add to Card */}
       <div>
         <h3 className="text-base font-semibold mb-1">Add to Card</h3>
-        <p className="text-sm text-gray-500 mb-3">Select a health record to show on the emergency card</p>
+        <p className="text-sm text-surface-500 mb-3">Select a health record to show on the emergency card</p>
 
         {hasAnyCandidates ? (
           <select
@@ -228,7 +229,7 @@ export default function AlertsTab({ petId, token, conditions, setConditions, all
             )}
           </select>
         ) : (
-          <p className="text-gray-400 text-sm text-center py-4 border border-dashed rounded-lg">
+          <p className="text-surface-400 text-sm text-center py-4 border border-dashed rounded-lg">
             All eligible health records are already on the card
           </p>
         )}

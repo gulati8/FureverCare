@@ -15,8 +15,8 @@ export default function Payment() {
 
   return (
     <div className="max-w-lg mx-auto py-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">Complete your payment</h1>
-      <p className="text-gray-600 mb-8">
+      <h1 className="text-2xl font-bold text-navy mb-2">Complete your payment</h1>
+      <p className="text-surface-600 mb-8">
         Enter your payment details below. Your information is secured by Stripe.
       </p>
 

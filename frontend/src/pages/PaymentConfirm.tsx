@@ -76,13 +76,13 @@ export default function PaymentConfirm() {
       <div className="card">
         {status === 'succeeded' && (
           <>
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="w-16 h-16 bg-success-light rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Premium!</h1>
-            <p className="text-gray-600 mb-6">{message}</p>
+            <h1 className="text-2xl font-bold text-navy mb-2">Welcome to Premium!</h1>
+            <p className="text-surface-600 mb-6">{message}</p>
             <button onClick={() => navigate('/dashboard')} className="btn-primary">
               Go to Dashboard
             </button>
@@ -91,11 +91,11 @@ export default function PaymentConfirm() {
 
         {status === 'processing' && (
           <>
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div className="w-16 h-16 bg-info-light rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-info"></div>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Processing Payment</h1>
-            <p className="text-gray-600 mb-6">{message}</p>
+            <h1 className="text-2xl font-bold text-navy mb-2">Processing Payment</h1>
+            <p className="text-surface-600 mb-6">{message}</p>
             <button onClick={() => navigate('/dashboard')} className="btn-secondary">
               Go to Dashboard
             </button>
@@ -104,13 +104,13 @@ export default function PaymentConfirm() {
 
         {status === 'failed' && (
           <>
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="w-16 h-16 bg-danger-light rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Payment Failed</h1>
-            <p className="text-gray-600 mb-6">{message}</p>
+            <h1 className="text-2xl font-bold text-navy mb-2">Payment Failed</h1>
+            <p className="text-surface-600 mb-6">{message}</p>
             <Link to="/pricing" className="btn-accent inline-block">
               Try Again
             </Link>

@@ -17,7 +17,7 @@ const ENTITY_TYPE_LABELS: Record<string, string> = {
 const ACTION_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   create: {
     label: 'Added',
-    color: 'text-green-600 bg-green-50',
+    color: 'text-success bg-success-light',
     icon: (
       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -26,7 +26,7 @@ const ACTION_CONFIG: Record<string, { label: string; color: string; icon: React.
   },
   update: {
     label: 'Updated',
-    color: 'text-blue-600 bg-blue-50',
+    color: 'text-info bg-info-light',
     icon: (
       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -35,7 +35,7 @@ const ACTION_CONFIG: Record<string, { label: string; color: string; icon: React.
   },
   delete: {
     label: 'Removed',
-    color: 'text-red-600 bg-red-50',
+    color: 'text-danger bg-danger-light',
     icon: (
       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -79,7 +79,7 @@ export function AuditLogEntry({ entry }: AuditLogEntryProps) {
   const renderChanges = () => {
     if (entry.action === 'create' && entry.new_values) {
       return (
-        <div className="mt-2 text-xs text-gray-500">
+        <div className="mt-2 text-xs text-surface-500">
           <div className="grid grid-cols-2 gap-x-4 gap-y-1">
             {Object.entries(entry.new_values)
               .filter(([key]) => !['id', 'pet_id', 'created_at', 'updated_at'].includes(key))
@@ -87,7 +87,7 @@ export function AuditLogEntry({ entry }: AuditLogEntryProps) {
               .map(([key, value]) => (
                 <div key={key} className="flex justify-between">
                   <span className="font-medium capitalize">{key.replace(/_/g, ' ')}:</span>
-                  <span className="text-gray-700">{formatValue(value)}</span>
+                  <span className="text-surface-700">{formatValue(value)}</span>
                 </div>
               ))}
           </div>
@@ -100,10 +100,10 @@ export function AuditLogEntry({ entry }: AuditLogEntryProps) {
         <div className="mt-2 text-xs space-y-1">
           {entry.changed_fields.map((field) => (
             <div key={field} className="flex items-center gap-2">
-              <span className="font-medium text-gray-500 capitalize">{field.replace(/_/g, ' ')}:</span>
-              <span className="text-red-500 line-through">{formatValue(entry.old_values![field])}</span>
-              <span className="text-gray-400">→</span>
-              <span className="text-green-600">{formatValue(entry.new_values![field])}</span>
+              <span className="font-medium text-surface-500 capitalize">{field.replace(/_/g, ' ')}:</span>
+              <span className="text-danger line-through">{formatValue(entry.old_values![field])}</span>
+              <span className="text-surface-400">→</span>
+              <span className="text-success">{formatValue(entry.new_values![field])}</span>
             </div>
           ))}
         </div>
@@ -112,8 +112,8 @@ export function AuditLogEntry({ entry }: AuditLogEntryProps) {
 
     if (entry.action === 'delete' && entry.old_values) {
       return (
-        <div className="mt-2 text-xs text-gray-500">
-          <span className="text-red-500">Deleted record</span>
+        <div className="mt-2 text-xs text-surface-500">
+          <span className="text-danger">Deleted record</span>
           {recordName && <span>: {recordName}</span>}
         </div>
       );
@@ -123,7 +123,7 @@ export function AuditLogEntry({ entry }: AuditLogEntryProps) {
   };
 
   return (
-    <div className="py-4 border-b border-gray-100 last:border-0">
+    <div className="py-4 border-b border-surface-100 last:border-0">
       <div className="flex items-start gap-3">
         {/* Action icon */}
         <div className={`p-2 rounded-full ${actionConfig.color}`}>
@@ -136,9 +136,9 @@ export function AuditLogEntry({ entry }: AuditLogEntryProps) {
             <span className={`font-medium ${actionConfig.color.split(' ')[0]}`}>
               {actionConfig.label}
             </span>
-            <span className="text-gray-900">{entityLabel}</span>
+            <span className="text-navy">{entityLabel}</span>
             {recordName && (
-              <span className="text-gray-500">"{recordName}"</span>
+              <span className="text-surface-500">"{recordName}"</span>
             )}
             {entry.source === 'pdf_import' && (
               <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">
@@ -147,7 +147,7 @@ export function AuditLogEntry({ entry }: AuditLogEntryProps) {
             )}
           </div>
 
-          <div className="mt-1 text-xs text-gray-500 flex items-center gap-2">
+          <div className="mt-1 text-xs text-surface-500 flex items-center gap-2">
             <span>{formatDate(entry.created_at)}</span>
             {entry.changed_by_name && (
               <>

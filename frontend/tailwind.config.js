@@ -36,6 +36,7 @@ export default {
         },
         warning: {
           DEFAULT: '#E6A817',
+          dark: 'var(--color-warning-dark)',
           light: '#FFF8E1',
         },
         success: {

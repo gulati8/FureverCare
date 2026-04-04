@@ -134,7 +134,7 @@ export default function FlexibleDateInput({ value, precision, onChange, label, r
 
   return (
     <div>
-      {label && <label className="text-sm text-gray-600">{label}{required && ' *'}</label>}
+      {label && <label className="text-sm text-surface-600">{label}{required && ' *'}</label>}
       <div className="grid grid-cols-3 gap-2">
         <div>
           <select

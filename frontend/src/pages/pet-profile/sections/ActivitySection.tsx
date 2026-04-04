@@ -20,7 +20,7 @@ export default function ActivitySection() {
         ) : (
           <div className="space-y-4">
             <UpgradeBanner type="feature" feature="timeline" />
-            <p className="text-gray-500 text-center py-4">
+            <p className="text-surface-500 text-center py-4">
               Upgrade to premium to view a visual timeline of your pet's medical history.
             </p>
           </div>

@@ -84,7 +84,7 @@ export function PdfUploadList({
 
   if (uploads.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
+      <div className="text-center py-8 text-surface-500">
         <p>No PDF uploads yet</p>
         <p className="text-sm mt-1">Upload a veterinary document to get started</p>
       </div>
@@ -92,19 +92,19 @@ export function PdfUploadList({
   }
 
   return (
-    <div className="divide-y divide-gray-200">
+    <div className="divide-y divide-surface-200">
       {uploads.map((upload) => (
         <div key={upload.id} className="py-4 flex items-center justify-between">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3">
-              <svg className="h-8 w-8 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="h-8 w-8 text-danger flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
               </svg>
               <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
+                <p className="text-sm font-medium text-navy truncate">
                   {upload.original_filename}
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-surface-500">
                   {formatFileSize(upload.file_size)} • {formatDocType(upload.document_type)} • {formatDate(upload.created_at)}
                 </p>
               </div>
@@ -119,7 +119,7 @@ export function PdfUploadList({
                 <button
                   onClick={() => handleProcess(upload)}
                   disabled={processingIds.has(upload.id)}
-                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                  className="px-3 py-1 text-sm bg-info text-white rounded hover:bg-info disabled:opacity-50"
                 >
                   {processingIds.has(upload.id) ? 'Processing...' : 'Process'}
                 </button>
@@ -128,7 +128,7 @@ export function PdfUploadList({
               {upload.status === 'completed' && (
                 <button
                   onClick={() => onUploadSelect(upload)}
-                  className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+                  className="px-3 py-1 text-sm bg-success text-white rounded hover:bg-success"
                 >
                   Review
                 </button>
@@ -147,7 +147,7 @@ export function PdfUploadList({
               <button
                 onClick={() => handleDelete(upload.id)}
                 disabled={deletingIds.has(upload.id)}
-                className="p-1 text-gray-400 hover:text-red-500 disabled:opacity-50"
+                className="p-1 text-surface-400 hover:text-danger disabled:opacity-50"
                 title="Delete"
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

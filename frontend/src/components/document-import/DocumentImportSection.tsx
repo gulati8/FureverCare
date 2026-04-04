@@ -294,7 +294,7 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <svg className="animate-spin h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24">
+        <svg className="animate-spin h-8 w-8 text-info" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
         </svg>
@@ -320,10 +320,10 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900" style={{ fontFamily: 'var(--font-heading, inherit)' }}>
+        <h3 className="text-lg font-semibold text-navy" style={{ fontFamily: 'var(--font-heading, inherit)' }}>
           Documents
           {displayItems.length > 0 && (
-            <span className="ml-2 text-sm font-normal text-gray-400">{displayItems.length} total</span>
+            <span className="ml-2 text-sm font-normal text-surface-400">{displayItems.length} total</span>
           )}
         </h3>
         <div className="flex items-center gap-3">
@@ -348,7 +348,7 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
               <button
                 onClick={() => { setViewMode('grid'); try { localStorage.setItem('fc-doc-view-mode', 'grid'); } catch {} }}
                 className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1 transition-colors ${
-                  viewMode === 'grid' ? 'bg-white text-gray-900 shadow-sm' : 'bg-gray-50 text-gray-400 hover:text-gray-600'
+                  viewMode === 'grid' ? 'bg-white text-navy shadow-sm' : 'bg-surface text-surface-400 hover:text-surface-600'
                 }`}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -359,7 +359,7 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
               <button
                 onClick={() => { setViewMode('list'); try { localStorage.setItem('fc-doc-view-mode', 'list'); } catch {} }}
                 className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1 transition-colors ${
-                  viewMode === 'list' ? 'bg-white text-gray-900 shadow-sm' : 'bg-gray-50 text-gray-400 hover:text-gray-600'
+                  viewMode === 'list' ? 'bg-white text-navy shadow-sm' : 'bg-surface text-surface-400 hover:text-surface-600'
                 }`}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -374,8 +374,8 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-3">
-          <p className="text-sm text-red-600">{error}</p>
+        <div className="bg-danger-light border border-danger-light rounded-md p-3">
+          <p className="text-sm text-danger">{error}</p>
         </div>
       )}
 
@@ -397,7 +397,7 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
                 className={`px-3 py-1 text-xs font-semibold rounded-full border transition-colors ${
                   isActive
                     ? 'text-white border-transparent'
-                    : 'bg-white text-gray-500 hover:text-gray-700'
+                    : 'bg-white text-surface-500 hover:text-surface-700'
                 }`}
                 style={isActive ? {
                   background: 'var(--color-navy, #1B2A4A)',
@@ -423,16 +423,16 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
       {/* Document library */}
       {filteredItems.length === 0 && displayItems.length === 0 && (
         <div className="text-center py-10">
-          <svg className="mx-auto h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <svg className="mx-auto h-12 w-12 text-surface-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
           </svg>
-          <h4 className="mt-2 text-sm font-semibold text-gray-900">No documents yet</h4>
-          <p className="mt-1 text-sm text-gray-500">Upload vet records, prescriptions, or photos to keep them safe and organized.</p>
+          <h4 className="mt-2 text-sm font-semibold text-navy">No documents yet</h4>
+          <p className="mt-1 text-sm text-surface-500">Upload vet records, prescriptions, or photos to keep them safe and organized.</p>
         </div>
       )}
 
       {filteredItems.length === 0 && displayItems.length > 0 && (
-        <p className="text-sm text-gray-500 text-center py-6">No documents match this filter.</p>
+        <p className="text-sm text-surface-500 text-center py-6">No documents match this filter.</p>
       )}
 
       {/* Grid view */}
@@ -491,12 +491,12 @@ export function DocumentImportSection({ petId, onImportComplete, navigateToUploa
 
 // Status helpers
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  uploaded: { bg: 'bg-gray-100', text: 'text-gray-600' },
-  pending: { bg: 'bg-blue-50', text: 'text-blue-700' },
-  processing: { bg: 'bg-blue-50', text: 'text-blue-700' },
+  uploaded: { bg: 'bg-surface-100', text: 'text-surface-600' },
+  pending: { bg: 'bg-info-light', text: 'text-info' },
+  processing: { bg: 'bg-info-light', text: 'text-info' },
   pending_review: { bg: 'bg-amber-50', text: 'text-amber-700' },
-  completed: { bg: 'bg-green-50', text: 'text-green-700' },
-  failed: { bg: 'bg-red-50', text: 'text-red-700' },
+  completed: { bg: 'bg-success-light', text: 'text-success' },
+  failed: { bg: 'bg-danger-light', text: 'text-danger' },
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -509,12 +509,12 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_DOT_COLORS: Record<string, string> = {
-  uploaded: 'bg-gray-400',
-  pending: 'bg-blue-400',
-  processing: 'bg-blue-400',
+  uploaded: 'bg-surface-400',
+  pending: 'bg-info',
+  processing: 'bg-info',
   pending_review: 'bg-amber-400',
-  completed: 'bg-green-500',
-  failed: 'bg-red-500',
+  completed: 'bg-success',
+  failed: 'bg-danger',
 };
 
 // Delete confirmation dialog
@@ -541,8 +541,8 @@ function DeleteConfirmDialog({
         className="bg-white rounded-lg shadow-xl max-w-sm w-full p-5"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-base font-semibold text-gray-900 mb-1">Delete document?</h3>
-        <p className="text-sm text-gray-500 mb-4 break-words">
+        <h3 className="text-base font-semibold text-navy mb-1">Delete document?</h3>
+        <p className="text-sm text-surface-500 mb-4 break-words">
           {isProcessed
             ? `"${name}" has imported health records. What should happen to them?`
             : `Are you sure you want to delete "${name}"? This cannot be undone.`}
@@ -572,7 +572,7 @@ function DeleteConfirmDialog({
             <button
               onClick={onCancel}
               disabled={isDeleting}
-              className="w-full px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+              className="w-full px-4 py-2 text-sm text-surface-500 hover:text-surface-700 transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
@@ -582,7 +582,7 @@ function DeleteConfirmDialog({
             <button
               onClick={onCancel}
               disabled={isDeleting}
-              className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+              className="px-4 py-2 text-sm font-medium text-surface-500 hover:text-surface-700 transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
@@ -676,12 +676,12 @@ function GridCard({
   return (
     <>
       <div
-        className={`group rounded-lg border overflow-hidden bg-white transition-all cursor-pointer hover:border-blue-400 hover:shadow-md hover:-translate-y-0.5`}
+        className={`group rounded-lg border overflow-hidden bg-white transition-all cursor-pointer hover:border-info hover:shadow-md hover:-translate-y-0.5`}
         style={{ borderColor: 'var(--color-surface-200, #E2E5E9)' }}
         onClick={handleClick}
       >
         {/* Thumbnail */}
-        <div className="aspect-square bg-gray-100 relative flex items-center justify-center overflow-hidden">
+        <div className="aspect-square bg-surface-100 relative flex items-center justify-center overflow-hidden">
           {isImage ? (
             <img
               src={getDocumentUrl(upload)}
@@ -690,14 +690,14 @@ function GridCard({
               loading="lazy"
             />
           ) : (
-            <svg className="w-12 h-12 text-red-300" viewBox="0 0 24 24" fill="currentColor">
+            <svg className="w-12 h-12 text-danger" viewBox="0 0 24 24" fill="currentColor">
               <path d="M6 2h8l6 6v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/>
             </svg>
           )}
 
           {/* Status badge overlay */}
           {isStored && (
-            <span className="absolute top-1.5 right-1.5 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded bg-white/85 text-gray-500">
+            <span className="absolute top-1.5 right-1.5 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded bg-white/85 text-surface-500">
               Uploaded
             </span>
           )}
@@ -707,7 +707,7 @@ function GridCard({
             </span>
           )}
           {(isProcessing || isScanning) && (
-            <span className="absolute top-1.5 right-1.5 text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50/90 text-blue-700 animate-pulse">
+            <span className="absolute top-1.5 right-1.5 text-[10px] font-bold px-2 py-0.5 rounded bg-info-light/90 text-info animate-pulse">
               Processing...
             </span>
           )}
@@ -715,7 +715,7 @@ function GridCard({
           {/* Delete button overlay */}
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            className="absolute top-1.5 left-1.5 p-1 rounded bg-white/80 text-gray-400 hover:text-red-500 hover:bg-white transition-colors opacity-0 group-hover:opacity-100"
+            className="absolute top-1.5 left-1.5 p-1 rounded bg-white/80 text-surface-400 hover:text-danger hover:bg-white transition-colors opacity-0 group-hover:opacity-100"
             title="Delete document"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -742,13 +742,13 @@ function GridCard({
                 onChange={(e) => setRenameTo(e.target.value)}
                 onKeyDown={handleRenameKeyDown}
                 maxLength={255}
-                className="flex-1 min-w-0 text-sm font-semibold text-gray-900 border border-blue-400 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                className="flex-1 min-w-0 text-sm font-semibold text-navy border border-info rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
                 disabled={renaming}
               />
-              <button onClick={commitRename} disabled={renaming} className="p-0.5 text-green-600 hover:text-green-700 disabled:opacity-50" title="Save">
+              <button onClick={commitRename} disabled={renaming} className="p-0.5 text-success hover:text-success disabled:opacity-50" title="Save">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
               </button>
-              <button onClick={cancelRename} disabled={renaming} className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-50" title="Cancel">
+              <button onClick={cancelRename} disabled={renaming} className="p-0.5 text-surface-400 hover:text-surface-600 disabled:opacity-50" title="Cancel">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
@@ -756,24 +756,24 @@ function GridCard({
             <div className="flex items-center gap-1">
               <button
                 onClick={startRename}
-                className="flex-shrink-0 p-0.5 text-gray-400 hover:text-gray-600 transition-colors"
+                className="flex-shrink-0 p-0.5 text-surface-400 hover:text-surface-600 transition-colors"
                 title="Rename"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                 </svg>
               </button>
-              <p className="text-xs md:text-sm font-semibold text-gray-900 truncate flex-1 min-w-0">
+              <p className="text-xs md:text-sm font-semibold text-navy truncate flex-1 min-w-0">
                 {item.groupName || upload.original_filename}
               </p>
             </div>
           )}
           <div className="flex items-center gap-1.5 mt-1">
-            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT_COLORS[upload.status] || 'bg-gray-400'}`} />
-            <span className="text-[11px] md:text-xs text-gray-500">
+            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT_COLORS[upload.status] || 'bg-surface-400'}`} />
+            <span className="text-[11px] md:text-xs text-surface-500">
               {isScanning ? 'Processing...' : STATUS_LABELS[upload.status] || upload.status}
             </span>
-            <span className="text-[11px] md:text-xs text-gray-400">
+            <span className="text-[11px] md:text-xs text-surface-400">
               {new Date(upload.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
             </span>
           </div>
@@ -896,7 +896,7 @@ function ListCard({
     >
       <div className="flex items-center gap-3 p-3">
         {/* Thumbnail */}
-        <div className="w-11 h-11 rounded-md overflow-hidden flex-shrink-0 bg-gray-100 flex items-center justify-center">
+        <div className="w-11 h-11 rounded-md overflow-hidden flex-shrink-0 bg-surface-100 flex items-center justify-center">
           {isImage ? (
             <img
               src={getDocumentUrl(upload)}
@@ -905,7 +905,7 @@ function ListCard({
               loading="lazy"
             />
           ) : (
-            <svg className="w-6 h-6 text-red-300" viewBox="0 0 24 24" fill="currentColor">
+            <svg className="w-6 h-6 text-danger" viewBox="0 0 24 24" fill="currentColor">
               <path d="M6 2h8l6 6v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z"/>
             </svg>
           )}
@@ -922,13 +922,13 @@ function ListCard({
                 onChange={(e) => setRenameTo(e.target.value)}
                 onKeyDown={handleRenameKeyDown}
                 maxLength={255}
-                className="flex-1 min-w-0 text-sm font-semibold text-gray-900 border border-blue-400 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                className="flex-1 min-w-0 text-sm font-semibold text-navy border border-info rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
                 disabled={renaming}
               />
-              <button onClick={commitRename} disabled={renaming} className="p-0.5 text-green-600 hover:text-green-700 disabled:opacity-50 flex-shrink-0" title="Save">
+              <button onClick={commitRename} disabled={renaming} className="p-0.5 text-success hover:text-success disabled:opacity-50 flex-shrink-0" title="Save">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
               </button>
-              <button onClick={cancelRename} disabled={renaming} className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-50 flex-shrink-0" title="Cancel">
+              <button onClick={cancelRename} disabled={renaming} className="p-0.5 text-surface-400 hover:text-surface-600 disabled:opacity-50 flex-shrink-0" title="Cancel">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
@@ -936,7 +936,7 @@ function ListCard({
             <div className="flex items-center gap-1">
               <button
                 onClick={startRename}
-                className="flex-shrink-0 p-0.5 text-gray-400 hover:text-gray-600 transition-colors"
+                className="flex-shrink-0 p-0.5 text-surface-400 hover:text-surface-600 transition-colors"
                 title="Rename"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -945,7 +945,7 @@ function ListCard({
               </button>
               {/* For standalone docs: link to file. For groups: just a label */}
               {isGroup ? (
-                <span className="text-sm font-semibold text-gray-900 truncate flex-1 min-w-0">
+                <span className="text-sm font-semibold text-navy truncate flex-1 min-w-0">
                   {item.groupName || upload.original_filename}
                 </span>
               ) : (
@@ -953,7 +953,7 @@ function ListCard({
                   href={getDocumentUrl(upload)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm font-semibold text-gray-900 truncate flex-1 min-w-0 hover:text-blue-700 hover:underline"
+                  className="text-sm font-semibold text-navy truncate flex-1 min-w-0 hover:text-info hover:underline"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {upload.original_filename}
@@ -962,18 +962,18 @@ function ListCard({
             </div>
           )}
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS[upload.status]?.bg || 'bg-gray-100'} ${STATUS_COLORS[upload.status]?.text || 'text-gray-600'} ${(isProcessing || isScanning) ? 'animate-pulse' : ''}`}>
+            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS[upload.status]?.bg || 'bg-surface-100'} ${STATUS_COLORS[upload.status]?.text || 'text-surface-600'} ${(isProcessing || isScanning) ? 'animate-pulse' : ''}`}>
               {isScanning ? 'Processing...' : upload.status === 'pending_review' && upload.pending_items
                 ? `${upload.pending_items} pending`
                 : STATUS_LABELS[upload.status] || upload.status}
             </span>
             {isGroup && (
-              <span className="text-[11px] text-gray-400">{item.pages.length} pages</span>
+              <span className="text-[11px] text-surface-400">{item.pages.length} pages</span>
             )}
             {upload.user_tag && (
-              <span className="text-[11px] text-gray-400">{upload.user_tag}</span>
+              <span className="text-[11px] text-surface-400">{upload.user_tag}</span>
             )}
-            <span className="text-[11px] text-gray-400">
+            <span className="text-[11px] text-surface-400">
               {new Date(upload.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
             </span>
           </div>
@@ -984,7 +984,7 @@ function ListCard({
           {isGroup && (
             <button
               onClick={() => setPagesExpanded(!pagesExpanded)}
-              className="text-xs font-semibold px-3 py-1.5 rounded-md border text-gray-500 hover:bg-gray-50 transition-colors"
+              className="text-xs font-semibold px-3 py-1.5 rounded-md border text-surface-500 hover:bg-surface transition-colors"
               style={{ borderColor: 'var(--color-surface-200, #E2E5E9)' }}
             >
               {pagesExpanded ? 'Hide Pages' : 'View Pages'}
@@ -1020,7 +1020,7 @@ function ListCard({
           {canView && (
             <button
               onClick={onSelect}
-              className="text-xs font-semibold px-3 py-1.5 rounded-md border text-gray-500 hover:bg-gray-50 transition-colors"
+              className="text-xs font-semibold px-3 py-1.5 rounded-md border text-surface-500 hover:bg-surface transition-colors"
               style={{ borderColor: 'var(--color-surface-200, #E2E5E9)' }}
             >
               View
@@ -1029,7 +1029,7 @@ function ListCard({
           {/* Delete button */}
           <button
             onClick={onDelete}
-            className="p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+            className="p-1.5 rounded text-surface-400 hover:text-danger hover:bg-danger-light transition-colors"
             title="Delete document"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1047,7 +1047,7 @@ function ListCard({
               <div key={page.id} className="flex-shrink-0 flex flex-col items-center" style={{ width: '100px' }}>
                 {/* Thumbnail — click to view */}
                 <div
-                  className="w-full bg-gray-100 cursor-pointer relative rounded-md overflow-hidden border hover:border-blue-400 hover:shadow-md transition-all"
+                  className="w-full bg-surface-100 cursor-pointer relative rounded-md overflow-hidden border hover:border-info hover:shadow-md transition-all"
                   style={{ height: '80px', borderColor: 'var(--color-surface-200, #E2E5E9)' }}
                   onClick={() => setLightboxPage(page)}
                 >
@@ -1067,18 +1067,18 @@ function ListCard({
                   <button
                     onClick={() => handleMovePage(idx, idx - 1)}
                     disabled={idx === 0}
-                    className="p-0.5 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-gray-400"
+                    className="p-0.5 rounded text-surface-400 hover:text-surface-700 hover:bg-surface-100 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-surface-400"
                     title="Move left"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                     </svg>
                   </button>
-                  <span className="text-[10px] text-gray-400 tabular-nums">{idx + 1}/{item.pages.length}</span>
+                  <span className="text-[10px] text-surface-400 tabular-nums">{idx + 1}/{item.pages.length}</span>
                   <button
                     onClick={() => handleMovePage(idx, idx + 1)}
                     disabled={idx === item.pages.length - 1}
-                    className="p-0.5 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-gray-400"
+                    className="p-0.5 rounded text-surface-400 hover:text-surface-700 hover:bg-surface-100 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-surface-400"
                     title="Move right"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1093,7 +1093,7 @@ function ListCard({
               <div className="flex-shrink-0">
                 <button
                   onClick={onAddPage}
-                  className="rounded-md border-2 border-dashed flex flex-col items-center justify-center text-gray-300 hover:border-blue-400 hover:text-blue-500 transition-colors"
+                  className="rounded-md border-2 border-dashed flex flex-col items-center justify-center text-surface-300 hover:border-info hover:text-info transition-colors"
                   style={{ borderColor: 'var(--color-surface-300, #CED4DA)', width: '100px', height: '80px' }}
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M12 4v16m8-8H4"/></svg>
@@ -1102,7 +1102,7 @@ function ListCard({
               </div>
             )}
           </div>
-          <p className="text-[10px] text-gray-400 mt-1.5">Use arrows to reorder &middot; Click to view full size</p>
+          <p className="text-[10px] text-surface-400 mt-1.5">Use arrows to reorder &middot; Click to view full size</p>
         </div>
       )}
 
@@ -1123,7 +1123,7 @@ function ListCard({
         <div className="px-3 pb-3">
           <button
             onClick={() => setMetadataExpanded(!metadataExpanded)}
-            className="text-[11px] text-gray-400 hover:text-gray-600 flex items-center gap-1"
+            className="text-[11px] text-surface-400 hover:text-surface-600 flex items-center gap-1"
           >
             <svg className={`h-3 w-3 transition-transform ${metadataExpanded ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -1176,53 +1176,53 @@ function PageLightbox({
         className="relative bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <button onClick={onClose} className="absolute top-3 right-3 z-10 bg-white/90 rounded-full p-1.5 text-gray-600 hover:text-gray-900 shadow-sm">
+        <button onClick={onClose} className="absolute top-3 right-3 z-10 bg-white/90 rounded-full p-1.5 text-surface-600 hover:text-navy shadow-sm">
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
 
         {pages.length > 1 && (
           <>
             {currentIdx > 0 && (
-              <button onClick={() => onNavigate(pages[currentIdx - 1])} className="absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-white/90 rounded-full p-2 text-gray-600 hover:text-gray-900 shadow-md">
+              <button onClick={() => onNavigate(pages[currentIdx - 1])} className="absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-white/90 rounded-full p-2 text-surface-600 hover:text-navy shadow-md">
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
               </button>
             )}
             {currentIdx < pages.length - 1 && (
-              <button onClick={() => onNavigate(pages[currentIdx + 1])} className="absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-white/90 rounded-full p-2 text-gray-600 hover:text-gray-900 shadow-md">
+              <button onClick={() => onNavigate(pages[currentIdx + 1])} className="absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-white/90 rounded-full p-2 text-surface-600 hover:text-navy shadow-md">
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
               </button>
             )}
           </>
         )}
 
-        <div className="flex items-center justify-center bg-gray-900 max-h-[75vh]">
+        <div className="flex items-center justify-center bg-navy max-h-[75vh]">
           <img src={getDocumentUrl(currentPage)} alt={currentPage.original_filename} className="max-w-full max-h-[75vh] object-contain" />
         </div>
 
         <div className="p-3 border-t flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-sm font-medium text-surface-700">
               {pages.length > 1 ? `Page ${currentIdx + 1} of ${pages.length}` : currentPage.original_filename}
             </span>
             {pages.length > 1 && (
               <>
-                <span className="text-xs text-gray-400">{currentPage.original_filename}</span>
+                <span className="text-xs text-surface-400">{currentPage.original_filename}</span>
                 <div className="flex items-center gap-1 border-l pl-3" style={{ borderColor: 'var(--color-surface-200, #E2E5E9)' }}>
                   <button
                     onClick={() => handleMovePage(currentIdx, currentIdx - 1)}
                     disabled={currentIdx === 0}
-                    className="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-gray-400"
+                    className="p-1 rounded text-surface-400 hover:text-surface-700 hover:bg-surface-100 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-surface-400"
                     title="Move page earlier"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                     </svg>
                   </button>
-                  <span className="text-[11px] text-gray-500 font-medium">Move</span>
+                  <span className="text-[11px] text-surface-500 font-medium">Move</span>
                   <button
                     onClick={() => handleMovePage(currentIdx, currentIdx + 1)}
                     disabled={currentIdx === pages.length - 1}
-                    className="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-gray-400"
+                    className="p-1 rounded text-surface-400 hover:text-surface-700 hover:bg-surface-100 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-surface-400"
                     title="Move page later"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1233,7 +1233,7 @@ function PageLightbox({
               </>
             )}
           </div>
-          <a href={getDocumentUrl(currentPage)} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
+          <a href={getDocumentUrl(currentPage)} target="_blank" rel="noopener noreferrer" className="text-sm text-info hover:underline">
             Open full size
           </a>
         </div>
@@ -1273,28 +1273,28 @@ function InlineMetadataForm({ petId, uploadId, upload }: { petId: number; upload
   return (
     <div className="mt-2 space-y-2">
       <div>
-        <label className="block text-[11px] text-gray-500 mb-1">Tag</label>
+        <label className="block text-[11px] text-surface-500 mb-1">Tag</label>
         <div className="flex flex-wrap gap-1 mb-1">
           {tagSuggestions.map(tag => (
-            <button key={tag} onClick={() => setUserTag(tag)} className={`px-2 py-0.5 text-[11px] rounded-full border transition-colors ${userTag === tag ? 'bg-blue-100 border-blue-300 text-blue-700' : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+            <button key={tag} onClick={() => setUserTag(tag)} className={`px-2 py-0.5 text-[11px] rounded-full border transition-colors ${userTag === tag ? 'bg-info-light border-info text-info' : 'bg-white border-surface-200 text-surface-500 hover:border-surface-300'}`}>
               {tag}
             </button>
           ))}
         </div>
-        <input type="text" value={userTag} onChange={(e) => setUserTag(e.target.value)} placeholder="Custom tag..." className="w-full border border-gray-200 rounded px-2 py-1 text-xs" />
+        <input type="text" value={userTag} onChange={(e) => setUserTag(e.target.value)} placeholder="Custom tag..." className="w-full border border-surface-200 rounded px-2 py-1 text-xs" />
       </div>
       <div>
-        <label className="block text-[11px] text-gray-500 mb-1">Note</label>
-        <input type="text" value={userDescription} onChange={(e) => setUserDescription(e.target.value)} placeholder="Brief description..." className="w-full border border-gray-200 rounded px-2 py-1 text-xs" />
+        <label className="block text-[11px] text-surface-500 mb-1">Note</label>
+        <input type="text" value={userDescription} onChange={(e) => setUserDescription(e.target.value)} placeholder="Brief description..." className="w-full border border-surface-200 rounded px-2 py-1 text-xs" />
       </div>
       <div className="flex gap-2">
         <div className="flex-1">
-          <label className="block text-[11px] text-gray-500 mb-1">Date taken</label>
-          <input type="date" value={dateTaken} onChange={(e) => setDateTaken(e.target.value)} className="w-full border border-gray-200 rounded px-2 py-1 text-xs" />
+          <label className="block text-[11px] text-surface-500 mb-1">Date taken</label>
+          <input type="date" value={dateTaken} onChange={(e) => setDateTaken(e.target.value)} className="w-full border border-surface-200 rounded px-2 py-1 text-xs" />
         </div>
         <div className="flex-1">
-          <label className="block text-[11px] text-gray-500 mb-1">Body area</label>
-          <input type="text" value={bodyArea} onChange={(e) => setBodyArea(e.target.value)} placeholder="e.g., Left hip" className="w-full border border-gray-200 rounded px-2 py-1 text-xs" />
+          <label className="block text-[11px] text-surface-500 mb-1">Body area</label>
+          <input type="text" value={bodyArea} onChange={(e) => setBodyArea(e.target.value)} placeholder="e.g., Left hip" className="w-full border border-surface-200 rounded px-2 py-1 text-xs" />
         </div>
       </div>
       <button onClick={handleSave} disabled={saving} className="px-3 py-1 text-xs font-semibold text-white rounded disabled:opacity-50" style={{ background: 'var(--color-steel, #4A7FB5)' }}>

@@ -94,7 +94,7 @@ function AutocompleteSelect({ field, value, onChange }: { field: EditField; valu
 
   return (
     <div key={field.key}>
-      {field.label && <label className="text-sm text-gray-600">{field.label}</label>}
+      {field.label && <label className="text-sm text-surface-600">{field.label}</label>}
       <div className="relative">
         <input
           ref={inputRef}
@@ -108,7 +108,7 @@ function AutocompleteSelect({ field, value, onChange }: { field: EditField; valu
           autoComplete="off"
         />
         {isOpen && filtered.length > 0 && (
-          <div ref={dropdownRef} className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
+          <div ref={dropdownRef} className="absolute z-10 w-full mt-1 bg-white border border-surface-300 rounded-lg shadow-lg max-h-60 overflow-auto">
             {filtered.map((o, index) => (
               <button
                 key={o.value}
@@ -116,7 +116,7 @@ function AutocompleteSelect({ field, value, onChange }: { field: EditField; valu
                 onClick={() => { onChange(o.value); setIsOpen(false); setHighlightedIndex(-1); inputRef.current?.focus(); }}
                 onMouseEnter={() => setHighlightedIndex(index)}
                 className={`w-full text-left px-3 py-2 hover:bg-primary-50 transition-colors ${
-                  index === highlightedIndex ? 'bg-primary-50 text-primary-900' : 'text-gray-900'
+                  index === highlightedIndex ? 'bg-primary-50 text-primary-900' : 'text-navy'
                 }`}
               >
                 {o.label}
@@ -155,9 +155,9 @@ export default function InlineEditForm({ fields, values: initialValues, onSave, 
             id={`edit-${field.key}`}
             checked={val as boolean}
             onChange={(e) => setValue(field.key, e.target.checked)}
-            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-surface-300 rounded"
           />
-          <label htmlFor={`edit-${field.key}`} className="ml-2 block text-sm text-gray-700">
+          <label htmlFor={`edit-${field.key}`} className="ml-2 block text-sm text-surface-700">
             {field.placeholder}
           </label>
         </div>
@@ -196,7 +196,7 @@ export default function InlineEditForm({ fields, values: initialValues, onSave, 
     if (field.type === 'textarea') {
       return (
         <div key={field.key}>
-          {field.label && <label className="text-sm text-gray-600">{field.label}</label>}
+          {field.label && <label className="text-sm text-surface-600">{field.label}</label>}
           <textarea
             placeholder={field.placeholder}
             value={val as string}
@@ -210,7 +210,7 @@ export default function InlineEditForm({ fields, values: initialValues, onSave, 
 
     return (
       <div key={field.key}>
-        {field.label && <label className="text-sm text-gray-600">{field.label}</label>}
+        {field.label && <label className="text-sm text-surface-600">{field.label}</label>}
         <input
           type={field.type || 'text'}
           placeholder={field.placeholder}
@@ -251,7 +251,7 @@ export default function InlineEditForm({ fields, values: initialValues, onSave, 
   };
 
   return (
-    <div className={`bg-gray-50 rounded-lg p-4 space-y-3 ${className}`}>
+    <div className={`bg-surface rounded-lg p-4 space-y-3 ${className}`}>
       {renderFields()}
       <div className="flex gap-2">
         <button onClick={handleSave} className="btn-primary text-sm">Save</button>

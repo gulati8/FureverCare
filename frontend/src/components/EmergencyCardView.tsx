@@ -8,7 +8,7 @@ interface Props {
 
 export default function EmergencyCardView({ card, resolvePhotoUrl }: Props) {
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--color-surface-100)' }}>
+    <div className="min-h-screen bg-surface-100">
       <EmergencyCard card={card} resolvePhotoUrl={resolvePhotoUrl} />
     </div>
   );

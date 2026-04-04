@@ -100,17 +100,17 @@ export function ImageReviewForm({ petId, upload, exifDateTaken, onSave, onCancel
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium text-gray-900">Review Image</h3>
+        <h3 className="text-lg font-medium text-navy">Review Image</h3>
         <button
           onClick={onCancel}
-          className="text-sm text-gray-500 hover:text-gray-700"
+          className="text-sm text-surface-500 hover:text-surface-700"
         >
           Back to uploads
         </button>
       </div>
 
       {/* Image preview */}
-      <div className="bg-gray-100 rounded-lg p-4 flex justify-center">
+      <div className="bg-surface-100 rounded-lg p-4 flex justify-center">
         <img
           src={imageUrl}
           alt={upload.original_filename}
@@ -118,7 +118,7 @@ export function ImageReviewForm({ petId, upload, exifDateTaken, onSave, onCancel
         />
       </div>
 
-      <p className="text-sm text-gray-500 text-center">{upload.original_filename}</p>
+      <p className="text-sm text-surface-500 text-center">{upload.original_filename}</p>
 
       {/* Scan for records button — shown for images that haven't been processed */}
       {onScanComplete && (
@@ -155,8 +155,8 @@ export function ImageReviewForm({ petId, upload, exifDateTaken, onSave, onCancel
       <div className="space-y-4">
         {/* Tag (required) */}
         <div>
-          <label htmlFor="image-tag" className="block text-sm font-medium text-gray-700 mb-1">
-            Tag <span className="text-red-500">*</span>
+          <label htmlFor="image-tag" className="block text-sm font-medium text-surface-700 mb-1">
+            Tag <span className="text-danger">*</span>
           </label>
           <input
             id="image-tag"
@@ -165,7 +165,7 @@ export function ImageReviewForm({ petId, upload, exifDateTaken, onSave, onCancel
             value={tag}
             onChange={(e) => setTag(e.target.value)}
             placeholder="e.g. X-ray, Wound photo, Lab result"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+            className="w-full px-3 py-2 border border-surface-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
             maxLength={100}
           />
           <datalist id="tag-suggestions">
@@ -177,7 +177,7 @@ export function ImageReviewForm({ petId, upload, exifDateTaken, onSave, onCancel
 
         {/* Description (optional) */}
         <div>
-          <label htmlFor="image-description" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="image-description" className="block text-sm font-medium text-surface-700 mb-1">
             Description
           </label>
           <textarea
@@ -186,13 +186,13 @@ export function ImageReviewForm({ petId, upload, exifDateTaken, onSave, onCancel
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Optional notes about this image"
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+            className="w-full px-3 py-2 border border-surface-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
           />
         </div>
 
         {/* Date taken */}
         <div>
-          <label htmlFor="image-date-taken" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="image-date-taken" className="block text-sm font-medium text-surface-700 mb-1">
             Date Taken
           </label>
           <input
@@ -200,16 +200,16 @@ export function ImageReviewForm({ petId, upload, exifDateTaken, onSave, onCancel
             type="date"
             value={dateTaken}
             onChange={(e) => setDateTaken(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+            className="w-full px-3 py-2 border border-surface-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
           />
           {exifDateTaken && !upload.date_taken && (
-            <p className="text-xs text-gray-400 mt-1">Pre-filled from image EXIF data</p>
+            <p className="text-xs text-surface-400 mt-1">Pre-filled from image EXIF data</p>
           )}
         </div>
 
         {/* Body area (optional) */}
         <div>
-          <label htmlFor="image-body-area" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="image-body-area" className="block text-sm font-medium text-surface-700 mb-1">
             Body Area
           </label>
           <input
@@ -218,15 +218,15 @@ export function ImageReviewForm({ petId, upload, exifDateTaken, onSave, onCancel
             value={bodyArea}
             onChange={(e) => setBodyArea(e.target.value)}
             placeholder='e.g. "Left hind leg", "Teeth", "Abdomen"'
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+            className="w-full px-3 py-2 border border-surface-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
             maxLength={100}
           />
         </div>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-3">
-          <p className="text-sm text-red-600">{error}</p>
+        <div className="bg-danger-light border border-danger-light rounded-md p-3">
+          <p className="text-sm text-danger">{error}</p>
         </div>
       )}
 
@@ -235,14 +235,14 @@ export function ImageReviewForm({ petId, upload, exifDateTaken, onSave, onCancel
         <button
           onClick={handleSave}
           disabled={isSaving || !tag.trim()}
-          className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 bg-info text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-info disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSaving ? 'Saving...' : 'Save'}
         </button>
         <button
           onClick={onCancel}
           disabled={isSaving}
-          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          className="px-4 py-2 border border-surface-300 rounded-md text-sm font-medium text-surface-700 hover:bg-surface disabled:opacity-50"
         >
           Cancel
         </button>

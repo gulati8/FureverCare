@@ -13,12 +13,12 @@ const BLOCK_TYPE_LABELS: Record<string, string> = {
 };
 
 const BLOCK_TYPE_COLORS: Record<string, string> = {
-  hero: 'bg-blue-100 text-blue-800',
-  features: 'bg-green-100 text-green-800',
-  how_it_works: 'bg-purple-100 text-purple-800',
-  cta: 'bg-orange-100 text-orange-800',
-  footer: 'bg-gray-100 text-gray-800',
-  empty_state: 'bg-amber-100 text-amber-800',
+  hero: 'bg-info-light text-info',
+  features: 'bg-success-light text-success',
+  how_it_works: 'bg-surface-100 text-surface-700',
+  cta: 'bg-warning-light text-warning-dark',
+  footer: 'bg-surface-100 text-navy',
+  empty_state: 'bg-warning-light text-warning-dark',
 };
 
 export default function CMSEditor() {
@@ -139,14 +139,14 @@ export default function CMSEditor() {
     <div className="max-w-5xl mx-auto">
       {/* Page header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">CMS Editor</h1>
-        <p className="text-gray-600 mt-1">Manage your website content</p>
+        <h1 className="text-2xl font-bold text-navy">CMS Editor</h1>
+        <p className="text-surface-600 mt-1">Manage your website content</p>
       </div>
 
       {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg flex items-center justify-between">
+        <div className="mb-6 bg-danger-light border border-danger-light text-danger px-4 py-3 rounded-lg flex items-center justify-between">
           <span>{error}</span>
-          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600">
+          <button onClick={() => setError(null)} className="text-danger hover:text-danger-dark">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -159,7 +159,7 @@ export default function CMSEditor() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           {/* Page selector */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-            <label className="text-sm font-medium text-gray-700">Page:</label>
+            <label className="text-sm font-medium text-surface-700">Page:</label>
             <select
               value={selectedPageId || ''}
               onChange={(e) => setSelectedPageId(Number(e.target.value))}
@@ -220,14 +220,14 @@ export default function CMSEditor() {
 
         {/* Status indicator */}
         {currentPage && (
-          <div className="mt-3 pt-3 border-t border-gray-100">
+          <div className="mt-3 pt-3 border-t border-surface-100">
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-2 text-sm">
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium w-fit ${
-                currentPage.is_published ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                currentPage.is_published ? 'bg-success-light text-success' : 'bg-surface-100 text-navy'
               }`}>
                 {currentPage.is_published ? 'Published' : 'Draft'}
               </span>
-              <span className="text-gray-500 text-xs sm:text-sm">
+              <span className="text-surface-500 text-xs sm:text-sm">
                 Last updated: {new Date(currentPage.updated_at).toLocaleString()}
               </span>
             </div>
@@ -238,13 +238,13 @@ export default function CMSEditor() {
       {/* Blocks list */}
       {currentPage && (
         <div className="bg-white rounded-lg shadow-sm">
-          <div className="px-4 py-3 border-b border-gray-100">
-            <h2 className="text-lg font-medium text-gray-900">Content Blocks</h2>
+          <div className="px-4 py-3 border-b border-surface-100">
+            <h2 className="text-lg font-medium text-navy">Content Blocks</h2>
           </div>
 
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-surface-100">
             {currentPage.blocks.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
+              <div className="p-8 text-center text-surface-500">
                 No blocks found. Add blocks to start editing content.
               </div>
             ) : (
@@ -252,20 +252,20 @@ export default function CMSEditor() {
                 <div
                   key={block.id}
                   className={`p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${
-                    !block.is_visible ? 'bg-gray-50 opacity-60' : ''
+                    !block.is_visible ? 'bg-surface opacity-60' : ''
                   }`}
                 >
                   <div className="flex items-center space-x-4">
-                    <span className="text-gray-400 font-mono text-sm">
+                    <span className="text-surface-400 font-mono text-sm">
                       {String(block.sort_order + 1).padStart(2, '0')}
                     </span>
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium ${
-                      BLOCK_TYPE_COLORS[block.block_type] || 'bg-gray-100 text-gray-800'
+                      BLOCK_TYPE_COLORS[block.block_type] || 'bg-surface-100 text-navy'
                     }`}>
                       {BLOCK_TYPE_LABELS[block.block_type] || block.block_type}
                     </span>
                     {!block.is_visible && (
-                      <span className="text-xs text-gray-500">(hidden)</span>
+                      <span className="text-xs text-surface-500">(hidden)</span>
                     )}
                   </div>
 
@@ -274,8 +274,8 @@ export default function CMSEditor() {
                       onClick={() => handleToggleBlockVisibility(block)}
                       className={`p-2 rounded-lg transition-colors ${
                         block.is_visible
-                          ? 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                          : 'text-gray-400 hover:text-primary-600 hover:bg-primary-50'
+                          ? 'text-surface-400 hover:text-surface-600 hover:bg-surface-100'
+                          : 'text-surface-400 hover:text-primary-600 hover:bg-primary-50'
                       }`}
                       title={block.is_visible ? 'Hide block' : 'Show block'}
                     >

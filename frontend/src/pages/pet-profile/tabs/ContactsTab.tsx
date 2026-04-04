@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { petsApi, PetEmergencyContact } from '../../../api/client';
 import InlineEditForm from '../../../components/InlineEditForm';
+import EmptyState from '../../../components/EmptyState';
 import { CONTACT_FIELDS } from '../constants';
 
 export default function ContactsTab({ petId, token, contacts, setContacts }: {
@@ -45,7 +46,7 @@ export default function ContactsTab({ petId, token, contacts, setContacts }: {
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold">Emergency Contacts</h3>
+        <h3 className="section-title">Emergency Contacts</h3>
         <button onClick={() => setShowForm(!showForm)} className="btn-primary text-sm">+ Add Contact</button>
       </div>
 
@@ -60,7 +61,7 @@ export default function ContactsTab({ petId, token, contacts, setContacts }: {
       )}
 
       {contacts.length === 0 ? (
-        <p className="text-gray-500 text-center py-8">No emergency contacts recorded</p>
+        <EmptyState title="No emergency contacts recorded" compact />
       ) : (
         <ul className="divide-y">
           {contacts.map(c => (
@@ -76,8 +77,8 @@ export default function ContactsTab({ petId, token, contacts, setContacts }: {
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="font-medium">{c.name} {c.is_primary && <span className="text-xs bg-navy-50 text-primary-700 px-2 py-0.5 rounded">Primary</span>}</p>
-                    {c.relationship && <p className="text-sm text-gray-600">{c.relationship}</p>}
-                    <p className="text-sm text-gray-500">{c.phone}</p>
+                    {c.relationship && <p className="text-sm text-surface-600">{c.relationship}</p>}
+                    <p className="text-sm text-surface-500">{c.phone}</p>
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => setEditingId(c.id)} className="text-navy hover:text-primary-800 text-sm">Edit</button>
@@ -91,12 +92,12 @@ export default function ContactsTab({ petId, token, contacts, setContacts }: {
                     )}
                     {deletingId === c.id ? (
                       <>
-                        <span className="text-sm text-gray-500">Sure?</span>
-                        <button onClick={() => handleDelete(c.id)} className="text-red-600 hover:text-red-800 text-sm font-semibold">Yes</button>
-                        <button onClick={() => setDeletingId(null)} className="text-gray-600 hover:text-gray-800 text-sm">No</button>
+                        <span className="text-sm text-surface-500">Sure?</span>
+                        <button onClick={() => handleDelete(c.id)} className="text-danger hover:text-danger-dark text-sm font-semibold">Yes</button>
+                        <button onClick={() => setDeletingId(null)} className="text-surface-600 hover:text-navy text-sm">No</button>
                       </>
                     ) : (
-                      <button onClick={() => setDeletingId(c.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                      <button onClick={() => setDeletingId(c.id)} className="text-danger hover:text-danger-dark text-sm">Delete</button>
                     )}
                   </div>
                 </div>

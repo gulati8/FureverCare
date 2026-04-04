@@ -96,22 +96,22 @@ export default function UsersList() {
     if (tier === 'premium') {
       switch (status) {
         case 'active':
-          return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Premium</span>;
+          return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-success-light text-success">Premium</span>;
         case 'trialing':
-          return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">Trial</span>;
+          return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-info-light text-info">Trial</span>;
         case 'past_due':
-          return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">Past Due</span>;
+          return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-warning-light text-warning-dark">Past Due</span>;
         case 'canceled':
-          return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">Canceled</span>;
+          return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-danger-light text-danger">Canceled</span>;
       }
     }
-    return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">Free</span>;
+    return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface-100 text-surface-600">Free</span>;
   };
 
   const SortIcon = ({ column }: { column: string }) => {
     if (sortBy !== column) {
       return (
-        <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-4 h-4 text-surface-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
         </svg>
       );
@@ -131,14 +131,14 @@ export default function UsersList() {
     <div className="max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Users</h1>
-        <p className="text-gray-600 mt-1">Manage user accounts and access</p>
+        <h1 className="text-2xl font-bold text-navy">Users</h1>
+        <p className="text-surface-600 mt-1">Manage user accounts and access</p>
       </div>
 
       {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg flex items-center justify-between">
+        <div className="mb-6 bg-danger-light border border-danger-light text-danger px-4 py-3 rounded-lg flex items-center justify-between">
           <span>{error}</span>
-          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600">
+          <button onClick={() => setError(null)} className="text-danger hover:text-danger-dark">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -182,19 +182,19 @@ export default function UsersList() {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
           </div>
         ) : users.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-surface-500">
             <p>No users found.</p>
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-surface border-b border-surface-200">
                   <tr>
                     <th className="px-4 py-3 text-left">
                       <button
                         onClick={() => handleSort('id')}
-                        className="flex items-center space-x-1 text-xs font-medium text-gray-700 uppercase tracking-wider hover:text-primary-600"
+                        className="flex items-center space-x-1 text-xs font-medium text-surface-700 uppercase tracking-wider hover:text-primary-600"
                       >
                         <span>ID</span>
                         <SortIcon column="id" />
@@ -203,7 +203,7 @@ export default function UsersList() {
                     <th className="px-4 py-3 text-left">
                       <button
                         onClick={() => handleSort('name')}
-                        className="flex items-center space-x-1 text-xs font-medium text-gray-700 uppercase tracking-wider hover:text-primary-600"
+                        className="flex items-center space-x-1 text-xs font-medium text-surface-700 uppercase tracking-wider hover:text-primary-600"
                       >
                         <span>Name</span>
                         <SortIcon column="name" />
@@ -212,19 +212,19 @@ export default function UsersList() {
                     <th className="px-4 py-3 text-left">
                       <button
                         onClick={() => handleSort('email')}
-                        className="flex items-center space-x-1 text-xs font-medium text-gray-700 uppercase tracking-wider hover:text-primary-600"
+                        className="flex items-center space-x-1 text-xs font-medium text-surface-700 uppercase tracking-wider hover:text-primary-600"
                       >
                         <span>Email</span>
                         <SortIcon column="email" />
                       </button>
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-surface-700 uppercase tracking-wider">
                       Phone
                     </th>
                     <th className="px-4 py-3 text-left">
                       <button
                         onClick={() => handleSort('is_admin')}
-                        className="flex items-center space-x-1 text-xs font-medium text-gray-700 uppercase tracking-wider hover:text-primary-600"
+                        className="flex items-center space-x-1 text-xs font-medium text-surface-700 uppercase tracking-wider hover:text-primary-600"
                       >
                         <span>Admin</span>
                         <SortIcon column="is_admin" />
@@ -233,7 +233,7 @@ export default function UsersList() {
                     <th className="px-4 py-3 text-left">
                       <button
                         onClick={() => handleSort('subscription_status')}
-                        className="flex items-center space-x-1 text-xs font-medium text-gray-700 uppercase tracking-wider hover:text-primary-600"
+                        className="flex items-center space-x-1 text-xs font-medium text-surface-700 uppercase tracking-wider hover:text-primary-600"
                       >
                         <span>Subscription</span>
                         <SortIcon column="subscription_status" />
@@ -242,7 +242,7 @@ export default function UsersList() {
                     <th className="px-4 py-3 text-left">
                       <button
                         onClick={() => handleSort('owned_pet_count')}
-                        className="flex items-center space-x-1 text-xs font-medium text-gray-700 uppercase tracking-wider hover:text-primary-600"
+                        className="flex items-center space-x-1 text-xs font-medium text-surface-700 uppercase tracking-wider hover:text-primary-600"
                       >
                         <span>Pets</span>
                         <SortIcon column="owned_pet_count" />
@@ -251,7 +251,7 @@ export default function UsersList() {
                     <th className="px-4 py-3 text-left">
                       <button
                         onClick={() => handleSort('created_at')}
-                        className="flex items-center space-x-1 text-xs font-medium text-gray-700 uppercase tracking-wider hover:text-primary-600"
+                        className="flex items-center space-x-1 text-xs font-medium text-surface-700 uppercase tracking-wider hover:text-primary-600"
                       >
                         <span>Created</span>
                         <SortIcon column="created_at" />
@@ -259,26 +259,26 @@ export default function UsersList() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-surface-100">
                   {users.map((user) => (
                     <tr
                       key={user.id}
                       onClick={() => setSelectedUserId(user.id)}
-                      className="hover:bg-gray-50 cursor-pointer transition-colors"
+                      className="hover:bg-surface cursor-pointer transition-colors"
                     >
-                      <td className="px-4 py-3 text-sm font-mono text-gray-500">{user.id}</td>
+                      <td className="px-4 py-3 text-sm font-mono text-surface-500">{user.id}</td>
                       <td className="px-4 py-3">
-                        <span className="text-sm font-medium text-gray-900">{user.name}</span>
+                        <span className="text-sm font-medium text-navy">{user.name}</span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-sm text-gray-600">{user.email}</span>
+                        <span className="text-sm text-surface-600">{user.email}</span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-sm text-gray-600">{user.phone || '—'}</span>
+                        <span className="text-sm text-surface-600">{user.phone || '—'}</span>
                       </td>
                       <td className="px-4 py-3">
                         {user.is_admin && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-success-light text-success">
                             Admin
                           </span>
                         )}
@@ -287,12 +287,12 @@ export default function UsersList() {
                         {getSubscriptionBadge(user.subscription_status, user.subscription_tier)}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-sm text-gray-900">
+                        <span className="text-sm text-navy">
                           {Number(user.owned_pet_count) + Number(user.shared_pet_count)}
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-sm text-gray-600">{formatRelativeDate(user.created_at)}</span>
+                        <span className="text-sm text-surface-600">{formatRelativeDate(user.created_at)}</span>
                       </td>
                     </tr>
                   ))}
@@ -301,22 +301,22 @@ export default function UsersList() {
             </div>
 
             {/* Pagination */}
-            <div className="px-4 py-3 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="text-sm text-gray-700 text-center sm:text-left">
+            <div className="px-4 py-3 border-t border-surface-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="text-sm text-surface-700 text-center sm:text-left">
                 Showing {page * limit + 1} to {Math.min((page + 1) * limit, total)} of {total} users
               </div>
               <div className="flex space-x-2">
                 <button
                   onClick={handlePrevPage}
                   disabled={page === 0}
-                  className="px-3 py-1.5 rounded border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1.5 rounded border border-surface-300 text-sm font-medium text-surface-700 hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Previous
                 </button>
                 <button
                   onClick={handleNextPage}
                   disabled={(page + 1) * limit >= total}
-                  className="px-3 py-1.5 rounded border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1.5 rounded border border-surface-300 text-sm font-medium text-surface-700 hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next
                 </button>

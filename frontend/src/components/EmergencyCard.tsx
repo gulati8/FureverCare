@@ -97,40 +97,32 @@ export default function EmergencyCard({ card, resolvePhotoUrl }: Props) {
   return (
     <div>
       {/* Sticky Header */}
-      <header
-        className="sticky top-0 z-50"
-        style={{ background: 'var(--color-danger)', color: 'white', padding: '14px 16px' }}
-      >
+      <header className="sticky top-0 z-50 bg-danger text-white px-4 py-[14px]">
         <div className="max-w-lg mx-auto flex items-center gap-3">
-          <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="w-7 h-7 rounded-sm bg-white/20 flex items-center justify-center">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><rect x="9" y="2" width="6" height="20" rx="2"/><rect x="2" y="9" width="20" height="6" rx="2"/></svg>
           </div>
           <div>
-            <h1 style={{ fontSize: '0.8125rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' as const, fontFamily: 'var(--font-body)' }}>EMERGENCY PET CARD</h1>
-            <p style={{ fontSize: '0.6875rem', opacity: 0.8, fontFamily: 'var(--font-body)' }}>FureverCare</p>
+            <h1 className="text-[0.8125rem] font-bold tracking-[0.12em] uppercase">EMERGENCY PET CARD</h1>
+            <p className="text-[0.6875rem] opacity-80">FureverCare</p>
           </div>
         </div>
       </header>
 
       {/* Alert Banner */}
       {hasAlerts ? (
-        <div style={{ background: 'var(--color-danger-dark)', padding: '14px 16px' }}>
+        <div className="bg-danger-dark px-4 py-[14px]">
           <div className="max-w-lg mx-auto">
-            <div style={{ color: 'white', fontWeight: 600, fontSize: '0.8125rem', letterSpacing: '0.05em', textTransform: 'uppercase' as const, marginBottom: '10px' }}>
+            <div className="text-white font-semibold text-[0.8125rem] tracking-wide uppercase mb-[10px]">
               {alerts.length} Alert{alerts.length !== 1 ? 's' : ''} for {pet.name}
             </div>
             <div className="flex flex-col gap-2">
               {alerts.map((alert, i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-3"
-                  style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 'var(--radius-sm)', padding: '10px 14px' }}
+                  className="flex items-center gap-3 bg-white/[0.12] rounded-sm px-[14px] py-[10px]"
                 >
-                  <div style={{
-                    width: '28px', height: '28px', borderRadius: '50%',
-                    background: 'rgba(255,255,255,0.15)', display: 'flex',
-                    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                  }}>
+                  <div className="w-7 h-7 rounded-full bg-white/[0.15] flex items-center justify-center flex-shrink-0">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="#FFCDD2">
                       {alert.type === 'allergy' && <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>}
                       {alert.type === 'medication' && <path d="M4.22 11.29l5.07-5.07c1.95-1.95 5.12-1.95 7.07 0s1.95 5.12 0 7.07l-5.07 5.07c-1.95 1.95-5.12 1.95-7.07 0s-1.95-5.12 0-7.07z"/>}
@@ -139,8 +131,8 @@ export default function EmergencyCard({ card, resolvePhotoUrl }: Props) {
                     </svg>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p style={{ color: 'white', fontSize: '0.875rem', fontWeight: 600 }}>{alert.title}</p>
-                    <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.75rem', marginTop: '2px' }}>{alert.detail}</p>
+                    <p className="text-white text-sm font-semibold">{alert.title}</p>
+                    <p className="text-white/80 text-xs mt-[2px]">{alert.detail}</p>
                   </div>
                 </div>
               ))}
@@ -148,13 +140,13 @@ export default function EmergencyCard({ card, resolvePhotoUrl }: Props) {
           </div>
         </div>
       ) : (
-        <div style={{ background: 'var(--color-success)', color: 'white', padding: '24px 16px', textAlign: 'center' as const }}>
+        <div className="bg-success text-white px-4 py-6 text-center">
           <div className="max-w-lg mx-auto">
-            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', fontSize: '24px' }}>
+            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-3 text-2xl">
               ✓
             </div>
-            <p style={{ fontSize: '0.875rem', fontWeight: 600 }}>No known allergies or critical conditions</p>
-            <p style={{ fontSize: '0.75rem', opacity: 0.9, marginTop: '4px' }}>
+            <p className="text-sm font-semibold">No known allergies or critical conditions</p>
+            <p className="text-xs opacity-90 mt-1">
               {pet.name} &bull; {pet.breed || pet.species}
               {pet.weight_kg ? ` \u2022 ${primaryWeight(pet.weight_kg, pet.weight_unit)}` : ''}
             </p>
@@ -163,15 +155,10 @@ export default function EmergencyCard({ card, resolvePhotoUrl }: Props) {
       )}
 
       {/* Pet Quick Info */}
-      <div style={{ background: 'var(--color-white)', borderBottom: '1px solid var(--color-surface-200)', padding: '14px 16px' }}>
+      <div className="bg-white border-b border-surface-200 px-4 py-[14px]">
         <div className="max-w-lg mx-auto flex items-center gap-4">
           <div
-            className="flex-shrink-0"
-            style={{
-              width: '72px', height: '72px', borderRadius: '50%',
-              background: 'var(--color-navy)', display: 'flex',
-              alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
-            }}
+            className="flex-shrink-0 w-[72px] h-[72px] rounded-full bg-navy flex items-center justify-center overflow-hidden"
           >
             {photoUrl ? (
               <img src={photoUrl} alt={pet.name} className="w-full h-full object-cover" />
@@ -182,8 +169,8 @@ export default function EmergencyCard({ card, resolvePhotoUrl }: Props) {
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, fontFamily: 'var(--font-heading)' }}>{pet.name}</h2>
-            <p style={{ fontSize: '0.875rem', color: 'var(--color-surface-600)' }}>
+            <h2 className="text-2xl font-bold font-heading">{pet.name}</h2>
+            <p className="text-sm text-surface-600">
               {pet.breed && <span className="capitalize">{pet.breed}</span>}
               {pet.breed && pet.sex && ' \u2022 '}
               {pet.sex && <span className="capitalize">{pet.sex}{pet.is_fixed ? ', Fixed' : ''}</span>}
@@ -192,7 +179,7 @@ export default function EmergencyCard({ card, resolvePhotoUrl }: Props) {
               {pet.weight_kg && ` \u2022 ${primaryWeight(pet.weight_kg, pet.weight_unit)}`}
             </p>
             {pet.microchip_id && (
-              <p style={{ fontSize: '0.6875rem', color: 'var(--color-surface-400)', fontFamily: 'monospace', marginTop: '4px' }}>
+              <p className="text-[0.6875rem] text-surface-400 font-mono mt-1">
                 Microchip: {pet.microchip_id}
               </p>
             )}
@@ -201,30 +188,25 @@ export default function EmergencyCard({ card, resolvePhotoUrl }: Props) {
       </div>
 
       {/* Content */}
-      <div className="max-w-lg mx-auto px-4 py-4" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div className="max-w-lg mx-auto px-4 py-4 flex flex-col gap-5">
 
         {/* Special Instructions */}
         {pet.special_instructions && (
-          <div style={{
-            background: 'var(--color-warning-light)',
-            border: '1px solid #FFF9C4',
-            borderRadius: 'var(--radius-sm)',
-            padding: '16px',
-          }}>
-            <div className="flex items-center gap-2" style={{ marginBottom: '6px' }}>
+          <div className="bg-warning-light border border-[#FFF9C4] rounded-sm p-4">
+            <div className="flex items-center gap-2 mb-[6px]">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--color-warning)"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
-              <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.05em', color: '#8B6914' }}>
+              <span className="text-xs font-bold uppercase tracking-wide text-warning-dark">
                 Special Instructions
               </span>
             </div>
-            <p style={{ fontSize: '0.9375rem', lineHeight: 1.6 }}>{pet.special_instructions}</p>
+            <p className="text-[0.9375rem] leading-relaxed">{pet.special_instructions}</p>
           </div>
         )}
 
         {/* Emergency Contacts */}
         <section>
-          <h3 className="flex items-center gap-2" style={{ fontSize: '0.8125rem', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.05em', color: 'var(--color-surface-700)', marginBottom: '12px' }}>
-            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--color-steel-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <h3 className="flex items-center gap-2 text-[0.8125rem] font-bold uppercase tracking-wide text-surface-700 mb-3">
+            <div className="w-8 h-8 rounded-full bg-steel-light flex items-center justify-center">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--color-steel)"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
             </div>
             Emergency Contacts
@@ -232,14 +214,14 @@ export default function EmergencyCard({ card, resolvePhotoUrl }: Props) {
           <div className="flex flex-col gap-3">
             {/* Owner */}
             {owner && (
-              <div className="flex items-center gap-3" style={{ padding: '16px', border: '1px solid var(--color-surface-200)', borderRadius: 'var(--radius-md)', background: 'var(--color-white)' }}>
+              <div className="flex items-center gap-3 p-4 border border-surface-200 rounded-lg bg-white">
                 <div className="flex-1 min-w-0">
-                  <div style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.05em', color: 'var(--color-surface-500)', marginBottom: '4px' }}>Owner</div>
-                  <div style={{ fontWeight: 500, fontSize: '0.9375rem' }}>{owner.name}</div>
-                  {owner.phone && <div className="text-sm" style={{ color: 'var(--color-surface-500)' }}>{owner.phone}</div>}
+                  <div className="text-xs font-bold uppercase tracking-wide text-surface-500 mb-1">Owner</div>
+                  <div className="font-medium text-[0.9375rem]">{owner.name}</div>
+                  {owner.phone && <div className="text-sm text-surface-500">{owner.phone}</div>}
                 </div>
                 {owner.phone && (
-                  <a href={`tel:${owner.phone}`} className="btn btn-primary btn-sm" style={{ flexShrink: 0 }}>
+                  <a href={`tel:${owner.phone}`} className="btn btn-primary btn-sm flex-shrink-0">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
                     Call
                   </a>
@@ -251,13 +233,13 @@ export default function EmergencyCard({ card, resolvePhotoUrl }: Props) {
               if (emergency_contacts.length === 0) return null;
               const c = emergency_contacts.find(c => c.is_primary) || emergency_contacts[0];
               return (
-                <div className="flex items-center gap-3" style={{ padding: '16px', border: '1px solid var(--color-surface-200)', borderRadius: 'var(--radius-md)', background: 'var(--color-white)' }}>
+                <div className="flex items-center gap-3 p-4 border border-surface-200 rounded-lg bg-white">
                   <div className="flex-1 min-w-0">
-                    <div style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.05em', color: 'var(--color-surface-500)', marginBottom: '4px' }}>{c.relationship || 'Emergency Contact'}</div>
-                    <div style={{ fontWeight: 500, fontSize: '0.9375rem' }}>{c.name}</div>
-                    <div className="text-sm" style={{ color: 'var(--color-surface-500)' }}>{c.phone}</div>
+                    <div className="text-xs font-bold uppercase tracking-wide text-surface-500 mb-1">{c.relationship || 'Emergency Contact'}</div>
+                    <div className="font-medium text-[0.9375rem]">{c.name}</div>
+                    <div className="text-sm text-surface-500">{c.phone}</div>
                   </div>
-                  <a href={`tel:${c.phone}`} className="btn btn-primary btn-sm" style={{ flexShrink: 0 }}>
+                  <a href={`tel:${c.phone}`} className="btn btn-primary btn-sm flex-shrink-0">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
                     Call
                   </a>
@@ -267,17 +249,17 @@ export default function EmergencyCard({ card, resolvePhotoUrl }: Props) {
 
             {/* Veterinarians */}
             {veterinarians.map((v, i) => (
-              <div key={i} className="flex items-center gap-3" style={{ padding: '16px', border: '1px solid var(--color-surface-200)', borderRadius: 'var(--radius-md)', background: 'var(--color-white)' }}>
+              <div key={i} className="flex items-center gap-3 p-4 border border-surface-200 rounded-lg bg-white">
                 <div className="flex-1 min-w-0">
-                  <div style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.05em', color: 'var(--color-surface-500)', marginBottom: '4px' }}>
+                  <div className="text-xs font-bold uppercase tracking-wide text-surface-500 mb-1">
                     Veterinarian{v.is_primary ? ' (Primary)' : ''}
                   </div>
-                  <div style={{ fontWeight: 500, fontSize: '0.9375rem' }}>{v.clinic_name}</div>
-                  {v.vet_name && <div className="text-sm" style={{ color: 'var(--color-surface-500)' }}>Dr. {v.vet_name}</div>}
-                  {v.phone && <div className="text-sm" style={{ color: 'var(--color-surface-500)' }}>{v.phone}</div>}
+                  <div className="font-medium text-[0.9375rem]">{v.clinic_name}</div>
+                  {v.vet_name && <div className="text-sm text-surface-500">Dr. {v.vet_name}</div>}
+                  {v.phone && <div className="text-sm text-surface-500">{v.phone}</div>}
                 </div>
                 {v.phone && (
-                  <a href={`tel:${v.phone}`} className="btn btn-primary btn-sm" style={{ flexShrink: 0 }}>
+                  <a href={`tel:${v.phone}`} className="btn btn-primary btn-sm flex-shrink-0">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
                     Call
                   </a>
@@ -289,9 +271,9 @@ export default function EmergencyCard({ card, resolvePhotoUrl }: Props) {
       </div>
 
       {/* Footer */}
-      <footer style={{ background: 'var(--color-surface)', borderTop: '1px solid var(--color-surface-200)', textAlign: 'center' as const, padding: '16px', fontSize: '0.8125rem', color: 'var(--color-surface-500)' }}>
+      <footer className="bg-surface border-t border-surface-200 text-center p-4 text-[0.8125rem] text-surface-500">
         Last updated {new Date(card.generated_at).toLocaleDateString()} &bull; Powered by{' '}
-        <Link to="/" style={{ color: 'var(--color-navy)', fontWeight: 500, textDecoration: 'none' }}>FureverCare</Link>
+        <Link to="/" className="text-navy font-medium no-underline">FureverCare</Link>
       </footer>
     </div>
   );

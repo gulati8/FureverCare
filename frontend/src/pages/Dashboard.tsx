@@ -14,6 +14,7 @@ import { cmsApi } from '../api/cms';
 import AddPetModal from '../components/AddPetModal';
 import UpgradeBanner from '../components/UpgradeBanner';
 import SpeciesAvatar from '../components/SpeciesAvatar';
+import EmptyState from '../components/EmptyState';
 
 // Pet limits by tier
 const FREE_TIER_PET_LIMIT = Infinity; // Beta: unlimited pets for all users
@@ -165,7 +166,7 @@ export default function Dashboard() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: 'var(--color-navy)' }}></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-navy"></div>
       </div>
     );
   }
@@ -178,10 +179,10 @@ export default function Dashboard() {
       </div>
 
       {/* Header */}
-      <div className="flex justify-between items-center" style={{ marginBottom: '24px' }}>
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl" style={{ color: 'var(--color-navy)', fontWeight: 700 }}>My Pets</h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--color-surface-500)' }}>{getPetCountText()}</p>
+          <h1 className="page-title">My Pets</h1>
+          <p className="text-sm mt-1 text-surface-500">{getPetCountText()}</p>
         </div>
         <button
           onClick={handleAddPetClick}
@@ -201,19 +202,20 @@ export default function Dashboard() {
       )}
 
       {pets.length === 0 ? (
-        <div className="text-center py-12">
-          <div
-            className="mx-auto flex items-center justify-center mb-4"
-            style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'var(--color-navy-50)' }}
-          >
-            <SpeciesAvatar species="other" size={40} />
-          </div>
-          <h3 className="text-lg font-semibold" style={{ color: 'var(--color-navy)' }}>{emptyStateHeading}</h3>
-          <p className="mt-2" style={{ color: 'var(--color-surface-500)' }}>{emptyStateSubheading}</p>
-          <button onClick={() => setShowAddModal(true)} className="mt-4 btn btn-primary">
-            Add Your First Pet
-          </button>
-        </div>
+        <EmptyState
+          icon={
+            <div className="mx-auto flex items-center justify-center w-20 h-20 rounded-full bg-navy-50">
+              <SpeciesAvatar species="other" size={40} />
+            </div>
+          }
+          title={emptyStateHeading}
+          description={emptyStateSubheading || undefined}
+          action={
+            <button onClick={() => setShowAddModal(true)} className="btn btn-primary">
+              Add Your First Pet
+            </button>
+          }
+        />
       ) : (
         <>
           <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-2">
@@ -227,31 +229,24 @@ export default function Dashboard() {
                 <Link
                   key={pet.id}
                   to={`/pets/${pet.id}`}
-                  className="card fade-in-up hover:shadow-lg transition-shadow"
-                  style={{ cursor: 'pointer', textDecoration: 'none' }}
+                  className="card-interactive fade-in-up no-underline"
                 >
-                  <div className="flex gap-4" style={{ marginBottom: '16px' }}>
-                    <div
-                      className="flex items-center justify-center flex-shrink-0"
-                      style={{
-                        width: '64px', height: '64px', borderRadius: '50%',
-                        background: 'var(--color-navy)', overflow: 'hidden',
-                      }}
-                    >
+                  <div className="flex gap-4 mb-4">
+                    <div className="flex items-center justify-center flex-shrink-0 w-16 h-16 rounded-full bg-navy overflow-hidden">
                       {pet.photo_url ? (
                         <img src={pet.photo_url} alt={pet.name} className="w-full h-full object-cover" />
                       ) : (
                         <SpeciesAvatar species={pet.species} size={32} />
                       )}
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <div className="flex items-center gap-2" style={{ marginBottom: '2px' }}>
-                        <h3 className="text-xl" style={{ fontWeight: 600 }}>{pet.name}</h3>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-[2px]">
+                        <h3 className="text-xl font-semibold">{pet.name}</h3>
                         {pet.user_role && pet.user_role !== 'owner' && (
-                          <span className="badge badge-navy" style={{ fontSize: '0.6rem', padding: '2px 6px' }}>Shared with you</span>
+                          <span className="badge badge-navy text-[0.6rem] px-[6px] py-[2px]">Shared with you</span>
                         )}
                       </div>
-                      <p className="text-sm capitalize" style={{ color: 'var(--color-surface-500)' }}>
+                      <p className="text-sm capitalize text-surface-500">
                         {pet.breed ? `${pet.breed}` : pet.species}
                         {pet.date_of_birth && (() => {
                           const born = new Date(pet.date_of_birth!.split('T')[0] + 'T00:00:00');
@@ -274,7 +269,7 @@ export default function Dashboard() {
                             </span>
                           )}
                           {alertCount > 0 && (
-                            <span className="badge badge-danger" style={{ fontSize: '0.6875rem' }}>
+                            <span className="badge badge-danger text-[0.6875rem]">
                               {alertCount} alert{alertCount !== 1 ? 's' : ''} on card
                             </span>
                           )}
@@ -282,7 +277,7 @@ export default function Dashboard() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center justify-end" style={{ borderTop: '1px solid var(--color-surface-100)', paddingTop: '12px' }}>
+                  <div className="flex items-center justify-end border-t border-surface-100 pt-3">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--color-surface-400)">
                       <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
                     </svg>
@@ -295,13 +290,12 @@ export default function Dashboard() {
           {/* Action Items */}
           {actionItems.length > 0 && (
             <div className="dashboard-action-items">
-              <h2 className="text-lg mb-3" style={{ color: 'var(--color-navy)', fontWeight: 600 }}>Action Items</h2>
+              <h2 className="text-lg mb-3 text-navy font-semibold">Action Items</h2>
               {actionItems.map((item, i) => (
                 <Link
                   key={i}
                   to={`/pets/${item.petId}/health`}
-                  className={`dashboard-action-item dashboard-action-item-${item.type}`}
-                  style={{ textDecoration: 'none', color: 'inherit' }}
+                  className={`dashboard-action-item dashboard-action-item-${item.type} no-underline text-inherit`}
                 >
                   {item.type === 'danger' ? (
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--color-danger)">

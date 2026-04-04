@@ -58,9 +58,9 @@ export default function BlockEditorModal({ block, onSave, onClose }: BlockEditor
         return <EmptyStateEditor content={content as any} onChange={handleContentChange as any} />;
       default:
         return (
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <p className="text-gray-500">No editor available for block type: {block.block_type}</p>
-            <pre className="mt-4 text-xs text-gray-600 overflow-auto">
+          <div className="p-4 bg-surface rounded-lg">
+            <p className="text-surface-500">No editor available for block type: {block.block_type}</p>
+            <pre className="mt-4 text-xs text-surface-600 overflow-auto">
               {JSON.stringify(content, null, 2)}
             </pre>
           </div>
@@ -72,13 +72,13 @@ export default function BlockEditorModal({ block, onSave, onClose }: BlockEditor
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">
+        <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-navy">
             Edit {BLOCK_TYPE_LABELS[block.block_type] || block.block_type}
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-surface-400 hover:text-surface-600"
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -89,7 +89,7 @@ export default function BlockEditorModal({ block, onSave, onClose }: BlockEditor
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+            <div className="mb-4 bg-danger-light border border-danger-light text-danger px-4 py-3 rounded-lg">
               {error}
             </div>
           )}
@@ -97,7 +97,7 @@ export default function BlockEditorModal({ block, onSave, onClose }: BlockEditor
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 flex justify-end space-x-3">
+        <div className="px-6 py-4 border-t border-surface-100 flex justify-end space-x-3">
           <button
             type="button"
             onClick={onClose}
