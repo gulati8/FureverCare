@@ -31,29 +31,29 @@ export default function OverviewSection() {
           {/* Stat blocks */}
           <div className="pet-profile-stats">
             <div className="pet-profile-stat" onClick={() => navigate('health#conditions')}>
-              <div className="pet-profile-stat-value text-warning">{conditions.length}</div>
+              <div className="pet-profile-stat-value text-navy">{conditions.length}</div>
               <div className="pet-profile-stat-label">Conditions</div>
             </div>
             <div className="pet-profile-stat" onClick={() => navigate('health#allergies')}>
-              <div className="pet-profile-stat-value text-danger">{allergies.length}</div>
+              <div className="pet-profile-stat-value text-navy">{allergies.length}</div>
               <div className="pet-profile-stat-label">Allergies</div>
             </div>
             <div className="pet-profile-stat" onClick={() => navigate('health#medications')}>
-              <div className="pet-profile-stat-value text-info">{medications.filter(m => m.is_active).length}</div>
+              <div className="pet-profile-stat-value text-navy">{medications.filter(m => m.is_active).length}</div>
               <div className="pet-profile-stat-label">Medications</div>
             </div>
             <div className="pet-profile-stat" onClick={() => navigate('health#vaccinations')}>
-              <div className="pet-profile-stat-value text-success">{vaccinations.length}</div>
+              <div className="pet-profile-stat-value text-navy">{vaccinations.length}</div>
               <div className="pet-profile-stat-label">Vaccinations</div>
             </div>
           </div>
 
           {/* Mobile toggle - only visible < lg */}
           <button
-            className="lg:hidden w-full flex items-center justify-between p-3 rounded-lg bg-navy border border-surface-700 mb-2"
+            className="lg:hidden w-full flex items-center justify-between p-3 rounded-lg bg-surface-100 border border-surface-200 mb-2"
             onClick={() => setCardPreviewOpen(!cardPreviewOpen)}
           >
-            <span className="text-xs font-semibold uppercase tracking-wide text-surface-400">Card Preview</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-surface-600">Card Preview</span>
             <svg
               width="16"
               height="16"
@@ -61,7 +61,7 @@ export default function OverviewSection() {
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
-              className={`transition-transform text-surface-400 ${cardPreviewOpen ? 'rotate-180' : ''}`}
+              className={`transition-transform text-surface-600 ${cardPreviewOpen ? 'rotate-180' : ''}`}
             >
               <polyline points="6 9 12 15 18 9" />
             </svg>

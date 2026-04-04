@@ -155,7 +155,7 @@ export default function HealthRecordsSection() {
             </svg>
             Medications
             {activeMeds.length > 0 && (
-              <span className="badge badge-info">{activeMeds.length} active</span>
+              <span className="badge badge-navy">{activeMeds.length} active</span>
             )}
           </div>
           <svg className="health-accordion-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -190,7 +190,7 @@ export default function HealthRecordsSection() {
             {expiringVacs.length > 0 ? (
               <span className="badge badge-danger">{expiringVacs.length} expiring</span>
             ) : vaccinations.length > 0 ? (
-              <span className="badge badge-success">{vaccinations.length} recorded</span>
+              <span className="badge badge-navy">{vaccinations.length} recorded</span>
             ) : null}
           </div>
           <svg className="health-accordion-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

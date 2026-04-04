@@ -13,7 +13,7 @@ export default function Hero({ content }: HeroProps) {
   return (
     <section
       className="relative min-h-screen flex items-center pt-16 md:pt-20"
-      style={{ background: 'linear-gradient(180deg, var(--color-navy-50) 0%, var(--color-white) 40%)' }}
+      style={{ background: 'linear-gradient(180deg, var(--color-warm-bg) 0%, var(--color-white) 50%)' }}
     >
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">

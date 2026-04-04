@@ -97,7 +97,7 @@ export default function AccountSettings() {
 
       {/* Profile Section */}
       <div className="card mb-6">
-        <h2 className="text-lg font-semibold text-navy mb-4">Profile Information</h2>
+        <h2 className="section-title mb-4">Profile Information</h2>
 
         {profileError && (
           <div className="mb-4 bg-danger-light border border-danger-light text-danger px-4 py-3 rounded-lg">
@@ -166,7 +166,7 @@ export default function AccountSettings() {
 
       {/* Password Section */}
       <div className="card mb-6">
-        <h2 className="text-lg font-semibold text-navy mb-4">Change Password</h2>
+        <h2 className="section-title mb-4">Change Password</h2>
 
         {passwordError && (
           <div className="mb-4 bg-danger-light border border-danger-light text-danger px-4 py-3 rounded-lg">
@@ -237,16 +237,16 @@ export default function AccountSettings() {
 
       {/* Subscription Section */}
       <div className="card">
-        <h2 className="text-lg font-semibold text-navy mb-4">Subscription</h2>
+        <h2 className="section-title mb-4">Subscription</h2>
 
         <div className="space-y-3">
-          <div className="flex justify-between items-center py-2 border-b border-surface-200">
+          <div className="flex justify-between items-center py-3 border-b border-surface-200">
             <span className="text-surface-600">Current Plan</span>
             <span className="font-medium text-navy">{subscriptionInfo.tier}</span>
           </div>
 
           {subscriptionInfo.status && (
-            <div className="flex justify-between items-center py-2 border-b border-surface-200">
+            <div className="flex justify-between items-center py-3 border-b border-surface-200">
               <span className="text-surface-600">Status</span>
               <span>
                 {subscriptionInfo.status === 'active' && (
@@ -266,7 +266,7 @@ export default function AccountSettings() {
           )}
 
           {subscription?.currentPeriodEnd && (
-            <div className="flex justify-between items-center py-2 border-b border-surface-200">
+            <div className="flex justify-between items-center py-3 border-b border-surface-200">
               <span className="text-surface-600">
                 {subscription.status === 'canceled' ? 'Access Until' : 'Next Billing Date'}
               </span>

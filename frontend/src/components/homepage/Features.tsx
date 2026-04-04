@@ -43,7 +43,7 @@ const ICONS: Record<string, string> = {
 function FeatureIcon({ icon }: { icon: string }) {
   const path = ICONS[icon] || ICONS.sparkles;
   return (
-    <svg className="w-8 h-8" style={{ color: 'var(--color-steel)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="w-8 h-8" style={{ color: 'var(--color-coral)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={path} />
     </svg>
   );
@@ -51,10 +51,10 @@ function FeatureIcon({ icon }: { icon: string }) {
 
 function FeatureCard({ feature }: { feature: FeatureItem }) {
   return (
-    <div className="card">
+    <div className="card-interactive">
       <div
         className="flex items-center justify-center mb-4"
-        style={{ width: '56px', height: '56px', borderRadius: 'var(--radius-lg)', background: 'var(--color-steel-light)' }}
+        style={{ width: '56px', height: '56px', borderRadius: 'var(--radius-lg)', background: 'var(--color-warm-bg)' }}
       >
         <FeatureIcon icon={feature.icon} />
       </div>

@@ -28,19 +28,20 @@
 
   /* Surfaces */
   --color-white: #FFFFFF;
-  --color-surface: #F8F9FA;
-  --color-surface-100: #F1F3F5;
-  --color-surface-200: #E2E5E9;
-  --color-surface-300: #CED4DA;
-  --color-surface-400: #ADB5BD;
-  --color-surface-500: #868E96;
-  --color-surface-600: #5A6270;
-  --color-surface-700: #3D4551;
+  --color-surface: #FAF9F7;
+  --color-surface-100: #F5F3F0;
+  --color-surface-200: #E8E5E0;
+  --color-surface-300: #D5D0CA;
+  --color-surface-400: #B5AFA6;
+  --color-surface-500: #8C857C;
+  --color-surface-600: #635C54;
+  --color-surface-700: #463F38;
+  --color-warm-bg: #FFF8F3;
 
   /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(27,42,74,0.05);
-  --shadow-md: 0 2px 8px rgba(27,42,74,0.08);
-  --shadow-lg: 0 4px 16px rgba(27,42,74,0.1);
+  --shadow-sm: 0 1px 2px rgba(70,63,56,0.06);
+  --shadow-md: 0 2px 8px rgba(70,63,56,0.08);
+  --shadow-lg: 0 4px 16px rgba(70,63,56,0.10);
 
   /* Radii */
   --radius-sm: 8px;
@@ -598,6 +599,10 @@ h1, h2, h3, h4, h5, h6 {
   transform: rotate(180deg);
 }
 
+.health-accordion[open] {
+  border-left: 3px solid var(--color-navy);
+}
+
 .health-accordion-content {
   padding: 0 20px 20px;
   border-top: 1px solid var(--color-surface-100);
@@ -606,13 +611,13 @@ h1, h2, h3, h4, h5, h6 {
 /* ========== Emergency Card Preview ========== */
 .emergency-card-preview {
   background: var(--color-white);
-  border: 2px solid var(--color-danger);
+  border: 1.5px solid var(--color-surface-300);
   border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
 .emergency-card-preview-header {
-  background: var(--color-danger);
+  background: var(--color-navy);
   color: white;
   padding: 12px 16px;
   display: flex;

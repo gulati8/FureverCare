@@ -63,7 +63,7 @@ export default function ContactsTab({ petId, token, contacts, setContacts }: {
       {contacts.length === 0 ? (
         <EmptyState title="No emergency contacts recorded" compact />
       ) : (
-        <ul className="divide-y">
+        <ul className="divide-y divide-surface-100">
           {contacts.map(c => (
             <li key={c.id} className="py-3">
               {editingId === c.id ? (
@@ -76,7 +76,7 @@ export default function ContactsTab({ petId, token, contacts, setContacts }: {
               ) : (
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="font-medium">{c.name} {c.is_primary && <span className="text-xs bg-navy-50 text-primary-700 px-2 py-0.5 rounded">Primary</span>}</p>
+                    <p className="font-medium">{c.name} {c.is_primary && <span className="badge badge-navy">Primary</span>}</p>
                     {c.relationship && <p className="text-sm text-surface-600">{c.relationship}</p>}
                     <p className="text-sm text-surface-500">{c.phone}</p>
                   </div>

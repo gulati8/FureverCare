@@ -95,7 +95,7 @@ export default function EmergencyCardPreview({
   return (
     <div>
       {/* Mobile device frame */}
-      <div className="max-w-[375px] rounded-3xl border border-surface-300 shadow-[0_4px_24px_rgba(0,0,0,0.10)] overflow-hidden bg-surface-100">
+      <div className="max-w-[375px] rounded-2xl border border-surface-200 shadow-token-sm overflow-hidden bg-white">
         <EmergencyCard card={card} />
       </div>
 

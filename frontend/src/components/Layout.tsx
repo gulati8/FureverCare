@@ -12,7 +12,7 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-surface">
-      <nav className="py-3 bg-white border-b border-surface-200">
+      <nav className="py-3 bg-white border-b border-surface-200 shadow-token-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
           <Link to="/dashboard" className="flex items-center gap-2">
             <svg width="32" height="32" viewBox="0 0 32 32" fill="none" className="shrink-0">
@@ -38,13 +38,13 @@ export default function Layout() {
             )}
             <Link
               to="/settings"
-              className="text-sm font-medium text-surface-600 no-underline"
+              className="text-sm font-medium text-surface-600 no-underline hover:text-navy transition-colors"
             >
               {user?.name || 'Settings'}
             </Link>
             <button
               onClick={handleLogout}
-              className="text-sm font-medium text-surface-600 bg-transparent border-none cursor-pointer"
+              className="text-sm font-medium text-surface-600 bg-transparent border-none cursor-pointer hover:text-navy transition-colors"
             >
               Logout
             </button>
@@ -52,7 +52,7 @@ export default function Layout() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Outlet />
       </main>
     </div>

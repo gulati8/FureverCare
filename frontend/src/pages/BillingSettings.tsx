@@ -120,7 +120,7 @@ function BillingSettingsContent() {
       )}
 
       <div className="card">
-        <h2 className="text-lg font-semibold text-navy mb-4">Current Subscription</h2>
+        <h2 className="section-title mb-4">Current Subscription</h2>
 
         <div className="space-y-4">
           <div className="flex justify-between items-center py-3 border-b border-surface-200">
@@ -152,9 +152,9 @@ function BillingSettingsContent() {
         {/* Actions */}
         <div className="mt-6 space-y-3">
           {isFreeTier ? (
-            <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
-              <h3 className="font-medium text-primary-900 mb-2">Upgrade to Premium</h3>
-              <p className="text-sm text-primary-700 mb-4">
+            <div className="bg-warm border border-surface-200 rounded-lg p-4">
+              <h3 className="font-medium text-navy mb-2">Upgrade to Premium</h3>
+              <p className="text-sm text-surface-600 mb-4">
                 Unlock unlimited pets, advanced health tracking, and priority support.
               </p>
               <Link to="/pricing" className="btn-primary inline-block">
@@ -183,7 +183,7 @@ function BillingSettingsContent() {
                     })}
                     .
                   </p>
-                  <Link to="/pricing" className="text-sm text-primary-600 hover:text-primary-500 font-medium mt-2 inline-block">
+                  <Link to="/pricing" className="text-sm text-steel hover:text-steel-dark font-medium mt-2 inline-block">
                     Resubscribe
                   </Link>
                 </div>
@@ -196,7 +196,7 @@ function BillingSettingsContent() {
                   </p>
                   <button
                     onClick={() => setShowUpdatePayment(true)}
-                    className="text-sm text-primary-600 hover:text-primary-500 font-medium"
+                    className="text-sm text-steel hover:text-steel-dark font-medium"
                   >
                     Update Payment Method
                   </button>

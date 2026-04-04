@@ -77,7 +77,7 @@ export default function Pricing() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-navy"></div>
       </div>
     );
   }
@@ -117,32 +117,34 @@ export default function Pricing() {
       </div>
 
       {/* Billing Toggle */}
-      <div className="flex justify-center items-center gap-4 mb-8">
-        <button
-          onClick={() => setBillingInterval('monthly')}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            billingInterval === 'monthly'
-              ? 'bg-navy text-white'
-              : 'bg-surface-100 text-surface-700 hover:bg-surface-200'
-          }`}
-        >
-          Monthly
-        </button>
-        <button
-          onClick={() => setBillingInterval('annual')}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            billingInterval === 'annual'
-              ? 'bg-navy text-white'
-              : 'bg-surface-100 text-surface-700 hover:bg-surface-200'
-          }`}
-        >
-          Annual
-          {annualSavings > 0 && (
-            <span className="ml-2 text-xs bg-accent-400 text-white px-2 py-0.5 rounded-full">
-              Save ${annualSavings.toFixed(0)}/yr
-            </span>
-          )}
-        </button>
+      <div className="flex justify-center items-center mb-8">
+        <div className="bg-surface-100 rounded-lg p-1 inline-flex gap-1">
+          <button
+            onClick={() => setBillingInterval('monthly')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              billingInterval === 'monthly'
+                ? 'bg-white text-navy shadow-token-sm'
+                : 'bg-transparent text-surface-500 hover:text-navy'
+            }`}
+          >
+            Monthly
+          </button>
+          <button
+            onClick={() => setBillingInterval('annual')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              billingInterval === 'annual'
+                ? 'bg-white text-navy shadow-token-sm'
+                : 'bg-transparent text-surface-500 hover:text-navy'
+            }`}
+          >
+            Annual
+            {annualSavings > 0 && (
+              <span className="ml-2 text-xs bg-success-light text-success font-semibold px-2 py-0.5 rounded-full">
+                Save ${annualSavings.toFixed(0)}/yr
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -205,10 +207,10 @@ export default function Pricing() {
         </div>
 
         {/* Premium Tier */}
-        <div className="card border-2 border-primary-500 relative">
+        <div className="card border-2 border-steel relative">
           {hasActiveSubscription && (
             <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary-500 text-white">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-navy text-white">
                 {isTrialing ? 'Trial Active' : 'Current Plan'}
               </span>
             </div>
@@ -294,7 +296,7 @@ export default function Pricing() {
               {features.map((feature, index) => (
                 <tr
                   key={feature.name}
-                  className={index % 2 === 0 ? 'bg-surface' : 'bg-white'}
+                  className={index % 2 === 0 ? 'bg-surface-100' : 'bg-white'}
                 >
                   <td className="py-4 px-4 text-surface-700">{feature.name}</td>
                   <td className="py-4 px-4 text-center">

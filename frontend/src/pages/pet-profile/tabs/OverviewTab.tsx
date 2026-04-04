@@ -110,7 +110,7 @@ export default function OverviewTab({ pet, token, onPetUpdated }: {
       const config = fieldConfigs[field];
       return (
         <div className="col-span-2">
-          <dt className="text-sm text-surface-500 mb-1">{label}</dt>
+          <dt className="text-xs font-medium uppercase tracking-wide text-surface-500 mb-1">{label}</dt>
           <InlineEditForm
             fields={config.fields}
             values={config.values}
@@ -123,10 +123,10 @@ export default function OverviewTab({ pet, token, onPetUpdated }: {
 
     return (
       <div
-        className="group cursor-pointer rounded-lg p-2 -m-2 hover:bg-surface transition-colors"
+        className="group cursor-pointer rounded-lg p-3 -m-3 hover:bg-warm transition-colors"
         onClick={() => setEditingField(field)}
       >
-        <dt className="text-sm text-surface-500 flex items-center gap-1">
+        <dt className="text-xs font-medium uppercase tracking-wide text-surface-500 flex items-center gap-1">
           {label}
           <svg className="w-3 h-3 text-surface-400 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -142,7 +142,7 @@ export default function OverviewTab({ pet, token, onPetUpdated }: {
       const calculatedAge = Math.floor((Date.now() - new Date(pet.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000));
       return (
         <div>
-          <dt className="text-sm text-surface-500">Age</dt>
+          <dt className="text-xs font-medium uppercase tracking-wide text-surface-500">Age</dt>
           <dd className="text-navy">{calculatedAge} {calculatedAge === 1 ? 'year' : 'years'}</dd>
         </div>
       );
@@ -154,16 +154,16 @@ export default function OverviewTab({ pet, token, onPetUpdated }: {
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold text-navy mb-3">Basic Information</h3>
-        <dl className="grid grid-cols-2 gap-4">
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-1">
           {renderEditableField('name', 'Name', pet.name)}
           {renderEditableField('species', 'Species', <span className="capitalize">{pet.species}</span>)}
-          {renderEditableField('breed', 'Breed', pet.breed || <span className="text-surface-400 text-sm">Add breed</span>)}
-          {renderEditableField('color_markings', 'Color / Markings', pet.color_markings || <span className="text-surface-400 text-sm">Add color or markings</span>)}
-          {renderEditableField('sex', 'Sex', pet.sex ? <span className="capitalize">{pet.sex}{pet.is_fixed ? ' (Spayed/Neutered)' : ''}</span> : <span className="text-surface-400 text-sm">Add sex</span>)}
-          {renderEditableField('date_of_birth', 'Date of Birth', pet.date_of_birth ? new Date(pet.date_of_birth.split('T')[0] + 'T00:00:00').toLocaleDateString() : <span className="text-surface-400 text-sm">Add date of birth</span>)}
+          {renderEditableField('breed', 'Breed', pet.breed || <span className="text-surface-400 text-sm italic">Add breed</span>)}
+          {renderEditableField('color_markings', 'Color / Markings', pet.color_markings || <span className="text-surface-400 text-sm italic">Add color or markings</span>)}
+          {renderEditableField('sex', 'Sex', pet.sex ? <span className="capitalize">{pet.sex}{pet.is_fixed ? ' (Spayed/Neutered)' : ''}</span> : <span className="text-surface-400 text-sm italic">Add sex</span>)}
+          {renderEditableField('date_of_birth', 'Date of Birth', pet.date_of_birth ? new Date(pet.date_of_birth.split('T')[0] + 'T00:00:00').toLocaleDateString() : <span className="text-surface-400 text-sm italic">Add date of birth</span>)}
           {renderAgeField()}
-          {renderEditableField('weight', 'Weight', pet.weight_kg ? formatWeight(pet.weight_kg, pet.weight_unit) : <span className="text-surface-400 text-sm">Add weight</span>)}
-          {renderEditableField('microchip_id', 'Microchip ID', pet.microchip_id ? <span className="font-mono">{pet.microchip_id}</span> : <span className="text-surface-400 text-sm">Add microchip ID</span>)}
+          {renderEditableField('weight', 'Weight', pet.weight_kg ? formatWeight(pet.weight_kg, pet.weight_unit) : <span className="text-surface-400 text-sm italic">Add weight</span>)}
+          {renderEditableField('microchip_id', 'Microchip ID', pet.microchip_id ? <span className="font-mono">{pet.microchip_id}</span> : <span className="text-surface-400 text-sm italic">Add microchip ID</span>)}
         </dl>
       </div>
 
@@ -178,7 +178,7 @@ export default function OverviewTab({ pet, token, onPetUpdated }: {
           />
         ) : (
           <div
-            className="group cursor-pointer rounded-lg p-2 -m-2 hover:bg-surface transition-colors"
+            className="group cursor-pointer rounded-lg p-4 bg-warm border border-surface-200 hover:border-surface-300 transition-colors"
             onClick={() => setEditingField('special_instructions')}
           >
             {pet.special_instructions ? (
@@ -189,7 +189,7 @@ export default function OverviewTab({ pet, token, onPetUpdated }: {
                 </svg>
               </p>
             ) : (
-              <p className="text-surface-400 text-sm">Add owner's notes</p>
+              <p className="text-surface-400 text-sm italic">Add owner's notes</p>
             )}
           </div>
         )}

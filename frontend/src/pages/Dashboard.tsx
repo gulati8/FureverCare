@@ -218,7 +218,7 @@ export default function Dashboard() {
         />
       ) : (
         <>
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-2">
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {pets.map((pet) => {
               const health = healthData[pet.id];
               const vaccineStatus = health ? getVaccineStatus(health) : null;
@@ -232,7 +232,7 @@ export default function Dashboard() {
                   className="card-interactive fade-in-up no-underline"
                 >
                   <div className="flex gap-4 mb-4">
-                    <div className="flex items-center justify-center flex-shrink-0 w-16 h-16 rounded-full bg-navy overflow-hidden">
+                    <div className="flex items-center justify-center flex-shrink-0 w-16 h-16 rounded-full bg-surface-200 overflow-hidden">
                       {pet.photo_url ? (
                         <img src={pet.photo_url} alt={pet.name} className="w-full h-full object-cover" />
                       ) : (
@@ -277,7 +277,7 @@ export default function Dashboard() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center justify-end border-t border-surface-100 pt-3">
+                  <div className="flex items-center justify-end border-t border-surface-100 pt-3 mt-1">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--color-surface-400)">
                       <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
                     </svg>
@@ -290,7 +290,7 @@ export default function Dashboard() {
           {/* Action Items */}
           {actionItems.length > 0 && (
             <div className="dashboard-action-items">
-              <h2 className="text-lg mb-3 text-navy font-semibold">Action Items</h2>
+              <h2 className="section-title mb-3">Action Items</h2>
               {actionItems.map((item, i) => (
                 <Link
                   key={i}

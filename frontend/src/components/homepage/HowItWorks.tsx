@@ -11,7 +11,7 @@ function StepCard({ step, isLast }: { step: HowItWorksStep; isLast: boolean }) {
         className="flex items-center justify-center text-xl font-bold mb-4 relative z-10"
         style={{
           width: '56px', height: '56px', borderRadius: '50%',
-          background: 'var(--color-navy)', color: 'white',
+          background: 'var(--color-coral)', color: 'white',
           fontFamily: 'var(--font-heading)',
         }}
       >
@@ -32,7 +32,7 @@ function StepCard({ step, isLast }: { step: HowItWorksStep; isLast: boolean }) {
             left: 'calc(50% + 28px)',
             width: 'calc(100% - 56px)',
             height: '2px',
-            background: 'var(--color-navy-50)',
+            background: 'var(--color-coral-light)',
           }}
         />
       )}
@@ -48,7 +48,7 @@ function StepCardMobile({ step, isLast }: { step: HowItWorksStep; isLast: boolea
           className="flex items-center justify-center text-lg font-bold relative z-10"
           style={{
             width: '48px', height: '48px', borderRadius: '50%',
-            background: 'var(--color-navy)', color: 'white',
+            background: 'var(--color-coral)', color: 'white',
             fontFamily: 'var(--font-heading)',
           }}
         >
@@ -57,7 +57,7 @@ function StepCardMobile({ step, isLast }: { step: HowItWorksStep; isLast: boolea
         {!isLast && (
           <div
             className="absolute left-6 -translate-x-1/2"
-            style={{ top: '48px', width: '2px', height: 'calc(100% - 48px)', background: 'var(--color-navy-50)' }}
+            style={{ top: '48px', width: '2px', height: 'calc(100% - 48px)', background: 'var(--color-coral-light)' }}
           />
         )}
       </div>

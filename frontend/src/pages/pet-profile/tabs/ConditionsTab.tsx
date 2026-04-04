@@ -128,7 +128,7 @@ export default function ConditionsTab({ petId, token, conditions, setConditions,
       {active.length > 0 && (
         <div className="mb-6">
           <h4 className="text-sm font-medium text-surface-500 mb-2">Active Conditions</h4>
-          <ul className="divide-y border rounded-lg">
+          <ul className="divide-y divide-surface-200 border border-surface-200 rounded-lg">
             {active.map(c => renderConditionRow(c))}
           </ul>
         </div>
@@ -137,7 +137,7 @@ export default function ConditionsTab({ petId, token, conditions, setConditions,
       {inactive.length > 0 && (
         <div>
           <h4 className="text-sm font-medium text-surface-500 mb-2">Discontinued Conditions</h4>
-          <ul className="divide-y border rounded-lg opacity-60">
+          <ul className="divide-y divide-surface-200 border border-surface-200 rounded-lg opacity-60">
             {inactive.map(c => renderConditionRow(c, true))}
           </ul>
         </div>

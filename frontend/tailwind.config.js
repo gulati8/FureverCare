@@ -47,18 +47,20 @@ export default {
           DEFAULT: '#2E86DE',
           light: '#EBF5FB',
         },
-        // Surface grays
+        // Surface grays (warm cream/tan tones)
         surface: {
-          DEFAULT: '#F8F9FA',
-          50: '#F8F9FA',
-          100: '#F1F3F5',
-          200: '#E2E5E9',
-          300: '#CED4DA',
-          400: '#ADB5BD',
-          500: '#868E96',
-          600: '#5A6270',
-          700: '#3D4551',
+          DEFAULT: '#FAF9F7',
+          50: '#FAF9F7',
+          100: '#F5F3F0',
+          200: '#E8E5E0',
+          300: '#D5D0CA',
+          400: '#B5AFA6',
+          500: '#8C857C',
+          600: '#635C54',
+          700: '#463F38',
         },
+        // Warm accent background
+        warm: '#FFF8F3',
         // Keep backward compatibility with existing primary/accent references
         primary: {
           50: '#E8EDF4',
@@ -91,9 +93,9 @@ export default {
         lg: '12px',
       },
       boxShadow: {
-        'token-sm': '0 1px 2px rgba(27,42,74,0.05)',
-        'token-md': '0 2px 8px rgba(27,42,74,0.08)',
-        'token-lg': '0 4px 16px rgba(27,42,74,0.1)',
+        'token-sm': '0 1px 2px rgba(70,63,56,0.06)',
+        'token-md': '0 2px 8px rgba(70,63,56,0.08)',
+        'token-lg': '0 4px 16px rgba(70,63,56,0.10)',
       },
     },
   },

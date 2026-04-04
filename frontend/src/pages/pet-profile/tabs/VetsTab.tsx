@@ -64,7 +64,7 @@ export default function VetsTab({ petId, token, vets, setVets }: {
       {vets.length === 0 ? (
         <EmptyState title="No veterinarians recorded" compact />
       ) : (
-        <ul className="divide-y">
+        <ul className="divide-y divide-surface-100">
           {vets.map(v => (
             <li key={v.id} className="py-3">
               {editingId === v.id ? (
@@ -77,7 +77,7 @@ export default function VetsTab({ petId, token, vets, setVets }: {
               ) : (
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="font-medium">{v.clinic_name} {v.is_primary && <span className="text-xs bg-navy-50 text-primary-700 px-2 py-0.5 rounded">Primary</span>}</p>
+                    <p className="font-medium">{v.clinic_name} {v.is_primary && <span className="badge badge-navy">Primary</span>}</p>
                     {v.vet_name && <p className="text-sm text-surface-600">Dr. {v.vet_name}</p>}
                     {v.phone && <p className="text-sm text-surface-500">{v.phone}</p>}
                   </div>

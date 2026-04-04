@@ -41,13 +41,16 @@ export default function Register() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-surface py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+      <div className="max-w-md w-full space-y-8 card">
         <div className="text-center">
-          <svg className="mx-auto w-16 h-16 text-primary-600" viewBox="0 0 100 100" fill="currentColor">
-            <circle cx="50" cy="50" r="45" />
-            <path d="M30 35 Q35 25 45 30 Q50 20 55 30 Q65 25 70 35 Q75 45 65 50 Q70 60 60 65 Q55 75 50 70 Q45 75 40 65 Q30 60 35 50 Q25 45 30 35" fill="white"/>
+          <svg width="48" height="48" viewBox="0 0 32 32" fill="none" className="mx-auto">
+            <rect width="32" height="32" rx="10" fill="#1B2A4A"/>
+            <circle cx="11" cy="12" r="2" fill="#4A7FB5"/>
+            <circle cx="21" cy="12" r="2" fill="#4A7FB5"/>
+            <circle cx="16" cy="16" r="1.5" fill="#4A7FB5"/>
+            <path d="M9 20c0-3.9 3.1-7 7-7s7 3.1 7 7" stroke="#4A7FB5" strokeWidth="2" strokeLinecap="round"/>
           </svg>
-          <h2 className="mt-6 text-3xl font-extrabold text-navy">
+          <h2 className="mt-6 text-3xl font-bold text-navy">
             Create your account
           </h2>
           <p className="mt-2 text-sm text-surface-600">
@@ -137,14 +140,14 @@ export default function Register() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full btn-primary py-3"
+            className="w-full btn btn-primary"
           >
             {isLoading ? 'Creating account...' : 'Create account'}
           </button>
 
           <p className="text-center text-sm text-surface-600">
             Already have an account?{' '}
-            <Link to="/login" className="text-primary-600 hover:text-primary-500 font-medium">
+            <Link to="/login" className="text-steel hover:text-steel-dark font-medium">
               Sign in
             </Link>
           </p>
