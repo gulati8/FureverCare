@@ -94,11 +94,18 @@ export default function EmergencyCardPreview({
 
   return (
     <div>
-      {/* Mobile device frame */}
-      <div className="max-w-[375px] rounded-2xl border border-surface-200 shadow-token-sm overflow-hidden bg-white">
+      {/* Phone-frame preview — constrained window, scrollable */}
+      <div
+        className="max-w-[375px] rounded-2xl border border-surface-200 shadow-token-sm bg-white"
+        style={{
+          maxHeight: '480px',
+          overflowY: 'auto',
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'var(--color-surface-300) transparent',
+        }}
+      >
         <EmergencyCard card={card} />
       </div>
-
     </div>
   );
 }

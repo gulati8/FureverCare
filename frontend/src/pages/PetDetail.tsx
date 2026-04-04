@@ -195,7 +195,7 @@ export default function PetDetail() {
               species={pet.species}
             />
             <div>
-              <h1 className="text-2xl text-navy font-bold">{pet.name}</h1>
+              <h1 className="text-2xl text-navy font-semibold">{pet.name}</h1>
               <p className="capitalize text-surface-500">
                 {pet.breed ? `${pet.breed} ${pet.species}` : pet.species}
                 {pet.sex && ` \u2022 ${pet.sex}${pet.is_fixed ? ' (Fixed)' : ''}`}

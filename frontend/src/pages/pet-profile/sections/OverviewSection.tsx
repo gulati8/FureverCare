@@ -27,7 +27,7 @@ export default function OverviewSection() {
         </div>
 
         {/* Right: Stat blocks + Emergency card preview */}
-        <div>
+        <div className="flex flex-col">
           {/* Stat blocks */}
           <div className="pet-profile-stats">
             <div className="pet-profile-stat" onClick={() => navigate('health#conditions')}>
@@ -68,9 +68,9 @@ export default function OverviewSection() {
           </button>
           {cardPreviewOpen && (
             <div className="lg:hidden mb-2">
-              <div className="flex justify-between items-center mb-2">
+              <div className="flex justify-between items-center mb-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-surface-400 m-0">Preview</p>
-                <button onClick={() => setShowCardAlertsModal(true)} className="text-xs font-medium text-info hover:text-info">Edit</button>
+                <button onClick={() => setShowCardAlertsModal(true)} className="text-xs font-medium text-steel hover:text-steel-dark">Edit</button>
               </div>
               <EmergencyCardPreview
                 pet={pet}
@@ -87,9 +87,9 @@ export default function OverviewSection() {
 
           {/* Desktop - always visible */}
           <div className="hidden lg:block">
-            <div className="flex justify-between items-center mb-2">
+            <div className="flex justify-between items-center mb-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-surface-400 m-0">Preview</p>
-              <button onClick={() => setShowCardAlertsModal(true)} className="text-xs font-medium text-info hover:text-info">Edit</button>
+              <button onClick={() => setShowCardAlertsModal(true)} className="text-xs font-medium text-steel hover:text-steel-dark">Edit</button>
             </div>
             <EmergencyCardPreview
               pet={pet}

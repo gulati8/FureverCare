@@ -511,12 +511,7 @@ h1, h2, h3, h4, h5, h6 {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
-}
-
-@media (min-width: 640px) {
-  .pet-profile-stats {
-    grid-template-columns: repeat(4, 1fr);
-  }
+  margin-bottom: 16px;
 }
 
 .pet-profile-stat {

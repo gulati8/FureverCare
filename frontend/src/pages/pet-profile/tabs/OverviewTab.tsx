@@ -154,7 +154,7 @@ export default function OverviewTab({ pet, token, onPetUpdated }: {
     <div className="space-y-6">
       <div>
         <h3 className="section-title mb-3">Basic Information</h3>
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-3">
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
           {renderEditableField('name', 'Name', pet.name)}
           {renderEditableField('species', 'Species', <span className="capitalize">{pet.species}</span>)}
           {renderEditableField('breed', 'Breed', pet.breed || <span className="text-surface-400 text-sm italic">Add breed</span>)}
