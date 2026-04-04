@@ -153,8 +153,8 @@ export default function OverviewTab({ pet, token, onPetUpdated }: {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-semibold text-navy mb-3">Basic Information</h3>
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-1">
+        <h3 className="section-title mb-3">Basic Information</h3>
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-3">
           {renderEditableField('name', 'Name', pet.name)}
           {renderEditableField('species', 'Species', <span className="capitalize">{pet.species}</span>)}
           {renderEditableField('breed', 'Breed', pet.breed || <span className="text-surface-400 text-sm italic">Add breed</span>)}
@@ -168,7 +168,7 @@ export default function OverviewTab({ pet, token, onPetUpdated }: {
       </div>
 
       <div>
-        <h3 className="text-lg font-semibold text-navy mb-3">Owner's Notes</h3>
+        <h3 className="section-title mb-3">Owner's Notes</h3>
         {editingField === 'special_instructions' ? (
           <InlineEditForm
             fields={fieldConfigs.special_instructions.fields}
