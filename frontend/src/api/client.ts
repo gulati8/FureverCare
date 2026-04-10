@@ -870,6 +870,29 @@ export const documentsApi = {
     api.patch<DocumentUpload>(`/api/pets/${petId}/documents/uploads/${uploadId}/image-metadata`, data, token),
 };
 
+// Invitations Types
+export type PetRole = 'owner' | 'editor' | 'viewer';
+
+export interface PendingInvitation {
+  id: number;
+  pet_id: number;
+  pet_name: string;
+  inviter_name: string;
+  role: PetRole;
+  invite_code: string;
+  expires_at: string;
+  created_at: string;
+}
+
+// Invitations API
+export const invitationsApi = {
+  getMyPending: (token: string) =>
+    api.get<PendingInvitation[]>('/api/invitations', token),
+
+  accept: (inviteCode: string, token: string) =>
+    api.post<{ message: string; pet: Pet }>(`/api/owners/accept/${inviteCode}`, {}, token),
+};
+
 // Audit API
 export const auditApi = {
   // Get audit log for a pet
