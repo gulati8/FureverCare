@@ -12,6 +12,7 @@ import {
 } from '../api/client';
 import { cmsApi } from '../api/cms';
 import AddPetModal from '../components/AddPetModal';
+import PendingInvitations from '../components/PendingInvitations';
 import UpgradeBanner from '../components/UpgradeBanner';
 import SpeciesAvatar from '../components/SpeciesAvatar';
 import EmptyState from '../components/EmptyState';
@@ -177,6 +178,8 @@ export default function Dashboard() {
       <div className="breadcrumb">
         <span className="current">Dashboard</span>
       </div>
+
+      <PendingInvitations onAccepted={loadPets} />
 
       {/* Header */}
       <div className="flex justify-between items-center mb-6">

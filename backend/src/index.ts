@@ -22,6 +22,7 @@ import adminAnalyticsRoutes from './routes/admin-analytics.js';
 import billingRoutes from './routes/billing.js';
 import subscriptionAdminRoutes from './routes/subscription-admin.js';
 import stripeWebhookRoutes from './routes/stripe-webhook.js';
+import invitationsRoutes from './routes/invitations.js';
 
 const app = express();
 
@@ -73,6 +74,7 @@ app.use('/api/pets', auditRoutes);        // Audit routes under /api/pets/:petId
 app.use('/api/public', publicRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/owners', ownersRoutes);
+app.use('/api/invitations', invitationsRoutes);
 app.use('/api', shareTokenRoutes);  // Share token routes under /api/pets/:petId/share-tokens
 app.use('/api/cms', cmsRoutes);     // CMS routes under /api/cms
 app.use('/api/admin/users', adminUsersRoutes);  // Admin users routes

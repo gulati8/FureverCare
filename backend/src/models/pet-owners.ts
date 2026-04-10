@@ -204,6 +204,31 @@ export async function deleteInvitation(invitationId: number, petId: number): Pro
   return true;
 }
 
+export interface PendingInvitationForUser {
+  id: number;
+  pet_id: number;
+  pet_name: string;
+  inviter_name: string;
+  role: PetRole;
+  invite_code: string;
+  expires_at: Date;
+  created_at: Date;
+}
+
+// Get pending invitations for a user by their email address
+export async function getPendingInvitationsForEmail(email: string): Promise<PendingInvitationForUser[]> {
+  return query<PendingInvitationForUser>(
+    `SELECT pi.id, pi.pet_id, p.name as pet_name, u.name as inviter_name,
+            pi.role, pi.invite_code, pi.expires_at, pi.created_at
+     FROM pet_invitations pi
+     JOIN pets p ON p.id = pi.pet_id
+     JOIN users u ON u.id = pi.invited_by
+     WHERE pi.email = $1 AND pi.accepted_at IS NULL AND pi.expires_at > CURRENT_TIMESTAMP
+     ORDER BY pi.created_at DESC`,
+    [email.toLowerCase()]
+  );
+}
+
 // Get all pets a user has access to (replaces the old findPetsByUserId)
 export async function getPetsForUser(userId: number): Promise<number[]> {
   const results = await query<{ pet_id: number }>(
