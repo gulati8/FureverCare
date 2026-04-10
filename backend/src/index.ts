@@ -21,6 +21,7 @@ import adminPetsRoutes from './routes/admin-pets.js';
 import adminAnalyticsRoutes from './routes/admin-analytics.js';
 import billingRoutes from './routes/billing.js';
 import subscriptionAdminRoutes from './routes/subscription-admin.js';
+import adminEmailTemplatesRoutes from './routes/admin-email-templates.js';
 import stripeWebhookRoutes from './routes/stripe-webhook.js';
 import invitationsRoutes from './routes/invitations.js';
 
@@ -82,6 +83,7 @@ app.use('/api/admin/pets', adminPetsRoutes);    // Admin pets routes
 app.use('/api/admin/analytics', adminAnalyticsRoutes);  // Admin analytics routes
 app.use('/api/billing', billingRoutes);  // Billing routes under /api/billing
 app.use('/api/admin/subscription', subscriptionAdminRoutes);  // Subscription admin routes
+app.use('/api/admin/email-templates', adminEmailTemplatesRoutes);  // Email templates admin routes
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

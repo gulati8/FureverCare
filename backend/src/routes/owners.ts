@@ -4,7 +4,9 @@ import { authenticate, AuthRequest } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { requireFeature } from '../middleware/subscription.js';
 import { findPetById } from '../models/pet.js';
-import { findUserByEmail } from '../models/user.js';
+import { findUserByEmail, findUserById } from '../models/user.js';
+import { email as emailService, buildPetInvitationParams } from '../services/email.js';
+import { config } from '../config/index.js';
 import {
   userIsPetOwner,
   userHasPetAccess,
@@ -84,11 +86,17 @@ router.post('/pets/:petId/invite', authenticate, requireFeature('shared_ownershi
     }
 
     const pet = await findPetById(petId);
+    const inviter = await findUserById(req.userId!);
     const invitation = await createPetInvitation(petId, email, role as PetRole, req.userId!);
 
-    // In a real app, you'd send an email here
-    // For now, we return the invite code that can be shared manually
-    const inviteUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/invite/${invitation.invite_code}`;
+    const inviteUrl = `${config.frontend.url}/invite/${invitation.invite_code}`;
+
+    try {
+      const emailParams = buildPetInvitationParams(inviter!.name, pet!.name, pet?.photo_url || '', inviteUrl, role);
+      await emailService.send({ to: email, ...emailParams });
+    } catch (emailError) {
+      console.error('Failed to send invitation email:', emailError);
+    }
 
     res.status(201).json({
       invitation,
