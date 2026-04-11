@@ -14,7 +14,7 @@ import {
 } from '../models/user.js';
 import { generateToken, authenticate, AuthRequest } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { email, buildPasswordResetParams } from '../services/email.js';
+import { email as emailService, buildPasswordResetParams } from '../services/email.js';
 import { config } from '../config/index.js';
 import { createRedisStore, getClientIp } from '../middleware/rate-limit-store.js';
 
@@ -203,7 +203,7 @@ router.post('/forgot-password', authRateLimit, validate(forgotPasswordSchema), a
 
     const { emailType, params } = buildPasswordResetParams(resetUrl, user.name, config.passwordReset.tokenExpiryMinutes);
 
-    await email.send({ to: user.email, emailType, params });
+    await emailService.send({ to: user.email, emailType, params });
 
     res.json({ message: 'If an account with that email exists, a password reset link has been sent.' });
   } catch (error) {
