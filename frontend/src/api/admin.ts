@@ -187,6 +187,21 @@ export interface SubscriptionConfig {
   stripe: SubscriptionStripe;
 }
 
+export interface EmailTemplate {
+  id: number;
+  email_type: string;
+  brevo_template_id: number;
+  description: string | null;
+  updated_at: string;
+  updated_by: number | null;
+}
+
+export interface EmailTemplateInput {
+  email_type?: string;  // only needed for create
+  brevo_template_id: number;
+  description?: string;
+}
+
 // ============ Admin API ============
 
 export const adminApi = {
@@ -259,4 +274,17 @@ export const adminApi = {
 
   updateStripe: (token: string, stripe: SubscriptionStripe) =>
     api.put<SubscriptionStripe>('/api/admin/subscription/stripe', stripe, token),
+
+  // Email Templates
+  fetchEmailTemplates: (token: string) =>
+    api.get<EmailTemplate[]>('/api/admin/email-templates', token),
+
+  updateEmailTemplate: (token: string, emailType: string, data: EmailTemplateInput) =>
+    api.put<EmailTemplate>(`/api/admin/email-templates/${emailType}`, data, token),
+
+  createEmailTemplate: (token: string, data: EmailTemplateInput) =>
+    api.post<EmailTemplate>('/api/admin/email-templates', data, token),
+
+  deleteEmailTemplate: (token: string, emailType: string) =>
+    api.delete<void>(`/api/admin/email-templates/${emailType}`, token),
 };

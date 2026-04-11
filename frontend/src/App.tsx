@@ -22,6 +22,7 @@ import AnalyticsDashboard from './pages/admin/AnalyticsDashboard';
 import UsersList from './pages/admin/UsersList';
 import PetsList from './pages/admin/PetsList';
 import SubscriptionSettings from './pages/admin/SubscriptionSettings';
+import EmailTemplates from './pages/admin/EmailTemplates';
 import BillingSettings from './pages/BillingSettings';
 import Pricing from './pages/Pricing';
 import Payment from './pages/Payment';
@@ -125,6 +126,7 @@ export default function App() {
         <Route path="pets" element={<PetsList />} />
         <Route path="cms" element={<CMSEditor />} />
         <Route path="subscriptions" element={<SubscriptionSettings />} />
+        <Route path="email-templates" element={<EmailTemplates />} />
       </Route>
 
       {/* Catch all */}
