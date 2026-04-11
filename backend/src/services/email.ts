@@ -51,10 +51,6 @@ class BrevoEmailProvider implements EmailProvider {
       const templateId = await getTemplateId(emailType);
 
       const response = await this.client.transactionalEmails.sendTransacEmail({
-        sender: {
-          name: config.email.fromName,
-          email: config.email.fromAddress,
-        },
         to: [{ email: to }],
         templateId,
         params: emailParams,

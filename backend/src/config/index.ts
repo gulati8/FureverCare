@@ -37,8 +37,6 @@ export const config = {
 
   email: {
     brevoApiKey: process.env.BREVO_API_KEY || '',
-    fromAddress: process.env.EMAIL_FROM_ADDRESS || 'noreply@furevercare.pet',
-    fromName: process.env.EMAIL_FROM_NAME || 'FureverCare',
   },
 
   passwordReset: {
