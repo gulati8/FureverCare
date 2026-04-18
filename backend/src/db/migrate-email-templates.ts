@@ -17,7 +17,9 @@ CREATE INDEX IF NOT EXISTS idx_email_templates_email_type ON email_templates(ema
 -- Seed known email types with placeholder template IDs (0 = needs configuration)
 INSERT INTO email_templates (email_type, brevo_template_id, description) VALUES
   ('password_reset', 0, 'Password reset email sent when user requests to reset their password'),
-  ('pet_invitation', 0, 'Invitation email sent when a pet owner invites someone to share access')
+  ('pet_invitation', 0, 'Invitation email sent when a pet owner invites someone to share access'),
+  ('vaccination_reminder', 0, 'Reminder email sent before a vaccination due date'),
+  ('medication_reminder', 0, 'Reminder email sent before a recurring medication due date')
 ON CONFLICT (email_type) DO NOTHING;
 `;
 

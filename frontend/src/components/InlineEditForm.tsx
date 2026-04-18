@@ -14,6 +14,8 @@ export interface EditField {
   step?: string;
   min?: string;
   rows?: number;
+  disabled?: boolean;
+  helpText?: string;
   /** If set, render this field on the same row as adjacent fields sharing the same gridGroup */
   gridGroup?: string;
 }
@@ -106,6 +108,7 @@ function AutocompleteSelect({ field, value, onChange }: { field: EditField; valu
           placeholder={field.placeholder}
           className="input"
           autoComplete="off"
+          disabled={field.disabled}
         />
         {isOpen && filtered.length > 0 && (
           <div ref={dropdownRef} className="absolute z-10 w-full mt-1 bg-white border border-surface-300 rounded-lg shadow-lg max-h-60 overflow-auto">
@@ -149,17 +152,23 @@ export default function InlineEditForm({ fields, values: initialValues, onSave, 
 
     if (field.type === 'checkbox') {
       return (
-        <div key={field.key} className="flex items-center">
-          <input
-            type="checkbox"
-            id={`edit-${field.key}`}
-            checked={val as boolean}
-            onChange={(e) => setValue(field.key, e.target.checked)}
-            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-surface-300 rounded"
-          />
-          <label htmlFor={`edit-${field.key}`} className="ml-2 block text-sm text-surface-700">
-            {field.placeholder}
-          </label>
+        <div key={field.key} className="space-y-1">
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id={`edit-${field.key}`}
+              checked={val as boolean}
+              onChange={(e) => setValue(field.key, e.target.checked)}
+              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-surface-300 rounded"
+              disabled={field.disabled}
+            />
+            <label htmlFor={`edit-${field.key}`} className="ml-2 block text-sm text-surface-700">
+              {field.placeholder}
+            </label>
+          </div>
+          {field.helpText && (
+            <p className="pl-6 text-xs text-surface-500">{field.helpText}</p>
+          )}
         </div>
       );
     }
@@ -188,7 +197,11 @@ export default function InlineEditForm({ fields, values: initialValues, onSave, 
             }}
             label={field.label || field.placeholder}
             required={field.required}
+            disabled={field.disabled}
           />
+          {field.helpText && (
+            <p className="mt-1 text-xs text-surface-500">{field.helpText}</p>
+          )}
         </div>
       );
     }
@@ -203,7 +216,11 @@ export default function InlineEditForm({ fields, values: initialValues, onSave, 
             onChange={(e) => setValue(field.key, e.target.value)}
             className="input"
             rows={field.rows ?? 2}
+            disabled={field.disabled}
           />
+          {field.helpText && (
+            <p className="mt-1 text-xs text-surface-500">{field.helpText}</p>
+          )}
         </div>
       );
     }
@@ -219,7 +236,11 @@ export default function InlineEditForm({ fields, values: initialValues, onSave, 
           className="input"
           step={field.step}
           min={field.min}
+          disabled={field.disabled}
         />
+        {field.helpText && (
+          <p className="mt-1 text-xs text-surface-500">{field.helpText}</p>
+        )}
       </div>
     );
   };

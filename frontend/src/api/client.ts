@@ -258,6 +258,8 @@ export interface PetVet {
 }
 
 export type DatePrecision = 'day' | 'month' | 'year';
+export type ReminderLeadTimeUnit = 'days' | 'weeks';
+export type ReminderRecurrenceUnit = 'months' | 'years';
 
 export interface PetCondition {
   id: number;
@@ -296,6 +298,13 @@ export interface PetMedication {
   notes: string | null;
   is_active: boolean;
   show_on_card: boolean;
+  reminder_enabled: boolean;
+  reminder_channel: 'email' | null;
+  reminder_lead_time_value: number | null;
+  reminder_lead_time_unit: ReminderLeadTimeUnit | null;
+  reminder_next_due_date: string | null;
+  reminder_recurrence_value: number | null;
+  reminder_recurrence_unit: ReminderRecurrenceUnit | null;
   created_at: string;
 }
 
@@ -310,6 +319,13 @@ export interface PetVaccination {
   administered_by: string | null;
   lot_number: string | null;
   show_on_card: boolean;
+  reminder_enabled: boolean;
+  reminder_channel: 'email' | null;
+  reminder_lead_time_value: number | null;
+  reminder_lead_time_unit: ReminderLeadTimeUnit | null;
+  reminder_next_due_date: string | null;
+  reminder_recurrence_value: number | null;
+  reminder_recurrence_unit: ReminderRecurrenceUnit | null;
   created_at: string;
 }
 

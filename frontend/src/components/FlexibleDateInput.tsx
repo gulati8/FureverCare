@@ -7,6 +7,7 @@ interface FlexibleDateInputProps {
   onChange: (date: string, precision: DatePrecision) => void;
   label?: string;
   required?: boolean;
+  disabled?: boolean;
 }
 
 const MONTHS = [
@@ -49,7 +50,7 @@ function parseDateWithPrecision(dateStr: string, precision: DatePrecision): { ye
   return { year, month, day };
 }
 
-export default function FlexibleDateInput({ value, precision, onChange, label, required }: FlexibleDateInputProps) {
+export default function FlexibleDateInput({ value, precision, onChange, label, required, disabled = false }: FlexibleDateInputProps) {
   const parsed = parseDateWithPrecision(value, precision);
   const [year, setYear] = useState(parsed.year);
   const [month, setMonth] = useState(parsed.month);
@@ -141,6 +142,7 @@ export default function FlexibleDateInput({ value, precision, onChange, label, r
             value={year}
             onChange={(e) => handleYearChange(e.target.value)}
             className="input text-sm"
+            disabled={disabled}
           >
             {yearOptions.map(y => (
               <option key={y.value} value={y.value}>{y.label}</option>
@@ -152,7 +154,7 @@ export default function FlexibleDateInput({ value, precision, onChange, label, r
             value={month}
             onChange={(e) => handleMonthChange(e.target.value)}
             className="input text-sm"
-            disabled={!year}
+            disabled={disabled || !year}
           >
             {MONTHS.map(m => (
               <option key={m.value} value={m.value}>{m.label}</option>
@@ -164,7 +166,7 @@ export default function FlexibleDateInput({ value, precision, onChange, label, r
             value={day}
             onChange={(e) => handleDayChange(e.target.value)}
             className="input text-sm"
-            disabled={!month}
+            disabled={disabled || !month}
           >
             {dayOptions.map(d => (
               <option key={d.value} value={d.value}>{d.label}</option>

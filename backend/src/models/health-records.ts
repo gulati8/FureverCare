@@ -2,6 +2,12 @@ import { query, queryOne, transaction } from '../db/pool.js';
 import { cacheDelete } from '../db/redis.js';
 import { logCreate, logUpdate, logDelete } from '../services/audit-logger.js';
 import { computeMatchScore, computeMultiFieldMatchScore, DEFAULT_MATCH_THRESHOLD } from '../services/match-scoring.js';
+import {
+  deleteReminderRuleForRecord,
+  getReminderSelectColumns,
+  type ReminderConfigFields,
+  upsertReminderRuleForRecord,
+} from './reminders.js';
 
 // Audit context for tracking changes
 export interface AuditContext {
@@ -10,6 +16,20 @@ export interface AuditContext {
   sourcePdfUploadId?: number;
   ipAddress?: string;
   userAgent?: string;
+}
+
+function extractReminderConfig(
+  values: Partial<ReminderConfigFields>
+): ReminderConfigFields {
+  return {
+    reminder_enabled: values.reminder_enabled ?? false,
+    reminder_channel: values.reminder_channel ?? null,
+    reminder_lead_time_value: values.reminder_lead_time_value ?? null,
+    reminder_lead_time_unit: values.reminder_lead_time_unit ?? null,
+    reminder_next_due_date: values.reminder_next_due_date ?? null,
+    reminder_recurrence_value: values.reminder_recurrence_value ?? null,
+    reminder_recurrence_unit: values.reminder_recurrence_unit ?? null,
+  };
 }
 
 // Veterinarian
@@ -406,15 +426,76 @@ export interface PetMedication {
   notes: string | null;
   is_active: boolean;
   show_on_card: boolean;
+  reminder_enabled: boolean;
+  reminder_channel: 'email' | null;
+  reminder_lead_time_value: number | null;
+  reminder_lead_time_unit: 'days' | 'weeks' | null;
+  reminder_next_due_date: Date | null;
+  reminder_recurrence_value: number | null;
+  reminder_recurrence_unit: 'months' | 'years' | null;
   created_at: Date;
 }
 
 export async function createPetMedication(petId: number, data: Omit<PetMedication, 'id' | 'pet_id' | 'created_at'>, audit?: AuditContext): Promise<PetMedication> {
-  const result = await queryOne<PetMedication>(
-    `INSERT INTO pet_medications (pet_id, name, dosage, frequency, start_date, start_date_precision, end_date, end_date_precision, prescribing_vet, notes, is_active, show_on_card)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
-    [petId, data.name, data.dosage, data.frequency, data.start_date, data.start_date_precision || 'day', data.end_date, data.end_date_precision || 'day', data.prescribing_vet, data.notes, data.is_active ?? true, data.show_on_card ?? false]
-  );
+  const reminder = extractReminderConfig(data);
+
+  const result = await transaction(async (client) => {
+    const inserted = await client.query(
+      `INSERT INTO pet_medications (
+         pet_id,
+         name,
+         dosage,
+         frequency,
+         start_date,
+         start_date_precision,
+         end_date,
+         end_date_precision,
+         prescribing_vet,
+         notes,
+         is_active,
+         show_on_card
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       RETURNING *`,
+      [
+        petId,
+        data.name,
+        data.dosage,
+        data.frequency,
+        data.start_date,
+        data.start_date_precision || 'day',
+        data.end_date,
+        data.end_date_precision || 'day',
+        data.prescribing_vet,
+        data.notes,
+        data.is_active ?? true,
+        data.show_on_card ?? false,
+      ]
+    );
+
+    const medication = inserted.rows[0] as PetMedication;
+
+    await upsertReminderRuleForRecord(client, {
+      petId,
+      recordType: 'medication',
+      recordId: medication.id,
+      reminder,
+      userId: audit?.userId,
+    });
+
+    const withReminder = await client.query(
+      `SELECT m.*, ${getReminderSelectColumns('rr')}
+       FROM pet_medications m
+       LEFT JOIN pet_reminder_rules rr
+         ON rr.record_type = 'medication'
+        AND rr.record_id = m.id
+        AND rr.channel = 'email'
+       WHERE m.id = $1 AND m.pet_id = $2`,
+      [medication.id, petId]
+    );
+
+    return withReminder.rows[0] as PetMedication;
+  });
 
   if (audit && result) {
     await logCreate('pet_medications', result.id, data, audit.userId, {
@@ -425,11 +506,21 @@ export async function createPetMedication(petId: number, data: Omit<PetMedicatio
     });
   }
 
-  return result!;
+  return result;
 }
 
 export async function getPetMedications(petId: number): Promise<PetMedication[]> {
-  return query<PetMedication>('SELECT * FROM pet_medications WHERE pet_id = $1 ORDER BY is_active DESC, created_at DESC', [petId]);
+  return query<PetMedication>(
+    `SELECT m.*, ${getReminderSelectColumns('rr')}
+     FROM pet_medications m
+     LEFT JOIN pet_reminder_rules rr
+       ON rr.record_type = 'medication'
+      AND rr.record_id = m.id
+      AND rr.channel = 'email'
+     WHERE m.pet_id = $1
+     ORDER BY m.is_active DESC, m.created_at DESC`,
+    [petId]
+  );
 }
 
 export async function findPetMedicationByName(
@@ -477,11 +568,45 @@ export async function findDuplicateMedications(
 
 export async function updatePetMedication(id: number, petId: number, updates: Partial<Omit<PetMedication, 'id' | 'pet_id' | 'created_at'>>, audit?: AuditContext): Promise<PetMedication | null> {
   // Get existing record for audit
-  const existing = await queryOne<PetMedication>('SELECT * FROM pet_medications WHERE id = $1 AND pet_id = $2', [id, petId]);
+  const existing = await queryOne<PetMedication>(
+    `SELECT m.*, ${getReminderSelectColumns('rr')}
+     FROM pet_medications m
+     LEFT JOIN pet_reminder_rules rr
+       ON rr.record_type = 'medication'
+      AND rr.record_id = m.id
+      AND rr.channel = 'email'
+     WHERE m.id = $1 AND m.pet_id = $2`,
+    [id, petId]
+  );
 
   const fields: string[] = [];
   const values: any[] = [];
   let paramCount = 1;
+  const reminderTouched = [
+    'reminder_enabled',
+    'reminder_channel',
+    'reminder_lead_time_value',
+    'reminder_lead_time_unit',
+    'reminder_next_due_date',
+    'reminder_recurrence_value',
+    'reminder_recurrence_unit',
+  ].some((field) => (updates as any)[field] !== undefined);
+  const reminder = extractReminderConfig({
+    reminder_enabled:
+      updates.reminder_enabled ?? existing?.reminder_enabled ?? false,
+    reminder_channel:
+      updates.reminder_channel ?? existing?.reminder_channel ?? null,
+    reminder_lead_time_value:
+      updates.reminder_lead_time_value ?? existing?.reminder_lead_time_value ?? null,
+    reminder_lead_time_unit:
+      updates.reminder_lead_time_unit ?? existing?.reminder_lead_time_unit ?? null,
+    reminder_next_due_date:
+      updates.reminder_next_due_date ?? existing?.reminder_next_due_date ?? null,
+    reminder_recurrence_value:
+      updates.reminder_recurrence_value ?? existing?.reminder_recurrence_value ?? null,
+    reminder_recurrence_unit:
+      updates.reminder_recurrence_unit ?? existing?.reminder_recurrence_unit ?? null,
+  });
 
   const allowedFields = ['name', 'dosage', 'frequency', 'start_date', 'start_date_precision', 'end_date', 'end_date_precision', 'prescribing_vet', 'notes', 'is_active', 'show_on_card'];
 
@@ -492,14 +617,49 @@ export async function updatePetMedication(id: number, petId: number, updates: Pa
     }
   }
 
-  if (fields.length === 0) return null;
+  if (fields.length > 0) {
+    values.push(id, petId);
+  }
 
-  values.push(id, petId);
+  const result = await transaction(async (client) => {
+    let medication = existing;
+    if (fields.length > 0) {
+      const updated = await client.query(
+        `UPDATE pet_medications SET ${fields.join(', ')} WHERE id = $${paramCount} AND pet_id = $${paramCount + 1} RETURNING *`,
+        values
+      );
+      medication = (updated.rows[0] as PetMedication | undefined) ?? null;
+    }
 
-  const result = await queryOne<PetMedication>(
-    `UPDATE pet_medications SET ${fields.join(', ')} WHERE id = $${paramCount} AND pet_id = $${paramCount + 1} RETURNING *`,
-    values
-  );
+    if (!medication) {
+      return null;
+    }
+
+    await upsertReminderRuleForRecord(client, {
+      petId,
+      recordType: 'medication',
+      recordId: medication.id,
+      reminder,
+      userId: audit?.userId,
+    });
+
+    const withReminder = await client.query(
+      `SELECT m.*, ${getReminderSelectColumns('rr')}
+       FROM pet_medications m
+       LEFT JOIN pet_reminder_rules rr
+         ON rr.record_type = 'medication'
+        AND rr.record_id = m.id
+        AND rr.channel = 'email'
+       WHERE m.id = $1 AND m.pet_id = $2`,
+      [medication.id, petId]
+    );
+
+    return ((withReminder.rows[0] as PetMedication | undefined) ?? null);
+  });
+
+  if (!result && !existing && !reminderTouched) {
+    return null;
+  }
 
   if (audit && existing && result) {
     await logUpdate('pet_medications', id, existing, result, audit.userId, {
@@ -513,9 +673,21 @@ export async function updatePetMedication(id: number, petId: number, updates: Pa
 }
 
 export async function deletePetMedication(id: number, petId: number, audit?: AuditContext): Promise<boolean> {
-  const existing = await queryOne<PetMedication>('SELECT * FROM pet_medications WHERE id = $1 AND pet_id = $2', [id, petId]);
+  const existing = await queryOne<PetMedication>(
+    `SELECT m.*, ${getReminderSelectColumns('rr')}
+     FROM pet_medications m
+     LEFT JOIN pet_reminder_rules rr
+       ON rr.record_type = 'medication'
+      AND rr.record_id = m.id
+      AND rr.channel = 'email'
+     WHERE m.id = $1 AND m.pet_id = $2`,
+    [id, petId]
+  );
 
-  await query('DELETE FROM pet_medications WHERE id = $1 AND pet_id = $2', [id, petId]);
+  await transaction(async (client) => {
+    await deleteReminderRuleForRecord(client, 'medication', id);
+    await client.query('DELETE FROM pet_medications WHERE id = $1 AND pet_id = $2', [id, petId]);
+  });
 
   if (audit && existing) {
     await logDelete('pet_medications', id, existing, audit.userId, {
@@ -540,15 +712,75 @@ export interface PetVaccination {
   administered_by: string | null;
   lot_number: string | null;
   show_on_card: boolean;
+  reminder_enabled: boolean;
+  reminder_channel: 'email' | null;
+  reminder_lead_time_value: number | null;
+  reminder_lead_time_unit: 'days' | 'weeks' | null;
+  reminder_next_due_date: Date | null;
+  reminder_recurrence_value: number | null;
+  reminder_recurrence_unit: 'months' | 'years' | null;
   created_at: Date;
 }
 
 export async function createPetVaccination(petId: number, data: Omit<PetVaccination, 'id' | 'pet_id' | 'created_at'>, audit?: AuditContext): Promise<PetVaccination> {
-  const result = await queryOne<PetVaccination>(
-    `INSERT INTO pet_vaccinations (pet_id, name, administered_date, administered_date_precision, expiration_date, expiration_date_precision, administered_by, lot_number, show_on_card)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-    [petId, data.name, data.administered_date, data.administered_date_precision || 'day', data.expiration_date, data.expiration_date_precision || 'day', data.administered_by, data.lot_number, data.show_on_card ?? false]
-  );
+  const reminder = extractReminderConfig({
+    ...data,
+    reminder_next_due_date: data.expiration_date ?? null,
+    reminder_recurrence_value: null,
+    reminder_recurrence_unit: null,
+  });
+
+  const result = await transaction(async (client) => {
+    const inserted = await client.query(
+      `INSERT INTO pet_vaccinations (
+         pet_id,
+         name,
+         administered_date,
+         administered_date_precision,
+         expiration_date,
+         expiration_date_precision,
+         administered_by,
+         lot_number,
+         show_on_card
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING *`,
+      [
+        petId,
+        data.name,
+        data.administered_date,
+        data.administered_date_precision || 'day',
+        data.expiration_date,
+        data.expiration_date_precision || 'day',
+        data.administered_by,
+        data.lot_number,
+        data.show_on_card ?? false,
+      ]
+    );
+
+    const vaccination = inserted.rows[0] as PetVaccination;
+
+    await upsertReminderRuleForRecord(client, {
+      petId,
+      recordType: 'vaccination',
+      recordId: vaccination.id,
+      reminder,
+      userId: audit?.userId,
+    });
+
+    const withReminder = await client.query(
+      `SELECT v.*, ${getReminderSelectColumns('rr')}
+       FROM pet_vaccinations v
+       LEFT JOIN pet_reminder_rules rr
+         ON rr.record_type = 'vaccination'
+        AND rr.record_id = v.id
+        AND rr.channel = 'email'
+       WHERE v.id = $1 AND v.pet_id = $2`,
+      [vaccination.id, petId]
+    );
+
+    return withReminder.rows[0] as PetVaccination;
+  });
 
   if (audit && result) {
     await logCreate('pet_vaccinations', result.id, data, audit.userId, {
@@ -559,19 +791,61 @@ export async function createPetVaccination(petId: number, data: Omit<PetVaccinat
     });
   }
 
-  return result!;
+  return result;
 }
 
 export async function getPetVaccinations(petId: number): Promise<PetVaccination[]> {
-  return query<PetVaccination>('SELECT * FROM pet_vaccinations WHERE pet_id = $1 ORDER BY administered_date DESC', [petId]);
+  return query<PetVaccination>(
+    `SELECT v.*, ${getReminderSelectColumns('rr')}
+     FROM pet_vaccinations v
+     LEFT JOIN pet_reminder_rules rr
+       ON rr.record_type = 'vaccination'
+      AND rr.record_id = v.id
+      AND rr.channel = 'email'
+     WHERE v.pet_id = $1
+     ORDER BY v.administered_date DESC`,
+    [petId]
+  );
 }
 
 export async function updatePetVaccination(id: number, petId: number, updates: Partial<Omit<PetVaccination, 'id' | 'pet_id' | 'created_at'>>, audit?: AuditContext): Promise<PetVaccination | null> {
-  const existing = await queryOne<PetVaccination>('SELECT * FROM pet_vaccinations WHERE id = $1 AND pet_id = $2', [id, petId]);
+  const existing = await queryOne<PetVaccination>(
+    `SELECT v.*, ${getReminderSelectColumns('rr')}
+     FROM pet_vaccinations v
+     LEFT JOIN pet_reminder_rules rr
+       ON rr.record_type = 'vaccination'
+      AND rr.record_id = v.id
+      AND rr.channel = 'email'
+     WHERE v.id = $1 AND v.pet_id = $2`,
+    [id, petId]
+  );
 
   const fields: string[] = [];
   const values: any[] = [];
   let paramCount = 1;
+  const reminderTouched = [
+    'reminder_enabled',
+    'reminder_channel',
+    'reminder_lead_time_value',
+    'reminder_lead_time_unit',
+  ].some((field) => (updates as any)[field] !== undefined);
+  const effectiveExpirationDate =
+    updates.expiration_date !== undefined
+      ? updates.expiration_date
+      : existing?.expiration_date ?? null;
+  const reminder = extractReminderConfig({
+    reminder_enabled:
+      updates.reminder_enabled ?? existing?.reminder_enabled ?? false,
+    reminder_channel:
+      updates.reminder_channel ?? existing?.reminder_channel ?? null,
+    reminder_lead_time_value:
+      updates.reminder_lead_time_value ?? existing?.reminder_lead_time_value ?? null,
+    reminder_lead_time_unit:
+      updates.reminder_lead_time_unit ?? existing?.reminder_lead_time_unit ?? null,
+    reminder_next_due_date: effectiveExpirationDate,
+    reminder_recurrence_value: null,
+    reminder_recurrence_unit: null,
+  });
 
   const allowedFields = ['name', 'administered_date', 'administered_date_precision', 'expiration_date', 'expiration_date_precision', 'administered_by', 'lot_number', 'show_on_card'];
 
@@ -582,14 +856,49 @@ export async function updatePetVaccination(id: number, petId: number, updates: P
     }
   }
 
-  if (fields.length === 0) return null;
+  if (fields.length > 0) {
+    values.push(id, petId);
+  }
 
-  values.push(id, petId);
+  const result = await transaction(async (client) => {
+    let vaccination = existing;
+    if (fields.length > 0) {
+      const updated = await client.query(
+        `UPDATE pet_vaccinations SET ${fields.join(', ')} WHERE id = $${paramCount} AND pet_id = $${paramCount + 1} RETURNING *`,
+        values
+      );
+      vaccination = (updated.rows[0] as PetVaccination | undefined) ?? null;
+    }
 
-  const result = await queryOne<PetVaccination>(
-    `UPDATE pet_vaccinations SET ${fields.join(', ')} WHERE id = $${paramCount} AND pet_id = $${paramCount + 1} RETURNING *`,
-    values
-  );
+    if (!vaccination) {
+      return null;
+    }
+
+    await upsertReminderRuleForRecord(client, {
+      petId,
+      recordType: 'vaccination',
+      recordId: vaccination.id,
+      reminder,
+      userId: audit?.userId,
+    });
+
+    const withReminder = await client.query(
+      `SELECT v.*, ${getReminderSelectColumns('rr')}
+       FROM pet_vaccinations v
+       LEFT JOIN pet_reminder_rules rr
+         ON rr.record_type = 'vaccination'
+        AND rr.record_id = v.id
+        AND rr.channel = 'email'
+       WHERE v.id = $1 AND v.pet_id = $2`,
+      [vaccination.id, petId]
+    );
+
+    return ((withReminder.rows[0] as PetVaccination | undefined) ?? null);
+  });
+
+  if (!result && !existing && !reminderTouched) {
+    return null;
+  }
 
   if (audit && existing && result) {
     await logUpdate('pet_vaccinations', id, existing, result, audit.userId, {
@@ -603,9 +912,21 @@ export async function updatePetVaccination(id: number, petId: number, updates: P
 }
 
 export async function deletePetVaccination(id: number, petId: number, audit?: AuditContext): Promise<boolean> {
-  const existing = await queryOne<PetVaccination>('SELECT * FROM pet_vaccinations WHERE id = $1 AND pet_id = $2', [id, petId]);
+  const existing = await queryOne<PetVaccination>(
+    `SELECT v.*, ${getReminderSelectColumns('rr')}
+     FROM pet_vaccinations v
+     LEFT JOIN pet_reminder_rules rr
+       ON rr.record_type = 'vaccination'
+      AND rr.record_id = v.id
+      AND rr.channel = 'email'
+     WHERE v.id = $1 AND v.pet_id = $2`,
+    [id, petId]
+  );
 
-  await query('DELETE FROM pet_vaccinations WHERE id = $1 AND pet_id = $2', [id, petId]);
+  await transaction(async (client) => {
+    await deleteReminderRuleForRecord(client, 'vaccination', id);
+    await client.query('DELETE FROM pet_vaccinations WHERE id = $1 AND pet_id = $2', [id, petId]);
+  });
 
   if (audit && existing) {
     await logDelete('pet_vaccinations', id, existing, audit.userId, {
