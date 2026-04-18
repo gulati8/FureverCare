@@ -2,6 +2,8 @@
 .claude/
 .beads/
 .logs/
+.agents/
+AGENTS.md
 
 # Dependencies
 node_modules/
