@@ -4,6 +4,7 @@ import InlineEditForm from '../../../components/InlineEditForm';
 import { formatFlexibleDate } from '../../../components/FlexibleDateInput';
 import SourceDocumentLink from '../../../components/SourceDocumentLink';
 import EmptyState from '../../../components/EmptyState';
+import ShowOnCardButton from '../../../components/ShowOnCardButton';
 import { useFieldToggle } from '../../../hooks/useFieldToggle';
 import { MEDICATION_FIELDS } from '../constants';
 
@@ -79,9 +80,7 @@ export default function MedicationsTab({ petId, token, medications, setMedicatio
             <SourceDocumentLink petId={petId} recordType="pet_medications" recordId={m.id} onNavigateToReview={onNavigateToReview} />
           </div>
           <div className="flex gap-2">
-            <button onClick={() => handleToggleShowOnCard(m)} className={`text-sm ${m.show_on_card ? 'text-danger hover:text-danger-dark' : 'text-surface-400 hover:text-surface-600'}`} title={m.show_on_card ? 'Remove from card' : 'Show on card'}>
-              {m.show_on_card ? '\u{1F514}' : '\u{1F515}'}
-            </button>
+            <ShowOnCardButton active={m.show_on_card} onClick={() => handleToggleShowOnCard(m)} />
             <button onClick={() => setEditingId(m.id)} className="text-navy hover:text-primary-800 text-sm">Edit</button>
             <button onClick={() => handleToggleActive(m)} className={`text-sm ${isInactive ? 'text-navy hover:text-primary-800' : 'text-surface-600 hover:text-navy'}`}>
               {isInactive ? 'Reactivate' : 'Discontinue'}

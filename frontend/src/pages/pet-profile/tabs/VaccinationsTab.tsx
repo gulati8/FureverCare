@@ -4,6 +4,7 @@ import InlineEditForm from '../../../components/InlineEditForm';
 import { formatFlexibleDate } from '../../../components/FlexibleDateInput';
 import SourceDocumentLink from '../../../components/SourceDocumentLink';
 import EmptyState from '../../../components/EmptyState';
+import ShowOnCardButton from '../../../components/ShowOnCardButton';
 import { useFieldToggle } from '../../../hooks/useFieldToggle';
 import { VACCINATION_FIELDS } from '../constants';
 
@@ -111,9 +112,7 @@ export default function VaccinationsTab({ petId, token, vaccinations, setVaccina
                     <SourceDocumentLink petId={petId} recordType="pet_vaccinations" recordId={v.id} onNavigateToReview={onNavigateToReview} />
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => handleToggleShowOnCard(v)} className={`text-sm ${v.show_on_card ? 'text-danger hover:text-danger-dark' : 'text-surface-400 hover:text-surface-600'}`} title={v.show_on_card ? 'Remove from card' : 'Show on card'}>
-                      {v.show_on_card ? '\u{1F514}' : '\u{1F515}'}
-                    </button>
+                    <ShowOnCardButton active={v.show_on_card} onClick={() => handleToggleShowOnCard(v)} />
                     <button onClick={() => setEditingId(v.id)} className="text-navy hover:text-primary-800 text-sm">Edit</button>
                     {deletingId === v.id ? (
                       <>

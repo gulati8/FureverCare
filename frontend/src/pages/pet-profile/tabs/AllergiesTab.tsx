@@ -3,6 +3,7 @@ import { petsApi, PetAllergy } from '../../../api/client';
 import InlineEditForm from '../../../components/InlineEditForm';
 import SourceDocumentLink from '../../../components/SourceDocumentLink';
 import EmptyState from '../../../components/EmptyState';
+import ShowOnCardButton from '../../../components/ShowOnCardButton';
 import { useFieldToggle } from '../../../hooks/useFieldToggle';
 import { ALLERGY_FIELDS } from '../constants';
 
@@ -86,9 +87,7 @@ export default function AllergiesTab({ petId, token, allergies, setAllergies, on
                     <SourceDocumentLink petId={petId} recordType="pet_allergies" recordId={a.id} onNavigateToReview={onNavigateToReview} />
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => handleToggleShowOnCard(a)} className={`text-sm ${a.show_on_card ? 'text-danger hover:text-danger-dark' : 'text-surface-400 hover:text-surface-600'}`} title={a.show_on_card ? 'Remove from card' : 'Show on card'}>
-                      {a.show_on_card ? '\u{1F514}' : '\u{1F515}'}
-                    </button>
+                    <ShowOnCardButton active={a.show_on_card} onClick={() => handleToggleShowOnCard(a)} />
                     <button onClick={() => setEditingId(a.id)} className="text-navy hover:text-primary-800 text-sm">Edit</button>
                     {deletingId === a.id ? (
                       <>
