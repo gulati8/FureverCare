@@ -4,6 +4,7 @@ import InlineEditForm from '../../../components/InlineEditForm';
 import { formatFlexibleDate } from '../../../components/FlexibleDateInput';
 import SourceDocumentLink from '../../../components/SourceDocumentLink';
 import EmptyState from '../../../components/EmptyState';
+import ShowOnCardButton from '../../../components/ShowOnCardButton';
 import { useFieldToggle } from '../../../hooks/useFieldToggle';
 import { CONDITION_FIELDS } from '../constants';
 
@@ -86,9 +87,7 @@ export default function ConditionsTab({ petId, token, conditions, setConditions,
             <SourceDocumentLink petId={petId} recordType="pet_conditions" recordId={c.id} onNavigateToReview={onNavigateToReview} />
           </div>
           <div className="flex gap-2 flex-shrink-0">
-            <button onClick={() => handleToggleShowOnCard(c)} className={`text-sm ${c.show_on_card ? 'text-danger hover:text-danger-dark' : 'text-surface-400 hover:text-surface-600'}`} title={c.show_on_card ? 'Remove from card' : 'Show on card'}>
-              {c.show_on_card ? '\u{1F514}' : '\u{1F515}'}
-            </button>
+            <ShowOnCardButton active={c.show_on_card} onClick={() => handleToggleShowOnCard(c)} />
             <button onClick={() => setEditingId(c.id)} className="text-navy hover:text-primary-800 text-sm">Edit</button>
             <button onClick={() => handleToggleActive(c)} className={`text-sm ${isInactive ? 'text-navy hover:text-primary-800' : 'text-surface-600 hover:text-navy'}`}>
               {isInactive ? 'Reactivate' : 'Discontinue'}
