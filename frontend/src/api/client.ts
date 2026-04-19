@@ -25,7 +25,12 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new Error(error.error || 'Request failed');
+    const detailMessage = Array.isArray(error.details) && error.details.length > 0
+      ? error.details.map((detail: { path?: string; message?: string }) =>
+          detail.path ? `${detail.path}: ${detail.message}` : detail.message
+        ).filter(Boolean).join(', ')
+      : null;
+    throw new Error(detailMessage || error.error || 'Request failed');
   }
 
   if (response.status === 204) {

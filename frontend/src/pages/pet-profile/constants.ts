@@ -113,11 +113,11 @@ export function getMedicationFields(values: Record<string, string | boolean>): E
       helpText: 'Requires a future next due date, lead time, and recurrence interval.',
     },
     ...(reminderEnabled ? [
-      { key: 'reminder_next_due_date', placeholder: 'Next due date', label: 'Next due date *', type: 'date' as const },
-      { key: 'reminder_lead_time_value', placeholder: '1', label: 'Remind me', type: 'number' as const, min: '1', gridGroup: 'medication-reminder-lead' },
-      { key: 'reminder_lead_time_unit', placeholder: 'Lead time unit', label: 'Unit', type: 'select' as const, options: REMINDER_LEAD_UNIT_OPTIONS, gridGroup: 'medication-reminder-lead' },
-      { key: 'reminder_recurrence_value', placeholder: '1', label: 'Repeat every', type: 'number' as const, min: '1', gridGroup: 'medication-reminder-repeat' },
-      { key: 'reminder_recurrence_unit', placeholder: 'Recurrence unit', label: 'Interval', type: 'select' as const, options: REMINDER_RECURRENCE_UNIT_OPTIONS, gridGroup: 'medication-reminder-repeat' },
+      { key: 'reminder_next_due_date', placeholder: 'Next due date', label: 'Next due date *', required: true, type: 'date' as const },
+      { key: 'reminder_lead_time_value', placeholder: '1', label: 'Remind me *', required: true, type: 'number' as const, min: '1', gridGroup: 'medication-reminder-lead' },
+      { key: 'reminder_lead_time_unit', placeholder: 'Lead time unit', label: 'Unit *', required: true, type: 'select' as const, options: REMINDER_LEAD_UNIT_OPTIONS, gridGroup: 'medication-reminder-lead' },
+      { key: 'reminder_recurrence_value', placeholder: '1', label: 'Repeat every *', required: true, type: 'number' as const, min: '1', gridGroup: 'medication-reminder-repeat' },
+      { key: 'reminder_recurrence_unit', placeholder: 'Recurrence unit', label: 'Interval *', required: true, type: 'select' as const, options: REMINDER_RECURRENCE_UNIT_OPTIONS, gridGroup: 'medication-reminder-repeat' },
     ] : []),
   ];
 }
@@ -155,7 +155,8 @@ export function getVaccinationFields(values: Record<string, string | boolean>): 
       {
         key: 'reminder_lead_time_value',
         placeholder: '1',
-        label: 'Remind me',
+        label: 'Remind me *',
+        required: true,
         type: 'number' as const,
         min: '1',
         gridGroup: 'vaccination-reminder-lead',
@@ -164,7 +165,8 @@ export function getVaccinationFields(values: Record<string, string | boolean>): 
       {
         key: 'reminder_lead_time_unit',
         placeholder: 'Lead time unit',
-        label: 'Unit',
+        label: 'Unit *',
+        required: true,
         type: 'select' as const,
         options: REMINDER_LEAD_UNIT_OPTIONS,
         gridGroup: 'vaccination-reminder-lead',

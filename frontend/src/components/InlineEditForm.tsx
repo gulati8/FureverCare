@@ -135,17 +135,37 @@ function AutocompleteSelect({ field, value, onChange }: { field: EditField; valu
 
 export default function InlineEditForm({ fields, values: initialValues, onSave, onCancel, className = '' }: InlineEditFormProps) {
   const [values, setValues] = useState<Record<string, string | boolean>>(initialValues);
+  const [error, setError] = useState<string | null>(null);
   const resolvedFields = typeof fields === 'function' ? fields(values) : fields;
 
   useEffect(() => {
     setValues(initialValues);
+    setError(null);
   }, [initialValues]);
 
   const setValue = (key: string, value: string | boolean) => {
+    setError(null);
     setValues(prev => ({ ...prev, [key]: value }));
   };
 
   const handleSave = () => {
+    for (const field of resolvedFields) {
+      if (!field.required) continue;
+
+      const rawValue = values[field.key];
+      const isMissing =
+        rawValue === undefined ||
+        rawValue === null ||
+        rawValue === false ||
+        (typeof rawValue === 'string' && rawValue.trim() === '');
+
+      if (isMissing) {
+        setError(field.label || field.placeholder.replace(/\s*\*$/, ''));
+        return;
+      }
+    }
+
+    setError(null);
     onSave(values);
   };
 
@@ -277,9 +297,14 @@ export default function InlineEditForm({ fields, values: initialValues, onSave, 
   return (
     <div className={`bg-surface rounded-lg p-4 space-y-3 ${className}`}>
       {renderFields()}
+      {error && (
+        <div className="bg-danger-light border border-danger/20 text-danger px-4 py-3 rounded-lg text-sm">
+          {error} is required.
+        </div>
+      )}
       <div className="flex gap-2">
-        <button onClick={handleSave} className="btn-primary text-sm">Save</button>
-        <button onClick={onCancel} className="btn-secondary text-sm">Cancel</button>
+        <button type="button" onClick={handleSave} className="btn-primary text-sm">Save</button>
+        <button type="button" onClick={onCancel} className="btn-secondary text-sm">Cancel</button>
       </div>
     </div>
   );

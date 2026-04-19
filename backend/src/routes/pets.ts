@@ -122,6 +122,25 @@ function isFutureDate(dateString: string): boolean {
   return candidate > today;
 }
 
+function isPastDate(dateString: string): boolean {
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
+  const candidate = new Date(`${dateString}T00:00:00.000Z`);
+  return candidate < today;
+}
+
+function subtractLeadTimeDays(
+  dateString: string,
+  leadTimeValue: number,
+  leadTimeUnit: 'days' | 'weeks'
+): string {
+  const days = leadTimeUnit === 'weeks' ? leadTimeValue * 7 : leadTimeValue;
+  const candidate = new Date(`${dateString}T00:00:00.000Z`);
+  candidate.setUTCDate(candidate.getUTCDate() - days);
+  return candidate.toISOString().slice(0, 10);
+}
+
 function validateMedicationReminderState(
   payload: Partial<PetMedication>,
   existing?: PetMedication
@@ -157,6 +176,16 @@ function validateMedicationReminderState(
 
   if (!recurrenceValue || !recurrenceUnit) {
     return 'Medication reminders require a recurrence interval in months or years.';
+  }
+
+  const firstReminderDate = subtractLeadTimeDays(
+    nextDueDate,
+    leadTimeValue,
+    leadTimeUnit
+  );
+
+  if (isPastDate(firstReminderDate)) {
+    return 'Medication reminders must start today or later. Choose a later next due date or a shorter lead time.';
   }
 
   return null;
@@ -195,6 +224,16 @@ function validateVaccinationReminderState(
 
   if (!leadTimeValue || !leadTimeUnit) {
     return 'Vaccination reminders require a lead time in days or weeks.';
+  }
+
+  const firstReminderDate = subtractLeadTimeDays(
+    expirationDate,
+    leadTimeValue,
+    leadTimeUnit
+  );
+
+  if (isPastDate(firstReminderDate)) {
+    return 'Vaccination reminders must start today or later. Choose a later expiration date or a shorter lead time.';
   }
 
   return null;
