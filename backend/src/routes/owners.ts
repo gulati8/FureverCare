@@ -7,7 +7,7 @@ import { findPetById } from '../models/pet.js';
 import { findUserByEmail, findUserById } from '../models/user.js';
 import { notifications, buildPetInvitationNotification } from '../services/notifications.js';
 import { config } from '../config/index.js';
-import { getPublicPetPhotoPath } from '../services/pet-photo.js';
+import { signPetPhotoUrl } from '../services/pet-photo.js';
 import {
   userIsPetOwner,
   userHasPetAccess,
@@ -96,9 +96,7 @@ router.post('/pets/:petId/invite', authenticate, requireFeature('shared_ownershi
       const notification = buildPetInvitationNotification(
         inviter!.name,
         pet!.name,
-        pet?.photo_url
-          ? `${config.frontend.url}${getPublicPetPhotoPath(pet.share_id, pet.photo_url)}`
-          : '',
+        (await signPetPhotoUrl(pet?.photo_url || null, 60 * 60 * 24 * 7)) || '',
         inviteUrl,
         role
       );

@@ -43,7 +43,6 @@ export async function authenticate(
       res.status(401).json({ error: 'Authentication required' });
       return;
     }
-
     const token = authHeader.split(' ')[1];
     const payload = verifyToken(token);
 

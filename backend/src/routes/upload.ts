@@ -4,7 +4,7 @@ import { uploadPhoto } from '../middleware/upload.js';
 import { storage } from '../services/storage.js';
 import { findPetById, updatePet } from '../models/pet.js';
 import { optimizeImage, replaceExtension, isOptimizableImage } from '../services/image-optimizer.js';
-import { getAuthenticatedPetPhotoPath } from '../services/pet-photo.js';
+import { signPetPhotoUrl, withSignedPetPhoto } from '../services/pet-photo.js';
 
 const router = Router();
 
@@ -59,12 +59,9 @@ router.post('/pet/:petId/photo', authenticate, uploadPhoto.single('photo'), asyn
     const updatedPet = await updatePet(petId, req.userId!, { photo_url: result.url });
 
     res.json({
-      photo_url: getAuthenticatedPetPhotoPath(petId, result.url),
+      photo_url: await signPetPhotoUrl(result.url),
       pet: updatedPet
-        ? {
-            ...updatedPet,
-            photo_url: getAuthenticatedPetPhotoPath(updatedPet.id, updatedPet.photo_url),
-          }
+        ? await withSignedPetPhoto(updatedPet)
         : updatedPet,
     });
   } catch (error) {

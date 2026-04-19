@@ -8,7 +8,7 @@ import {
   findPetByIdWithDetails,
   PetsFilterOptions,
 } from '../models/admin.js';
-import { withAuthenticatedPetPhoto } from '../services/pet-photo.js';
+import { withSignedPetPhoto, withSignedPetPhotos } from '../services/pet-photo.js';
 
 const router = Router();
 
@@ -46,7 +46,7 @@ router.get('/', authenticate, requireAdmin, async (req: AuthRequest, res: Respon
     const result = await findAllPetsWithPagination(options);
     res.json({
       ...result,
-      data: result.data.map(withAuthenticatedPetPhoto),
+      data: await withSignedPetPhotos(result.data),
     });
   } catch (error: any) {
     if (error.name === 'ZodError') {
@@ -75,7 +75,7 @@ router.get('/:id', authenticate, requireAdmin, async (req: AuthRequest, res: Res
       return;
     }
 
-    res.json(withAuthenticatedPetPhoto(pet));
+    res.json(await withSignedPetPhoto(pet));
   } catch (error) {
     console.error('Error fetching pet:', error);
     res.status(500).json({ error: 'Failed to fetch pet' });

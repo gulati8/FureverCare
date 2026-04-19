@@ -32,8 +32,8 @@ import {
   type PetVaccination,
 } from '../models/health-records.js';
 import {
-  streamPetPhoto,
-  withAuthenticatedPetPhoto,
+  withSignedPetPhoto,
+  withSignedPetPhotos,
 } from '../services/pet-photo.js';
 
 const router = Router();
@@ -222,7 +222,7 @@ async function invalidateCardCache(petId: number): Promise<void> {
 router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const pets = await findPetsForUser(req.userId!);
-    res.json(pets.map(withAuthenticatedPetPhoto));
+    res.json(await withSignedPetPhotos(pets));
   } catch (error) {
     console.error('Error fetching pets:', error);
     res.status(500).json({ error: 'Failed to fetch pets' });
@@ -240,7 +240,7 @@ router.post('/', authenticate, checkPetLimit, validate(createPetSchema), async (
     // Add creator as owner in pet_owners table
     await addPetOwner(pet.id, req.userId!, 'owner');
 
-    res.status(201).json(withAuthenticatedPetPhoto(pet));
+    res.status(201).json(await withSignedPetPhoto(pet));
   } catch (error) {
     console.error('Error creating pet:', error);
     res.status(500).json({ error: 'Failed to create pet' });
@@ -267,7 +267,7 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
 
     // Include user's role in the response
     const role = await getUserPetRole(petId, req.userId!);
-    res.json(withAuthenticatedPetPhoto({ ...pet, userRole: role }));
+    res.json(await withSignedPetPhoto({ ...pet, userRole: role }));
   } catch (error) {
     console.error('Error fetching pet:', error);
     res.status(500).json({ error: 'Failed to fetch pet' });
@@ -282,33 +282,10 @@ router.patch('/:id', authenticate, validate(updatePetSchema), async (req: AuthRe
       res.status(404).json({ error: 'Pet not found' });
       return;
     }
-    res.json(withAuthenticatedPetPhoto(pet));
+    res.json(await withSignedPetPhoto(pet));
   } catch (error) {
     console.error('Error updating pet:', error);
     res.status(500).json({ error: 'Failed to update pet' });
-  }
-});
-
-// GET /pets/:id/photo - Stream the stored pet photo through the API
-router.get('/:id/photo', authenticate, async (req: AuthRequest, res: Response) => {
-  try {
-    const petId = parseInt(req.params.id);
-    const pet = await findPetById(petId);
-
-    if (!pet?.photo_url) {
-      res.status(404).json({ error: 'Pet photo not found' });
-      return;
-    }
-
-    if (!req.isAdmin && !(await verifyPetAccess(petId, req.userId!))) {
-      res.status(404).json({ error: 'Pet not found' });
-      return;
-    }
-
-    await streamPetPhoto(res, pet.photo_url);
-  } catch (error) {
-    console.error('Error serving pet photo:', error);
-    res.status(404).json({ error: 'Pet photo not found' });
   }
 });
 

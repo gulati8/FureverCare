@@ -9,7 +9,7 @@ import {
   findUserPets,
   UsersFilterOptions,
 } from '../models/admin.js';
-import { withAuthenticatedPetPhoto } from '../services/pet-photo.js';
+import { withSignedPetPhotos } from '../services/pet-photo.js';
 
 const router = Router();
 
@@ -75,7 +75,7 @@ router.get('/:id', authenticate, requireAdmin, async (req: AuthRequest, res: Res
 
     res.json({
       ...user,
-      pets: user.pets?.map(withAuthenticatedPetPhoto) ?? [],
+      pets: user.pets ? await withSignedPetPhotos(user.pets) : [],
     });
   } catch (error) {
     console.error('Error fetching user:', error);
@@ -94,7 +94,7 @@ router.get('/:id/pets', authenticate, requireAdmin, async (req: AuthRequest, res
     }
 
     const pets = await findUserPets(userId);
-    res.json(pets.map(withAuthenticatedPetPhoto));
+    res.json(await withSignedPetPhotos(pets));
   } catch (error) {
     console.error('Error fetching user pets:', error);
     res.status(500).json({ error: 'Failed to fetch user pets' });

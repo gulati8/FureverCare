@@ -1,75 +1,39 @@
-import path from 'path';
-import type { Response } from 'express';
 import { storage } from './storage.js';
+const DEFAULT_PHOTO_URL_TTL_SECONDS = 60 * 60;
 
-const PHOTO_CONTENT_TYPES: Record<string, string> = {
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.png': 'image/png',
-  '.gif': 'image/gif',
-  '.webp': 'image/webp',
-  '.bmp': 'image/bmp',
-  '.tif': 'image/tiff',
-  '.tiff': 'image/tiff',
-  '.heic': 'image/heic',
-  '.heif': 'image/heif',
-};
-
-export function getAuthenticatedPetPhotoPath(
-  petId: number,
-  photoUrl: string | null
-): string | null {
+export async function signPetPhotoUrl(
+  photoUrl: string | null,
+  expiresInSeconds: number = DEFAULT_PHOTO_URL_TTL_SECONDS
+): Promise<string | null> {
   if (!photoUrl) {
     return null;
   }
 
-  return `/api/pets/${petId}/photo`;
-}
-
-export function getPublicPetPhotoPath(
-  shareId: string,
-  photoUrl: string | null
-): string | null {
-  if (!photoUrl) {
-    return null;
+  if (!storage.isS3()) {
+    return photoUrl;
   }
 
-  return `/api/public/card/${shareId}/photo`;
+  if (!photoUrl.includes('amazonaws.com')) {
+    return photoUrl;
+  }
+
+  const key = storage.extractKey(photoUrl);
+  return storage.getSignedUrl(key, 'photos', expiresInSeconds);
 }
 
-export function withAuthenticatedPetPhoto<
-  T extends { id: number; photo_url: string | null },
->(pet: T): T {
+export async function withSignedPetPhoto<
+  T extends { photo_url: string | null },
+>(pet: T, expiresInSeconds?: number): Promise<T> {
   return {
     ...pet,
-    photo_url: getAuthenticatedPetPhotoPath(pet.id, pet.photo_url),
+    photo_url: await signPetPhotoUrl(pet.photo_url, expiresInSeconds),
   };
 }
 
-export function withPublicPetPhoto<
-  T extends { share_id: string; photo_url: string | null },
->(pet: T): T {
-  return {
-    ...pet,
-    photo_url: getPublicPetPhotoPath(pet.share_id, pet.photo_url),
-  };
-}
-
-function getPhotoContentType(photoUrl: string): string {
-  const key = storage.extractKey(photoUrl);
-  const ext = path.extname(key).toLowerCase();
-  return PHOTO_CONTENT_TYPES[ext] || 'application/octet-stream';
-}
-
-export async function streamPetPhoto(
-  res: Response,
-  photoUrl: string,
-  cacheControl: string = 'private, max-age=300'
-): Promise<void> {
-  const key = storage.extractKey(photoUrl);
-  const buffer = await storage.download(key, 'photos');
-
-  res.setHeader('Content-Type', getPhotoContentType(photoUrl));
-  res.setHeader('Cache-Control', cacheControl);
-  res.send(buffer);
+export async function withSignedPetPhotos<
+  T extends { photo_url: string | null },
+>(pets: T[], expiresInSeconds?: number): Promise<T[]> {
+  return Promise.all(
+    pets.map((pet) => withSignedPetPhoto(pet, expiresInSeconds))
+  );
 }

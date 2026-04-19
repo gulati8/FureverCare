@@ -1,5 +1,5 @@
 import { Router, Response, Request } from 'express';
-import { findPetByShareId, findPetById } from '../models/pet.js';
+import { findPetById, findPetByShareId } from '../models/pet.js';
 import { findUserById } from '../models/user.js';
 import {
   getPetVets,
@@ -18,8 +18,7 @@ import {
   updateShareTokenAccess,
 } from '../models/share-tokens.js';
 import {
-  streamPetPhoto,
-  withPublicPetPhoto,
+  withSignedPetPhoto,
 } from '../services/pet-photo.js';
 
 const router = Router();
@@ -57,24 +56,9 @@ router.get('/card/:shareId', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/card/:shareId/photo', async (req: Request, res: Response) => {
-  try {
-    const pet = await findPetByShareId(req.params.shareId);
-    if (!pet?.photo_url) {
-      res.status(404).json({ error: 'Pet photo not found' });
-      return;
-    }
-
-    await streamPetPhoto(res, pet.photo_url, 'public, max-age=300');
-  } catch (error) {
-    console.error('Error serving public pet photo:', error);
-    res.status(404).json({ error: 'Pet photo not found' });
-  }
-});
-
 // Helper function to build emergency card response
 async function buildEmergencyCard(pet: any) {
-  const cardPet = withPublicPetPhoto(pet);
+  const cardPet = await withSignedPetPhoto(pet);
 
   // Fetch owner info
   const owner = await findUserById(cardPet.user_id);
@@ -110,7 +94,7 @@ async function buildEmergencyCard(pet: any) {
   return {
     // Pet basic info
     pet: {
-      name: pet.name,
+      name: cardPet.name,
       species: cardPet.species,
       breed: cardPet.breed,
       age,
