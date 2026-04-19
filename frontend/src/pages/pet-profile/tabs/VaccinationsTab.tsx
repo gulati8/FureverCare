@@ -143,7 +143,7 @@ export default function VaccinationsTab({ petId, token, vaccinations, setVaccina
 
       {showForm && (
         <InlineEditForm
-          fields={getVaccinationFields(addValues)}
+          fields={getVaccinationFields}
           values={addValues}
           onSave={handleAdd}
           onCancel={() => setShowForm(false)}
@@ -159,16 +159,7 @@ export default function VaccinationsTab({ petId, token, vaccinations, setVaccina
             <li key={v.id} className="py-3">
               {editingId === v.id ? (
                 <InlineEditForm
-                  fields={getVaccinationFields({
-                    name: v.name,
-                    administered_date: toDateInput(v.administered_date),
-                    administered_date_precision: v.administered_date_precision || 'day',
-                    expiration_date: toDateInput(v.expiration_date),
-                    expiration_date_precision: v.expiration_date_precision || 'day',
-                    reminder_enabled: v.reminder_enabled,
-                    reminder_lead_time_value: v.reminder_lead_time_value?.toString() || '',
-                    reminder_lead_time_unit: v.reminder_lead_time_unit || 'days',
-                  })}
+                  fields={getVaccinationFields}
                   values={{
                     name: v.name,
                     administered_date: toDateInput(v.administered_date),

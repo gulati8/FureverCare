@@ -22,7 +22,7 @@ export interface EditField {
 }
 
 interface InlineEditFormProps {
-  fields: EditField[];
+  fields: EditField[] | ((values: Record<string, string | boolean>) => EditField[]);
   values: Record<string, string | boolean>;
   onSave: (values: Record<string, string | boolean>) => void;
   onCancel: () => void;
@@ -135,6 +135,7 @@ function AutocompleteSelect({ field, value, onChange }: { field: EditField; valu
 
 export default function InlineEditForm({ fields, values: initialValues, onSave, onCancel, className = '' }: InlineEditFormProps) {
   const [values, setValues] = useState<Record<string, string | boolean>>(initialValues);
+  const resolvedFields = typeof fields === 'function' ? fields(values) : fields;
 
   useEffect(() => {
     setValues(initialValues);
@@ -251,12 +252,12 @@ export default function InlineEditForm({ fields, values: initialValues, onSave, 
   const renderFields = () => {
     const elements: React.ReactNode[] = [];
     let i = 0;
-    while (i < fields.length) {
-      const field = fields[i];
+    while (i < resolvedFields.length) {
+      const field = resolvedFields[i];
       if (field.gridGroup) {
         const groupFields = [];
-        while (i < fields.length && fields[i].gridGroup === field.gridGroup) {
-          groupFields.push(fields[i]);
+        while (i < resolvedFields.length && resolvedFields[i].gridGroup === field.gridGroup) {
+          groupFields.push(resolvedFields[i]);
           i++;
         }
         const gridCols = groupFields.length === 3 ? 'grid-cols-3' : 'grid-cols-2';

@@ -142,19 +142,7 @@ export default function MedicationsTab({ petId, token, medications, setMedicatio
     <li key={m.id} className="p-3">
       {editingId === m.id ? (
         <InlineEditForm
-          fields={getMedicationFields({
-            name: m.name,
-            dosage: m.dosage || '',
-            frequency: m.frequency || '',
-            start_date: m.start_date ? m.start_date.split('T')[0] : '',
-            start_date_precision: m.start_date_precision || 'day',
-            reminder_enabled: m.reminder_enabled,
-            reminder_next_due_date: m.reminder_next_due_date ? m.reminder_next_due_date.split('T')[0] : '',
-            reminder_lead_time_value: m.reminder_lead_time_value?.toString() || '',
-            reminder_lead_time_unit: m.reminder_lead_time_unit || 'days',
-            reminder_recurrence_value: m.reminder_recurrence_value?.toString() || '',
-            reminder_recurrence_unit: m.reminder_recurrence_unit || 'months',
-          })}
+          fields={getMedicationFields}
           values={{
             name: m.name,
             dosage: m.dosage || '',
@@ -224,7 +212,7 @@ export default function MedicationsTab({ petId, token, medications, setMedicatio
 
       {showForm && (
         <InlineEditForm
-          fields={getMedicationFields(addValues)}
+          fields={getMedicationFields}
           values={addValues}
           onSave={handleAdd}
           onCancel={() => setShowForm(false)}
