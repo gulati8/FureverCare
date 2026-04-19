@@ -1,5 +1,10 @@
 # FureverCare Pre-Launch Implementation Plan
 
+> Historical planning artifact from April 2, 2026.
+> Many tasks in this document have already been completed.
+> Do not use this file as the source of truth for current setup, deployment, or architecture.
+> Use [README.md](README.md) and [docs/developer-operations.md](docs/developer-operations.md) instead.
+
 **21 issues, decomposed into 30 tasks across 8 parallel groups**
 **Generated: 2026-04-02**
 
