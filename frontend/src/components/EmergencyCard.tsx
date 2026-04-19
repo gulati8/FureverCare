@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { EmergencyCard as EmergencyCardData } from '../api/client';
+import { resolveAssetUrl } from '../utils/assetUrls';
 
 const KG_TO_LBS = 2.20462;
 
@@ -92,7 +93,9 @@ export default function EmergencyCard({ card, resolvePhotoUrl }: Props) {
   const alerts = buildAlerts(card);
   const hasAlerts = alerts.length > 0;
 
-  const photoUrl = resolvePhotoUrl ? resolvePhotoUrl(pet.photo_url) : pet.photo_url;
+  const photoUrl = resolvePhotoUrl
+    ? resolvePhotoUrl(pet.photo_url)
+    : resolveAssetUrl(pet.photo_url);
 
   return (
     <div>

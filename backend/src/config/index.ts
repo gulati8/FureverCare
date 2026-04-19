@@ -39,6 +39,13 @@ export const config = {
     brevoApiKey: process.env.BREVO_API_KEY || '',
   },
 
+  reminders: {
+    processCron: process.env.REMINDER_PROCESS_CRON || '0 9 * * *',
+    timezone: process.env.REMINDER_PROCESS_TIMEZONE || 'America/New_York',
+    workerConcurrency: parseInt(process.env.REMINDER_WORKER_CONCURRENCY || '2', 10),
+    notificationConcurrency: parseInt(process.env.REMINDER_NOTIFICATION_CONCURRENCY || '4', 10),
+  },
+
   passwordReset: {
     tokenExpiryMinutes: parseInt(process.env.PASSWORD_RESET_EXPIRY_MINUTES || '60', 10),
   },

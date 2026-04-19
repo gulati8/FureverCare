@@ -5,8 +5,9 @@ import { validate } from '../middleware/validate.js';
 import { requireFeature } from '../middleware/subscription.js';
 import { findPetById } from '../models/pet.js';
 import { findUserByEmail, findUserById } from '../models/user.js';
-import { email as emailService, buildPetInvitationParams } from '../services/email.js';
+import { notifications, buildPetInvitationNotification } from '../services/notifications.js';
 import { config } from '../config/index.js';
+import { signPetPhotoUrl } from '../services/pet-photo.js';
 import {
   userIsPetOwner,
   userHasPetAccess,
@@ -92,8 +93,14 @@ router.post('/pets/:petId/invite', authenticate, requireFeature('shared_ownershi
     const inviteUrl = `${config.frontend.url}/invite/${invitation.invite_code}`;
 
     try {
-      const emailParams = buildPetInvitationParams(inviter!.name, pet!.name, pet?.photo_url || '', inviteUrl, role);
-      await emailService.send({ to: email, ...emailParams });
+      const notification = buildPetInvitationNotification(
+        inviter!.name,
+        pet!.name,
+        (await signPetPhotoUrl(pet?.photo_url || null, 60 * 60 * 24 * 7)) || '',
+        inviteUrl,
+        role
+      );
+      await notifications.send({ to: email, ...notification });
     } catch (emailError) {
       console.error('Failed to send invitation email:', emailError);
     }

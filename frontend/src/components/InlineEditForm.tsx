@@ -14,12 +14,15 @@ export interface EditField {
   step?: string;
   min?: string;
   rows?: number;
+  disabled?: boolean;
+  helpText?: string;
+  maxFutureYears?: number;
   /** If set, render this field on the same row as adjacent fields sharing the same gridGroup */
   gridGroup?: string;
 }
 
 interface InlineEditFormProps {
-  fields: EditField[];
+  fields: EditField[] | ((values: Record<string, string | boolean>) => EditField[]);
   values: Record<string, string | boolean>;
   onSave: (values: Record<string, string | boolean>) => void;
   onCancel: () => void;
@@ -106,6 +109,7 @@ function AutocompleteSelect({ field, value, onChange }: { field: EditField; valu
           placeholder={field.placeholder}
           className="input"
           autoComplete="off"
+          disabled={field.disabled}
         />
         {isOpen && filtered.length > 0 && (
           <div ref={dropdownRef} className="absolute z-10 w-full mt-1 bg-white border border-surface-300 rounded-lg shadow-lg max-h-60 overflow-auto">
@@ -131,16 +135,37 @@ function AutocompleteSelect({ field, value, onChange }: { field: EditField; valu
 
 export default function InlineEditForm({ fields, values: initialValues, onSave, onCancel, className = '' }: InlineEditFormProps) {
   const [values, setValues] = useState<Record<string, string | boolean>>(initialValues);
+  const [error, setError] = useState<string | null>(null);
+  const resolvedFields = typeof fields === 'function' ? fields(values) : fields;
 
   useEffect(() => {
     setValues(initialValues);
+    setError(null);
   }, [initialValues]);
 
   const setValue = (key: string, value: string | boolean) => {
+    setError(null);
     setValues(prev => ({ ...prev, [key]: value }));
   };
 
   const handleSave = () => {
+    for (const field of resolvedFields) {
+      if (!field.required) continue;
+
+      const rawValue = values[field.key];
+      const isMissing =
+        rawValue === undefined ||
+        rawValue === null ||
+        rawValue === false ||
+        (typeof rawValue === 'string' && rawValue.trim() === '');
+
+      if (isMissing) {
+        setError(field.label || field.placeholder.replace(/\s*\*$/, ''));
+        return;
+      }
+    }
+
+    setError(null);
     onSave(values);
   };
 
@@ -149,17 +174,23 @@ export default function InlineEditForm({ fields, values: initialValues, onSave, 
 
     if (field.type === 'checkbox') {
       return (
-        <div key={field.key} className="flex items-center">
-          <input
-            type="checkbox"
-            id={`edit-${field.key}`}
-            checked={val as boolean}
-            onChange={(e) => setValue(field.key, e.target.checked)}
-            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-surface-300 rounded"
-          />
-          <label htmlFor={`edit-${field.key}`} className="ml-2 block text-sm text-surface-700">
-            {field.placeholder}
-          </label>
+        <div key={field.key} className="space-y-1">
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id={`edit-${field.key}`}
+              checked={val as boolean}
+              onChange={(e) => setValue(field.key, e.target.checked)}
+              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-surface-300 rounded"
+              disabled={field.disabled}
+            />
+            <label htmlFor={`edit-${field.key}`} className="ml-2 block text-sm text-surface-700">
+              {field.placeholder}
+            </label>
+          </div>
+          {field.helpText && (
+            <p className="pl-6 text-xs text-surface-500">{field.helpText}</p>
+          )}
         </div>
       );
     }
@@ -188,7 +219,12 @@ export default function InlineEditForm({ fields, values: initialValues, onSave, 
             }}
             label={field.label || field.placeholder}
             required={field.required}
+            disabled={field.disabled}
+            maxFutureYears={field.maxFutureYears}
           />
+          {field.helpText && (
+            <p className="mt-1 text-xs text-surface-500">{field.helpText}</p>
+          )}
         </div>
       );
     }
@@ -203,7 +239,11 @@ export default function InlineEditForm({ fields, values: initialValues, onSave, 
             onChange={(e) => setValue(field.key, e.target.value)}
             className="input"
             rows={field.rows ?? 2}
+            disabled={field.disabled}
           />
+          {field.helpText && (
+            <p className="mt-1 text-xs text-surface-500">{field.helpText}</p>
+          )}
         </div>
       );
     }
@@ -219,7 +259,11 @@ export default function InlineEditForm({ fields, values: initialValues, onSave, 
           className="input"
           step={field.step}
           min={field.min}
+          disabled={field.disabled}
         />
+        {field.helpText && (
+          <p className="mt-1 text-xs text-surface-500">{field.helpText}</p>
+        )}
       </div>
     );
   };
@@ -228,12 +272,12 @@ export default function InlineEditForm({ fields, values: initialValues, onSave, 
   const renderFields = () => {
     const elements: React.ReactNode[] = [];
     let i = 0;
-    while (i < fields.length) {
-      const field = fields[i];
+    while (i < resolvedFields.length) {
+      const field = resolvedFields[i];
       if (field.gridGroup) {
         const groupFields = [];
-        while (i < fields.length && fields[i].gridGroup === field.gridGroup) {
-          groupFields.push(fields[i]);
+        while (i < resolvedFields.length && resolvedFields[i].gridGroup === field.gridGroup) {
+          groupFields.push(resolvedFields[i]);
           i++;
         }
         const gridCols = groupFields.length === 3 ? 'grid-cols-3' : 'grid-cols-2';
@@ -253,9 +297,14 @@ export default function InlineEditForm({ fields, values: initialValues, onSave, 
   return (
     <div className={`bg-surface rounded-lg p-4 space-y-3 ${className}`}>
       {renderFields()}
+      {error && (
+        <div className="bg-danger-light border border-danger/20 text-danger px-4 py-3 rounded-lg text-sm">
+          {error} is required.
+        </div>
+      )}
       <div className="flex gap-2">
-        <button onClick={handleSave} className="btn-primary text-sm">Save</button>
-        <button onClick={onCancel} className="btn-secondary text-sm">Cancel</button>
+        <button type="button" onClick={handleSave} className="btn-primary text-sm">Save</button>
+        <button type="button" onClick={onCancel} className="btn-secondary text-sm">Cancel</button>
       </div>
     </div>
   );

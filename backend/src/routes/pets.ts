@@ -28,7 +28,13 @@ import {
   getPetVaccinations, createPetVaccination, updatePetVaccination, deletePetVaccination,
   getPetEmergencyContacts, createPetEmergencyContact, updatePetEmergencyContact, deletePetEmergencyContact, setPrimaryEmergencyContact,
   getPetAlerts, createPetAlert, updatePetAlert, deletePetAlert,
+  type PetMedication,
+  type PetVaccination,
 } from '../models/health-records.js';
+import {
+  withSignedPetPhoto,
+  withSignedPetPhotos,
+} from '../services/pet-photo.js';
 
 const router = Router();
 
@@ -50,6 +56,188 @@ const createPetSchema = z.object({
 });
 
 const updatePetSchema = createPetSchema.partial();
+
+const exactDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const nullableExactDateSchema = exactDateSchema.nullable().optional();
+const reminderFieldsSchema = z.object({
+  reminder_enabled: z.boolean().optional(),
+  reminder_channel: z.enum(['email']).nullable().optional(),
+  reminder_lead_time_value: z.number().int().positive().nullable().optional(),
+  reminder_lead_time_unit: z.enum(['days', 'weeks']).nullable().optional(),
+  reminder_next_due_date: nullableExactDateSchema,
+  reminder_recurrence_value: z.number().int().positive().nullable().optional(),
+  reminder_recurrence_unit: z.enum(['months', 'years']).nullable().optional(),
+});
+
+const createMedicationSchema = z.object({
+  name: z.string().min(1, 'Medication name is required'),
+  dosage: z.string().nullable().optional(),
+  frequency: z.string().nullable().optional(),
+  start_date: nullableExactDateSchema,
+  start_date_precision: z.enum(['day', 'month', 'year']).optional(),
+  end_date: nullableExactDateSchema,
+  end_date_precision: z.enum(['day', 'month', 'year']).optional(),
+  prescribing_vet: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  is_active: z.boolean().optional(),
+  show_on_card: z.boolean().optional(),
+}).merge(reminderFieldsSchema);
+
+const updateMedicationSchema = createMedicationSchema.partial();
+
+const createVaccinationSchema = z.object({
+  name: z.string().min(1, 'Vaccination name is required'),
+  administered_date: exactDateSchema,
+  administered_date_precision: z.enum(['day', 'month', 'year']).optional(),
+  expiration_date: nullableExactDateSchema,
+  expiration_date_precision: z.enum(['day', 'month', 'year']).optional(),
+  administered_by: z.string().nullable().optional(),
+  lot_number: z.string().nullable().optional(),
+  show_on_card: z.boolean().optional(),
+}).merge(reminderFieldsSchema.omit({
+  reminder_next_due_date: true,
+  reminder_recurrence_value: true,
+  reminder_recurrence_unit: true,
+}));
+
+const updateVaccinationSchema = createVaccinationSchema.partial();
+
+function toIsoDateString(value: string | Date | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value === 'string') {
+    return value.slice(0, 10);
+  }
+
+  return value.toISOString().slice(0, 10);
+}
+
+function isFutureDate(dateString: string): boolean {
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
+  const candidate = new Date(`${dateString}T00:00:00.000Z`);
+  return candidate > today;
+}
+
+function isPastDate(dateString: string): boolean {
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
+  const candidate = new Date(`${dateString}T00:00:00.000Z`);
+  return candidate < today;
+}
+
+function subtractLeadTimeDays(
+  dateString: string,
+  leadTimeValue: number,
+  leadTimeUnit: 'days' | 'weeks'
+): string {
+  const days = leadTimeUnit === 'weeks' ? leadTimeValue * 7 : leadTimeValue;
+  const candidate = new Date(`${dateString}T00:00:00.000Z`);
+  candidate.setUTCDate(candidate.getUTCDate() - days);
+  return candidate.toISOString().slice(0, 10);
+}
+
+function validateMedicationReminderState(
+  payload: Partial<PetMedication>,
+  existing?: PetMedication
+): string | null {
+  const reminderEnabled = payload.reminder_enabled ?? existing?.reminder_enabled ?? false;
+  if (!reminderEnabled) {
+    return null;
+  }
+
+  const nextDueDate = toIsoDateString(
+    payload.reminder_next_due_date ?? existing?.reminder_next_due_date ?? null
+  );
+  const leadTimeValue =
+    payload.reminder_lead_time_value ?? existing?.reminder_lead_time_value ?? null;
+  const leadTimeUnit =
+    payload.reminder_lead_time_unit ?? existing?.reminder_lead_time_unit ?? null;
+  const recurrenceValue =
+    payload.reminder_recurrence_value ?? existing?.reminder_recurrence_value ?? null;
+  const recurrenceUnit =
+    payload.reminder_recurrence_unit ?? existing?.reminder_recurrence_unit ?? null;
+
+  if (!nextDueDate) {
+    return 'Medication reminders require a next due date.';
+  }
+
+  if (!isFutureDate(nextDueDate)) {
+    return 'Medication reminders require a next due date in the future.';
+  }
+
+  if (!leadTimeValue || !leadTimeUnit) {
+    return 'Medication reminders require a lead time in days or weeks.';
+  }
+
+  if (!recurrenceValue || !recurrenceUnit) {
+    return 'Medication reminders require a recurrence interval in months or years.';
+  }
+
+  const firstReminderDate = subtractLeadTimeDays(
+    nextDueDate,
+    leadTimeValue,
+    leadTimeUnit
+  );
+
+  if (isPastDate(firstReminderDate)) {
+    return 'Medication reminders must start today or later. Choose a later next due date or a shorter lead time.';
+  }
+
+  return null;
+}
+
+function validateVaccinationReminderState(
+  payload: Partial<PetVaccination>,
+  existing?: PetVaccination
+): string | null {
+  const reminderEnabled = payload.reminder_enabled ?? existing?.reminder_enabled ?? false;
+  if (!reminderEnabled) {
+    return null;
+  }
+
+  const expirationDate = toIsoDateString(
+    payload.expiration_date ?? existing?.expiration_date ?? null
+  );
+  const expirationPrecision =
+    payload.expiration_date_precision ?? existing?.expiration_date_precision ?? 'day';
+  const leadTimeValue =
+    payload.reminder_lead_time_value ?? existing?.reminder_lead_time_value ?? null;
+  const leadTimeUnit =
+    payload.reminder_lead_time_unit ?? existing?.reminder_lead_time_unit ?? null;
+
+  if (!expirationDate) {
+    return 'Vaccination reminders require an expiration date.';
+  }
+
+  if (expirationPrecision !== 'day') {
+    return 'Vaccination reminders require a day-precision expiration date.';
+  }
+
+  if (!isFutureDate(expirationDate)) {
+    return 'Vaccination reminders require an expiration date in the future.';
+  }
+
+  if (!leadTimeValue || !leadTimeUnit) {
+    return 'Vaccination reminders require a lead time in days or weeks.';
+  }
+
+  const firstReminderDate = subtractLeadTimeDays(
+    expirationDate,
+    leadTimeValue,
+    leadTimeUnit
+  );
+
+  if (isPastDate(firstReminderDate)) {
+    return 'Vaccination reminders must start today or later. Choose a later expiration date or a shorter lead time.';
+  }
+
+  return null;
+}
 
 // Helper to verify pet access (any role)
 async function verifyPetAccess(petId: number, userId: number): Promise<boolean> {
@@ -73,7 +261,7 @@ async function invalidateCardCache(petId: number): Promise<void> {
 router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const pets = await findPetsForUser(req.userId!);
-    res.json(pets);
+    res.json(await withSignedPetPhotos(pets));
   } catch (error) {
     console.error('Error fetching pets:', error);
     res.status(500).json({ error: 'Failed to fetch pets' });
@@ -91,7 +279,7 @@ router.post('/', authenticate, checkPetLimit, validate(createPetSchema), async (
     // Add creator as owner in pet_owners table
     await addPetOwner(pet.id, req.userId!, 'owner');
 
-    res.status(201).json(pet);
+    res.status(201).json(await withSignedPetPhoto(pet));
   } catch (error) {
     console.error('Error creating pet:', error);
     res.status(500).json({ error: 'Failed to create pet' });
@@ -118,7 +306,7 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
 
     // Include user's role in the response
     const role = await getUserPetRole(petId, req.userId!);
-    res.json({ ...pet, userRole: role });
+    res.json(await withSignedPetPhoto({ ...pet, userRole: role }));
   } catch (error) {
     console.error('Error fetching pet:', error);
     res.status(500).json({ error: 'Failed to fetch pet' });
@@ -133,7 +321,7 @@ router.patch('/:id', authenticate, validate(updatePetSchema), async (req: AuthRe
       res.status(404).json({ error: 'Pet not found' });
       return;
     }
-    res.json(pet);
+    res.json(await withSignedPetPhoto(pet));
   } catch (error) {
     console.error('Error updating pet:', error);
     res.status(500).json({ error: 'Failed to update pet' });
@@ -396,10 +584,15 @@ router.get('/:id/medications', authenticate, async (req: AuthRequest, res: Respo
   }
 });
 
-router.post('/:id/medications', authenticate, async (req: AuthRequest, res: Response) => {
+router.post('/:id/medications', authenticate, validate(createMedicationSchema), async (req: AuthRequest, res: Response) => {
   try {
     if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
       res.status(404).json({ error: 'Pet not found' });
+      return;
+    }
+    const reminderError = validateMedicationReminderState(req.body);
+    if (reminderError) {
+      res.status(400).json({ error: reminderError });
       return;
     }
     const medication = await createPetMedication(parseInt(req.params.id), req.body);
@@ -410,18 +603,30 @@ router.post('/:id/medications', authenticate, async (req: AuthRequest, res: Resp
   }
 });
 
-router.patch('/:id/medications/:medId', authenticate, async (req: AuthRequest, res: Response) => {
+router.patch('/:id/medications/:medId', authenticate, validate(updateMedicationSchema), async (req: AuthRequest, res: Response) => {
   try {
-    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
+    const petId = parseInt(req.params.id);
+    if (!await verifyPetAccess(petId, req.userId!)) {
       res.status(404).json({ error: 'Pet not found' });
       return;
     }
-    const medication = await updatePetMedication(parseInt(req.params.medId), parseInt(req.params.id), req.body);
+    const medications = await getPetMedications(petId);
+    const existingMedication = medications.find((med) => med.id === parseInt(req.params.medId));
+    if (!existingMedication) {
+      res.status(404).json({ error: 'Medication not found' });
+      return;
+    }
+    const reminderError = validateMedicationReminderState(req.body, existingMedication);
+    if (reminderError) {
+      res.status(400).json({ error: reminderError });
+      return;
+    }
+    const medication = await updatePetMedication(parseInt(req.params.medId), petId, req.body);
     if (!medication) {
       res.status(404).json({ error: 'Medication not found' });
       return;
     }
-    await invalidateCardCache(parseInt(req.params.id));
+    await invalidateCardCache(petId);
     res.json(medication);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update medication' });
@@ -456,10 +661,15 @@ router.get('/:id/vaccinations', authenticate, async (req: AuthRequest, res: Resp
   }
 });
 
-router.post('/:id/vaccinations', authenticate, async (req: AuthRequest, res: Response) => {
+router.post('/:id/vaccinations', authenticate, validate(createVaccinationSchema), async (req: AuthRequest, res: Response) => {
   try {
     if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
       res.status(404).json({ error: 'Pet not found' });
+      return;
+    }
+    const reminderError = validateVaccinationReminderState(req.body);
+    if (reminderError) {
+      res.status(400).json({ error: reminderError });
       return;
     }
     const vaccination = await createPetVaccination(parseInt(req.params.id), req.body);
@@ -470,19 +680,31 @@ router.post('/:id/vaccinations', authenticate, async (req: AuthRequest, res: Res
   }
 });
 
-router.patch('/:id/vaccinations/:vacId', authenticate, async (req: AuthRequest, res: Response) => {
+router.patch('/:id/vaccinations/:vacId', authenticate, validate(updateVaccinationSchema), async (req: AuthRequest, res: Response) => {
   try {
-    if (!await verifyPetAccess(parseInt(req.params.id), req.userId!)) {
+    const petId = parseInt(req.params.id);
+    if (!await verifyPetAccess(petId, req.userId!)) {
       res.status(404).json({ error: 'Pet not found' });
       return;
     }
+    const vaccinations = await getPetVaccinations(petId);
+    const existingVaccination = vaccinations.find((vac) => vac.id === parseInt(req.params.vacId));
+    if (!existingVaccination) {
+      res.status(404).json({ error: 'Vaccination not found' });
+      return;
+    }
+    const reminderError = validateVaccinationReminderState(req.body, existingVaccination);
+    if (reminderError) {
+      res.status(400).json({ error: reminderError });
+      return;
+    }
     const audit = { userId: req.userId!, source: 'manual' as const, ipAddress: req.ip, userAgent: req.headers['user-agent'] };
-    const vaccination = await updatePetVaccination(parseInt(req.params.vacId), parseInt(req.params.id), req.body, audit);
+    const vaccination = await updatePetVaccination(parseInt(req.params.vacId), petId, req.body, audit);
     if (!vaccination) {
       res.status(404).json({ error: 'Vaccination not found' });
       return;
     }
-    await invalidateCardCache(parseInt(req.params.id));
+    await invalidateCardCache(petId);
     res.json(vaccination);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update vaccination' });

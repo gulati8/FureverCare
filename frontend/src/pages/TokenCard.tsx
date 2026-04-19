@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { publicApi, EmergencyCard, ShareTokenInfo, API_URL } from '../api/client';
+import { publicApi, EmergencyCard, ShareTokenInfo } from '../api/client';
 import EmergencyCardView from '../components/EmergencyCardView';
+import { resolveAssetUrl } from '../utils/assetUrls';
 
 export default function TokenCard() {
   const { token } = useParams<{ token: string }>();
@@ -68,12 +69,6 @@ export default function TokenCard() {
     if (pin.length >= 4) {
       loadCard(pin);
     }
-  };
-
-  const getFullPhotoUrl = (url: string | null) => {
-    if (!url) return null;
-    if (url.startsWith('http')) return url;
-    return `${API_URL}${url}`;
   };
 
   if (isLoading) {
@@ -154,5 +149,5 @@ export default function TokenCard() {
 
   if (!card) return null;
 
-  return <EmergencyCardView card={card} resolvePhotoUrl={getFullPhotoUrl} />;
+  return <EmergencyCardView card={card} resolvePhotoUrl={resolveAssetUrl} />;
 }

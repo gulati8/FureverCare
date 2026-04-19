@@ -6,7 +6,10 @@ import SourceDocumentLink from '../../../components/SourceDocumentLink';
 import EmptyState from '../../../components/EmptyState';
 import ShowOnCardButton from '../../../components/ShowOnCardButton';
 import { useFieldToggle } from '../../../hooks/useFieldToggle';
-import { VACCINATION_FIELDS } from '../constants';
+import {
+  getVaccinationFields,
+  getVaccinationReminderSummary,
+} from '../constants';
 
 export default function VaccinationsTab({ petId, token, vaccinations, setVaccinations, onNavigateToReview }: {
   petId: number;
@@ -18,37 +21,100 @@ export default function VaccinationsTab({ petId, token, vaccinations, setVaccina
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [addValues, setAddValues] = useState<Record<string, string | boolean>>({ name: '', administered_date: '', administered_date_precision: 'day', expiration_date: '', expiration_date_precision: 'day' });
+  const [error, setError] = useState<string | null>(null);
+  const [addValues, setAddValues] = useState<Record<string, string | boolean>>({
+    name: '',
+    administered_date: '',
+    administered_date_precision: 'day',
+    expiration_date: '',
+    expiration_date_precision: 'day',
+    reminder_enabled: false,
+    reminder_lead_time_value: '',
+    reminder_lead_time_unit: 'days',
+  });
 
   const toDateInput = (d: string | null) => d ? d.split('T')[0] : '';
 
-  const handleToggleShowOnCard = useFieldToggle(setVaccinations, (v, val) => petsApi.updateVaccination(petId, v.id, { show_on_card: val }, token), 'show_on_card');
+  const buildVaccinationPayload = (
+    values: Record<string, string | boolean>,
+    current?: PetVaccination
+  ) => {
+    const reminderEnabled = values.reminder_enabled === true;
+    const reminderChannel: 'email' | null = reminderEnabled ? 'email' : null;
 
-  const handleAdd = async (values: Record<string, string | boolean>) => {
-    if (!(values.name as string).trim() || !values.administered_date) return;
-    const vac = await petsApi.addVaccination(petId, {
-      name: values.name as string, administered_date: values.administered_date as string,
-      administered_date_precision: (values.administered_date_precision as string as any) || 'day',
-      expiration_date: (values.expiration_date as string) || null,
-      expiration_date_precision: (values.expiration_date_precision as string as any) || 'day',
-      administered_by: null, lot_number: null, show_on_card: false
-    }, token);
-    setVaccinations([vac, ...vaccinations]);
-    setShowForm(false);
-    setAddValues({ name: '', administered_date: '', administered_date_precision: 'day', expiration_date: '', expiration_date_precision: 'day' });
-  };
-
-  const handleSaveEdit = async (values: Record<string, string | boolean>) => {
-    if (!editingId || !(values.name as string).trim() || !values.administered_date) return;
-    const updated = await petsApi.updateVaccination(petId, editingId, {
+    return {
       name: values.name as string,
       administered_date: values.administered_date as string,
       administered_date_precision: (values.administered_date_precision as string as any) || 'day',
       expiration_date: (values.expiration_date as string) || null,
       expiration_date_precision: (values.expiration_date_precision as string as any) || 'day',
-    }, token);
-    setVaccinations(vaccinations.map(v => v.id === editingId ? updated : v));
-    setEditingId(null);
+      administered_by: current?.administered_by || null,
+      lot_number: current?.lot_number || null,
+      show_on_card: current?.show_on_card ?? false,
+      reminder_enabled: reminderEnabled,
+      reminder_channel: reminderChannel,
+      reminder_lead_time_value:
+        reminderEnabled && values.reminder_lead_time_value
+          ? Number(values.reminder_lead_time_value)
+          : null,
+      reminder_lead_time_unit:
+        reminderEnabled && values.reminder_lead_time_unit
+          ? (values.reminder_lead_time_unit as 'days' | 'weeks')
+          : null,
+      reminder_next_due_date: null,
+      reminder_recurrence_value: null,
+      reminder_recurrence_unit: null,
+    };
+  };
+
+  const handleToggleShowOnCard = useFieldToggle(setVaccinations, (v, val) => petsApi.updateVaccination(petId, v.id, { show_on_card: val }, token), 'show_on_card');
+
+  const handleAdd = async (values: Record<string, string | boolean>) => {
+    if (!(values.name as string).trim() || !values.administered_date) return;
+
+    try {
+      setError(null);
+      const vac = await petsApi.addVaccination(
+        petId,
+        buildVaccinationPayload(values),
+        token
+      );
+      setVaccinations([vac, ...vaccinations]);
+      setShowForm(false);
+      setAddValues({
+        name: '',
+        administered_date: '',
+        administered_date_precision: 'day',
+        expiration_date: '',
+        expiration_date_precision: 'day',
+        reminder_enabled: false,
+        reminder_lead_time_value: '',
+        reminder_lead_time_unit: 'days',
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save vaccination');
+    }
+  };
+
+  const handleSaveEdit = async (values: Record<string, string | boolean>) => {
+    if (!editingId || !(values.name as string).trim() || !values.administered_date) return;
+
+    try {
+      setError(null);
+      const updated = await petsApi.updateVaccination(
+        petId,
+        editingId,
+        buildVaccinationPayload(
+          values,
+          vaccinations.find((vaccination) => vaccination.id === editingId)
+        ),
+        token
+      );
+      setVaccinations(vaccinations.map(v => v.id === editingId ? updated : v));
+      setEditingId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update vaccination');
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -69,9 +135,15 @@ export default function VaccinationsTab({ petId, token, vaccinations, setVaccina
         <button onClick={() => setShowForm(!showForm)} className="btn-primary text-sm">+ Add Vaccination</button>
       </div>
 
+      {error && (
+        <div className="mb-4 bg-danger-light border border-danger/20 text-danger px-4 py-3 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+
       {showForm && (
         <InlineEditForm
-          fields={VACCINATION_FIELDS}
+          fields={getVaccinationFields}
           values={addValues}
           onSave={handleAdd}
           onCancel={() => setShowForm(false)}
@@ -87,14 +159,23 @@ export default function VaccinationsTab({ petId, token, vaccinations, setVaccina
             <li key={v.id} className="py-3">
               {editingId === v.id ? (
                 <InlineEditForm
-                  fields={VACCINATION_FIELDS}
-                  values={{ name: v.name, administered_date: toDateInput(v.administered_date), administered_date_precision: v.administered_date_precision || 'day', expiration_date: toDateInput(v.expiration_date), expiration_date_precision: v.expiration_date_precision || 'day' }}
+                  fields={getVaccinationFields}
+                  values={{
+                    name: v.name,
+                    administered_date: toDateInput(v.administered_date),
+                    administered_date_precision: v.administered_date_precision || 'day',
+                    expiration_date: toDateInput(v.expiration_date),
+                    expiration_date_precision: v.expiration_date_precision || 'day',
+                    reminder_enabled: v.reminder_enabled,
+                    reminder_lead_time_value: v.reminder_lead_time_value?.toString() || '',
+                    reminder_lead_time_unit: v.reminder_lead_time_unit || 'days',
+                  }}
                   onSave={handleSaveEdit}
                   onCancel={() => setEditingId(null)}
                 />
               ) : (
-                <div className="flex justify-between items-start">
-                  <div>
+                <div className="flex justify-between items-start gap-4">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <p className="font-medium">{v.name}</p>
                       {v.show_on_card && (
@@ -109,9 +190,12 @@ export default function VaccinationsTab({ petId, token, vaccinations, setVaccina
                         {isExpired(v.expiration_date) ? 'Expired' : 'Expires'}: {formatFlexibleDate(v.expiration_date, v.expiration_date_precision)}
                       </p>
                     )}
+                    {getVaccinationReminderSummary(v) && (
+                      <p className="text-sm text-surface-500">{getVaccinationReminderSummary(v)}</p>
+                    )}
                     <SourceDocumentLink petId={petId} recordType="pet_vaccinations" recordId={v.id} onNavigateToReview={onNavigateToReview} />
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
                     <ShowOnCardButton active={v.show_on_card} onClick={() => handleToggleShowOnCard(v)} />
                     <button onClick={() => setEditingId(v.id)} className="text-navy hover:text-primary-800 text-sm">Edit</button>
                     {deletingId === v.id ? (

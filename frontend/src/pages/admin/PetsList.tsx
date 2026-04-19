@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { adminApi, AdminPet, PetsQueryOptions } from '../../api/admin';
 import PetDetailModal from './PetDetailModal';
+import { resolveAssetUrl } from '../../utils/assetUrls';
 
 export default function PetsList() {
   const { token } = useAuth();
@@ -250,7 +251,7 @@ export default function PetsList() {
                         <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center overflow-hidden">
                           {pet.photo_url ? (
                             <img
-                              src={pet.photo_url}
+                              src={resolveAssetUrl(pet.photo_url)!}
                               alt={pet.name}
                               className="w-8 h-8 object-cover"
                             />

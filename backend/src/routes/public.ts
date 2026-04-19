@@ -1,5 +1,5 @@
 import { Router, Response, Request } from 'express';
-import { findPetByShareId, findPetById } from '../models/pet.js';
+import { findPetById, findPetByShareId } from '../models/pet.js';
 import { findUserById } from '../models/user.js';
 import {
   getPetVets,
@@ -17,6 +17,9 @@ import {
   isShareTokenValid,
   updateShareTokenAccess,
 } from '../models/share-tokens.js';
+import {
+  withSignedPetPhoto,
+} from '../services/pet-photo.js';
 
 const router = Router();
 
@@ -55,24 +58,26 @@ router.get('/card/:shareId', async (req: Request, res: Response) => {
 
 // Helper function to build emergency card response
 async function buildEmergencyCard(pet: any) {
+  const cardPet = await withSignedPetPhoto(pet);
+
   // Fetch owner info
-  const owner = await findUserById(pet.user_id);
+  const owner = await findUserById(cardPet.user_id);
 
   // Fetch all health records in parallel
   const [vets, conditions, allergies, medications, vaccinations, emergencyContacts, customAlerts] = await Promise.all([
-    getPetVets(pet.id),
-    getPetConditions(pet.id),
-    getPetAllergies(pet.id),
-    getPetMedications(pet.id),
-    getPetVaccinations(pet.id),
-    getPetEmergencyContacts(pet.id),
-    getPetAlerts(pet.id),
+    getPetVets(cardPet.id),
+    getPetConditions(cardPet.id),
+    getPetAllergies(cardPet.id),
+    getPetMedications(cardPet.id),
+    getPetVaccinations(cardPet.id),
+    getPetEmergencyContacts(cardPet.id),
+    getPetAlerts(cardPet.id),
   ]);
 
   // Calculate age from date of birth
   let age = null;
-  if (pet.date_of_birth) {
-    const dob = new Date(pet.date_of_birth);
+  if (cardPet.date_of_birth) {
+    const dob = new Date(cardPet.date_of_birth);
     const now = new Date();
     const years = now.getFullYear() - dob.getFullYear();
     const months = now.getMonth() - dob.getMonth();
@@ -89,18 +94,18 @@ async function buildEmergencyCard(pet: any) {
   return {
     // Pet basic info
     pet: {
-      name: pet.name,
-      species: pet.species,
-      breed: pet.breed,
+      name: cardPet.name,
+      species: cardPet.species,
+      breed: cardPet.breed,
       age,
-      date_of_birth: pet.date_of_birth,
-      weight_kg: pet.weight_kg,
-      weight_unit: pet.weight_unit,
-      sex: pet.sex,
-      is_fixed: pet.is_fixed,
-      microchip_id: pet.microchip_id,
-      photo_url: pet.photo_url,
-      special_instructions: pet.special_instructions,
+      date_of_birth: cardPet.date_of_birth,
+      weight_kg: cardPet.weight_kg,
+      weight_unit: cardPet.weight_unit,
+      sex: cardPet.sex,
+      is_fixed: cardPet.is_fixed,
+      microchip_id: cardPet.microchip_id,
+      photo_url: cardPet.photo_url,
+      special_instructions: cardPet.special_instructions,
     },
 
     // Owner contact (primary emergency contact)

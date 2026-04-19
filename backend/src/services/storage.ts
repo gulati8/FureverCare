@@ -1,4 +1,5 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import fs from 'fs';
 import path from 'path';
 import { nanoid } from 'nanoid';
@@ -25,6 +26,7 @@ interface StorageProvider {
   delete(key: string, type: StorageType): Promise<void>;
   download(key: string, type: StorageType): Promise<Buffer>;
   getUrl(key: string, type: StorageType): string;
+  getSignedUrl(key: string, type: StorageType, expiresInSeconds?: number): Promise<string>;
 }
 
 // Local filesystem storage provider
@@ -88,6 +90,10 @@ class LocalStorageProvider implements StorageProvider {
     return type === 'photos'
       ? `/uploads/${key}`
       : `/uploads/${type}/${key}`;
+  }
+
+  async getSignedUrl(key: string, type: StorageType): Promise<string> {
+    return this.getUrl(key, type);
   }
 }
 
@@ -164,6 +170,21 @@ class S3StorageProvider implements StorageProvider {
   getUrl(key: string, type: StorageType): string {
     return `https://${this.bucket}.s3.${this.region}.amazonaws.com/${key}`;
   }
+
+  async getSignedUrl(
+    key: string,
+    type: StorageType,
+    expiresInSeconds: number = 3600
+  ): Promise<string> {
+    return getSignedUrl(
+      this.client,
+      new GetObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      }),
+      { expiresIn: expiresInSeconds }
+    );
+  }
 }
 
 // Create the appropriate provider based on config
@@ -195,6 +216,14 @@ export const storage = {
 
   getUrl(key: string, type: StorageType): string {
     return storageProvider.getUrl(key, type);
+  },
+
+  async getSignedUrl(
+    key: string,
+    type: StorageType,
+    expiresInSeconds?: number
+  ): Promise<string> {
+    return storageProvider.getSignedUrl(key, type, expiresInSeconds);
   },
 
   // Helper to extract key from URL or path (for deletion)

@@ -62,6 +62,27 @@ services:
       - internal
       - proxy
 
+  worker:
+    image: ghcr.io/gulati8/furevercare-api:latest
+    container_name: furevercare-worker
+    command: ["npm", "run", "start:worker"]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@furevercare-db:5432/${POSTGRES_DB}
+      REDIS_URL: redis://furevercare-redis:6379
+      FRONTEND_URL: ${FRONTEND_URL}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      REMINDER_PROCESS_CRON: ${REMINDER_PROCESS_CRON:-0 9 * * *}
+      REMINDER_PROCESS_TIMEZONE: ${REMINDER_PROCESS_TIMEZONE:-America/New_York}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - internal
+
   frontend:
     image: ghcr.io/gulati8/furevercare-web:latest
     container_name: furevercare-web

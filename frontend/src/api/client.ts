@@ -25,7 +25,12 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new Error(error.error || 'Request failed');
+    const detailMessage = Array.isArray(error.details) && error.details.length > 0
+      ? error.details.map((detail: { path?: string; message?: string }) =>
+          detail.path ? `${detail.path}: ${detail.message}` : detail.message
+        ).filter(Boolean).join(', ')
+      : null;
+    throw new Error(detailMessage || error.error || 'Request failed');
   }
 
   if (response.status === 204) {
@@ -258,6 +263,8 @@ export interface PetVet {
 }
 
 export type DatePrecision = 'day' | 'month' | 'year';
+export type ReminderLeadTimeUnit = 'days' | 'weeks';
+export type ReminderRecurrenceUnit = 'months' | 'years';
 
 export interface PetCondition {
   id: number;
@@ -296,6 +303,13 @@ export interface PetMedication {
   notes: string | null;
   is_active: boolean;
   show_on_card: boolean;
+  reminder_enabled: boolean;
+  reminder_channel: 'email' | null;
+  reminder_lead_time_value: number | null;
+  reminder_lead_time_unit: ReminderLeadTimeUnit | null;
+  reminder_next_due_date: string | null;
+  reminder_recurrence_value: number | null;
+  reminder_recurrence_unit: ReminderRecurrenceUnit | null;
   created_at: string;
 }
 
@@ -310,6 +324,13 @@ export interface PetVaccination {
   administered_by: string | null;
   lot_number: string | null;
   show_on_card: boolean;
+  reminder_enabled: boolean;
+  reminder_channel: 'email' | null;
+  reminder_lead_time_value: number | null;
+  reminder_lead_time_unit: ReminderLeadTimeUnit | null;
+  reminder_next_due_date: string | null;
+  reminder_recurrence_value: number | null;
+  reminder_recurrence_unit: ReminderRecurrenceUnit | null;
   created_at: string;
 }
 
