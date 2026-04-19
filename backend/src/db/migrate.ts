@@ -88,6 +88,7 @@ CREATE TABLE IF NOT EXISTS pet_vaccinations (
   expiration_date DATE,
   administered_by VARCHAR(255),
   lot_number VARCHAR(100),
+  show_on_card BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

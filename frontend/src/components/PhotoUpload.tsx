@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { API_URL } from '../api/client';
 import SpeciesAvatar from './SpeciesAvatar';
+import { resolveAssetUrl } from '../utils/assetUrls';
 
 interface Props {
   petId: number;
@@ -18,12 +19,6 @@ export default function PhotoUpload({ petId, currentPhotoUrl, onPhotoUpdated, co
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const getFullPhotoUrl = (url: string | null) => {
-    if (!url) return null;
-    if (url.startsWith('http')) return url;
-    return `${API_URL}${url}`;
-  };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -116,7 +111,7 @@ export default function PhotoUpload({ petId, currentPhotoUrl, onPhotoUpdated, co
       <label className="relative cursor-pointer group flex-shrink-0">
         <div className="w-20 h-20 bg-primary-100 rounded-full flex items-center justify-center overflow-hidden">
           {currentPhotoUrl ? (
-            <img src={getFullPhotoUrl(currentPhotoUrl)!} alt="Pet photo" className="w-20 h-20 rounded-full object-cover" />
+            <img src={resolveAssetUrl(currentPhotoUrl)!} alt="Pet photo" className="w-20 h-20 rounded-full object-cover" />
           ) : (
             <SpeciesAvatar species={species ?? 'other'} size={40} />
           )}
@@ -150,7 +145,7 @@ export default function PhotoUpload({ petId, currentPhotoUrl, onPhotoUpdated, co
         <div className="w-24 h-24 bg-primary-100 rounded-full flex items-center justify-center overflow-hidden">
           {currentPhotoUrl ? (
             <img
-              src={getFullPhotoUrl(currentPhotoUrl)!}
+              src={resolveAssetUrl(currentPhotoUrl)!}
               alt="Pet photo"
               className="w-24 h-24 rounded-full object-cover"
             />

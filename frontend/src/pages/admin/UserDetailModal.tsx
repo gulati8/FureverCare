@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { adminApi, AdminUserDetails } from '../../api/admin';
+import { resolveAssetUrl } from '../../utils/assetUrls';
 
 interface Props {
   userId: number;
@@ -202,7 +203,7 @@ export default function UserDetailModal({ userId, onClose }: Props) {
                         <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
                           {pet.photo_url ? (
                             <img
-                              src={pet.photo_url}
+                              src={resolveAssetUrl(pet.photo_url)!}
                               alt={pet.name}
                               className="w-12 h-12 object-cover"
                             />

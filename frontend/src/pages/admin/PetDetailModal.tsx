@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { adminApi, AdminPetDetails } from '../../api/admin';
+import { resolveAssetUrl } from '../../utils/assetUrls';
 
 interface Props {
   petId: number;
@@ -97,7 +98,7 @@ export default function PetDetailModal({ petId, onClose }: Props) {
                   <div className="w-20 h-20 bg-primary-100 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
                     {pet.photo_url ? (
                       <img
-                        src={pet.photo_url}
+                        src={resolveAssetUrl(pet.photo_url)!}
                         alt={pet.name}
                         className="w-20 h-20 object-cover"
                       />

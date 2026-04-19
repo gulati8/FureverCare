@@ -16,6 +16,7 @@ import PendingInvitations from '../components/PendingInvitations';
 import UpgradeBanner from '../components/UpgradeBanner';
 import SpeciesAvatar from '../components/SpeciesAvatar';
 import EmptyState from '../components/EmptyState';
+import { resolveAssetUrl } from '../utils/assetUrls';
 
 // Pet limits by tier
 const FREE_TIER_PET_LIMIT = Infinity; // Beta: unlimited pets for all users
@@ -237,7 +238,7 @@ export default function Dashboard() {
                   <div className="flex gap-4 mb-4">
                     <div className="flex items-center justify-center flex-shrink-0 w-16 h-16 rounded-full bg-surface-200 overflow-hidden">
                       {pet.photo_url ? (
-                        <img src={pet.photo_url} alt={pet.name} className="w-full h-full object-cover" />
+                        <img src={resolveAssetUrl(pet.photo_url)!} alt={pet.name} className="w-full h-full object-cover" />
                       ) : (
                         <SpeciesAvatar species={pet.species} size={32} />
                       )}

@@ -8,6 +8,7 @@ import {
   findPetByIdWithDetails,
   PetsFilterOptions,
 } from '../models/admin.js';
+import { withAuthenticatedPetPhoto } from '../services/pet-photo.js';
 
 const router = Router();
 
@@ -43,7 +44,10 @@ router.get('/', authenticate, requireAdmin, async (req: AuthRequest, res: Respon
     };
 
     const result = await findAllPetsWithPagination(options);
-    res.json(result);
+    res.json({
+      ...result,
+      data: result.data.map(withAuthenticatedPetPhoto),
+    });
   } catch (error: any) {
     if (error.name === 'ZodError') {
       res.status(400).json({ error: 'Invalid query parameters', details: error.errors });
@@ -71,7 +75,7 @@ router.get('/:id', authenticate, requireAdmin, async (req: AuthRequest, res: Res
       return;
     }
 
-    res.json(pet);
+    res.json(withAuthenticatedPetPhoto(pet));
   } catch (error) {
     console.error('Error fetching pet:', error);
     res.status(500).json({ error: 'Failed to fetch pet' });

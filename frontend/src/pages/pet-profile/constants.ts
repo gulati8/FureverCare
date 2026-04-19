@@ -126,18 +126,29 @@ export function getVaccinationFields(values: Record<string, string | boolean>): 
   const reminderEnabled = values.reminder_enabled === true;
   const reminderUnavailableReason = getVaccinationReminderAvailability(values);
   const disableReminderToggle = Boolean(reminderUnavailableReason) && !reminderEnabled;
+  const expirationHelpText = reminderUnavailableReason
+    ? 'Email reminders unlock after this is a future date with day precision.'
+    : 'Optional. Add this if you want an email reminder before the vaccine expires.';
 
   return [
     { key: 'name', placeholder: 'Vaccination name *', required: true },
     { key: 'administered_date', placeholder: 'Date administered', type: 'flexible_date', label: 'Date administered *', required: true, precisionKey: 'administered_date_precision' },
-    { key: 'expiration_date', placeholder: 'Expiration date', type: 'flexible_date', label: 'Expiration date', precisionKey: 'expiration_date_precision', maxFutureYears: 10 },
+    {
+      key: 'expiration_date',
+      placeholder: 'Expiration date',
+      type: 'flexible_date',
+      label: 'Expiration date',
+      precisionKey: 'expiration_date_precision',
+      maxFutureYears: 10,
+      helpText: expirationHelpText,
+    },
     {
       key: 'reminder_enabled',
       placeholder: 'Send email reminder',
       type: 'checkbox',
       disabled: disableReminderToggle,
       helpText: reminderUnavailableReason
-        ? `To enable reminders, ${reminderUnavailableReason.toLowerCase()}`
+        ? `Unavailable until ${reminderUnavailableReason.toLowerCase()}`
         : 'Email the reminder before the vaccine expires.',
     },
     ...(reminderEnabled ? [
