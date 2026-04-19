@@ -130,7 +130,7 @@ export function getVaccinationFields(values: Record<string, string | boolean>): 
   return [
     { key: 'name', placeholder: 'Vaccination name *', required: true },
     { key: 'administered_date', placeholder: 'Date administered', type: 'flexible_date', label: 'Date administered *', required: true, precisionKey: 'administered_date_precision' },
-    { key: 'expiration_date', placeholder: 'Expiration date', type: 'flexible_date', label: 'Expiration date', precisionKey: 'expiration_date_precision' },
+    { key: 'expiration_date', placeholder: 'Expiration date', type: 'flexible_date', label: 'Expiration date', precisionKey: 'expiration_date_precision', maxFutureYears: 10 },
     {
       key: 'reminder_enabled',
       placeholder: 'Send email reminder',

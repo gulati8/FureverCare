@@ -8,6 +8,7 @@ interface FlexibleDateInputProps {
   label?: string;
   required?: boolean;
   disabled?: boolean;
+  maxFutureYears?: number;
 }
 
 const MONTHS = [
@@ -50,7 +51,15 @@ function parseDateWithPrecision(dateStr: string, precision: DatePrecision): { ye
   return { year, month, day };
 }
 
-export default function FlexibleDateInput({ value, precision, onChange, label, required, disabled = false }: FlexibleDateInputProps) {
+export default function FlexibleDateInput({
+  value,
+  precision,
+  onChange,
+  label,
+  required,
+  disabled = false,
+  maxFutureYears = 0,
+}: FlexibleDateInputProps) {
   const parsed = parseDateWithPrecision(value, precision);
   const [year, setYear] = useState(parsed.year);
   const [month, setMonth] = useState(parsed.month);
@@ -128,8 +137,9 @@ export default function FlexibleDateInput({ value, precision, onChange, label, r
   }
 
   const currentYear = new Date().getFullYear();
+  const maxFutureYear = currentYear + maxFutureYears;
   const yearOptions = [{ value: '', label: '-- Year --' }];
-  for (let y = currentYear; y >= 1990; y--) {
+  for (let y = maxFutureYear; y >= 1990; y--) {
     yearOptions.push({ value: y.toString(), label: y.toString() });
   }
 

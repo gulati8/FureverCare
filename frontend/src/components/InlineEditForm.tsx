@@ -16,6 +16,7 @@ export interface EditField {
   rows?: number;
   disabled?: boolean;
   helpText?: string;
+  maxFutureYears?: number;
   /** If set, render this field on the same row as adjacent fields sharing the same gridGroup */
   gridGroup?: string;
 }
@@ -198,6 +199,7 @@ export default function InlineEditForm({ fields, values: initialValues, onSave, 
             label={field.label || field.placeholder}
             required={field.required}
             disabled={field.disabled}
+            maxFutureYears={field.maxFutureYears}
           />
           {field.helpText && (
             <p className="mt-1 text-xs text-surface-500">{field.helpText}</p>
