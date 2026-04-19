@@ -17,7 +17,7 @@
 7. [Proposed Information Architecture](#proposed-information-architecture)
 8. [Redesign Directions](#redesign-directions)
 9. [Decision Matrix](#decision-matrix)
-10. [Mockups](#mockups)
+10. [Exploration Artifacts](#exploration-artifacts)
 
 ---
 
@@ -524,19 +524,14 @@ Pet cards show only name, breed, species, and DOB. No:
 
 ---
 
-## 10. Mockups
+## 10. Exploration Artifacts
 
-Interactive HTML mockups for all three directions are available:
+The HTML mockups created during this audit were exploratory artifacts, not durable product documentation.
 
-- [`mockup-direction-1-veterinary-clarity.html`](./mockup-direction-1-veterinary-clarity.html)
-- [`mockup-direction-2-warm-companion.html`](./mockup-direction-2-warm-companion.html)
-- [`mockup-direction-3-digital-shield.html`](./mockup-direction-3-digital-shield.html)
+Repository convention:
 
-Each mockup includes:
-1. Homepage hero section
-2. Dashboard with pet cards and health indicators
-3. Pet profile with the new 5-section navigation
-4. Health records page with accordion sections
-5. Emergency card preview
+- keep committed files in `docs/redesign/` limited to durable analysis, decisions, and implementation guidance
+- keep one-off mockups, prototype HTML, and iterative exploration under `tmp/redesign/`
+- do not treat exploratory mockups as app assets or documentation that must live in `frontend/public/`
 
-Open each HTML file in a browser to review. They are self-contained (no external dependencies except Google Fonts CDN).
+If a redesign direction is selected, the durable outcome should be captured here as a concise follow-up doc instead of preserving every intermediate prototype in git.
