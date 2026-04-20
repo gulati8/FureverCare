@@ -1,0 +1,588 @@
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model audit_log {
+  id                   Int          @id @default(autoincrement())
+  entity_type          String       @db.VarChar(100)
+  entity_id            Int
+  action               String       @db.VarChar(50)
+  changed_by           Int?
+  source               String       @default("manual") @db.VarChar(50)
+  source_pdf_upload_id Int?
+  old_values           Json?
+  new_values           Json?
+  changed_fields       String[]
+  ip_address           String?      @db.VarChar(45)
+  user_agent           String?
+  created_at           DateTime?    @default(now()) @db.Timestamptz(6)
+  users                users?       @relation(fields: [changed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pdf_uploads          pdf_uploads? @relation(fields: [source_pdf_upload_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([changed_by], map: "idx_audit_log_changed_by")
+  @@index([created_at], map: "idx_audit_log_created_at")
+  @@index([entity_type, entity_id], map: "idx_audit_log_entity")
+  @@index([source], map: "idx_audit_log_source")
+}
+
+model cms_blocks {
+  id         Int        @id @default(autoincrement())
+  page_id    Int?
+  block_type String     @db.VarChar(50)
+  sort_order Int
+  content    Json
+  is_visible Boolean?   @default(true)
+  created_at DateTime?  @default(now()) @db.Timestamptz(6)
+  updated_at DateTime?  @default(now()) @db.Timestamptz(6)
+  cms_pages  cms_pages? @relation(fields: [page_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([page_id], map: "idx_cms_blocks_page_id")
+  @@index([page_id, sort_order], map: "idx_cms_blocks_sort_order")
+}
+
+model cms_pages {
+  id           Int          @id @default(autoincrement())
+  slug         String       @unique @db.VarChar(100)
+  title        String       @db.VarChar(255)
+  is_published Boolean?     @default(false)
+  created_at   DateTime?    @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime?    @default(now()) @db.Timestamptz(6)
+  cms_blocks   cms_blocks[]
+
+  @@index([is_published], map: "idx_cms_pages_is_published")
+  @@index([slug], map: "idx_cms_pages_slug")
+}
+
+model document_extraction_items {
+  id                   Int                  @id @default(autoincrement())
+  extraction_id        Int
+  record_type          String               @db.VarChar(50)
+  extracted_data       Json
+  confidence_score     Decimal?             @db.Decimal(3, 2)
+  user_modified_data   Json?
+  status               String               @default("pending") @db.VarChar(50)
+  created_record_id    Int?
+  created_record_type  String?              @db.VarChar(50)
+  created_at           DateTime?            @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime?            @default(now()) @db.Timestamptz(6)
+  deleted_at           DateTime?            @db.Timestamptz(6)
+  document_extractions document_extractions @relation(fields: [extraction_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([extraction_id], map: "idx_document_extraction_items_extraction_id")
+  @@index([status], map: "idx_document_extraction_items_status")
+}
+
+model document_extractions {
+  id                        Int                         @id @default(autoincrement())
+  document_upload_id        Int
+  raw_extraction            Json?
+  mapped_data               Json?
+  extraction_model          String?                     @db.VarChar(100)
+  tokens_used               Int?
+  status                    String                      @default("pending_review") @db.VarChar(50)
+  reviewed_by               Int?
+  reviewed_at               DateTime?                   @db.Timestamptz(6)
+  created_at                DateTime?                   @default(now()) @db.Timestamptz(6)
+  deleted_at                DateTime?                   @db.Timestamptz(6)
+  document_extraction_items document_extraction_items[]
+  document_uploads          document_uploads            @relation(fields: [document_upload_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users                     users?                      @relation(fields: [reviewed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([document_upload_id], map: "idx_document_extractions_document_upload_id")
+  @@index([status], map: "idx_document_extractions_status")
+}
+
+model document_uploads {
+  id                         Int                    @id @default(autoincrement())
+  pet_id                     Int
+  uploaded_by                Int
+  filename                   String                 @db.VarChar(255)
+  original_filename          String                 @db.VarChar(255)
+  file_path                  String
+  file_size                  Int
+  mime_type                  String                 @db.VarChar(100)
+  media_type                 String                 @db.VarChar(20)
+  status                     String                 @default("pending") @db.VarChar(50)
+  detected_type              String?                @db.VarChar(100)
+  classification_confidence  Int?
+  classification_explanation String?
+  processing_started_at      DateTime?              @db.Timestamptz(6)
+  processing_completed_at    DateTime?              @db.Timestamptz(6)
+  error_message              String?
+  created_at                 DateTime?              @default(now()) @db.Timestamptz(6)
+  user_tag                   String?                @db.VarChar(100)
+  user_description           String?
+  date_taken                 DateTime?              @db.Timestamptz(6)
+  body_area                  String?                @db.VarChar(100)
+  document_group_id          String?                @db.Uuid
+  page_number                Int?                   @default(1)
+  group_name                 String?                @db.VarChar(255)
+  deleted_at                 DateTime?              @db.Timestamptz(6)
+  document_extractions       document_extractions[]
+  pets                       pets                   @relation(fields: [pet_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users                      users                  @relation(fields: [uploaded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([deleted_at], map: "idx_document_uploads_deleted_at")
+  @@index([detected_type], map: "idx_document_uploads_detected_type")
+  @@index([document_group_id], map: "idx_document_uploads_group_id", where: raw("(document_group_id IS NOT NULL)"))
+  @@index([media_type], map: "idx_document_uploads_media_type")
+  @@index([pet_id], map: "idx_document_uploads_pet_id")
+  @@index([status], map: "idx_document_uploads_status")
+  @@index([uploaded_by], map: "idx_document_uploads_uploaded_by")
+}
+
+model email_templates {
+  id                Int       @id @default(autoincrement())
+  email_type        String    @unique @db.VarChar(100)
+  brevo_template_id Int
+  description       String?
+  updated_at        DateTime? @default(now()) @db.Timestamptz(6)
+  updated_by        Int?
+  users             users?    @relation(fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([email_type], map: "idx_email_templates_email_type")
+}
+
+model image_extraction_items {
+  id                  Int               @id @default(autoincrement())
+  extraction_id       Int
+  record_type         String            @db.VarChar(50)
+  extracted_data      Json
+  confidence_score    Decimal?          @db.Decimal(3, 2)
+  user_modified_data  Json?
+  status              String            @default("pending") @db.VarChar(50)
+  created_record_id   Int?
+  created_record_type String?           @db.VarChar(50)
+  created_at          DateTime?         @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime?         @default(now()) @db.Timestamptz(6)
+  image_extractions   image_extractions @relation(fields: [extraction_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([extraction_id], map: "idx_image_extraction_items_extraction_id")
+  @@index([status], map: "idx_image_extraction_items_status")
+}
+
+model image_extractions {
+  id                     Int                      @id @default(autoincrement())
+  image_upload_id        Int
+  raw_extraction         Json?
+  mapped_data            Json?
+  extraction_model       String?                  @db.VarChar(100)
+  tokens_used            Int?
+  status                 String                   @default("pending_review") @db.VarChar(50)
+  reviewed_by            Int?
+  reviewed_at            DateTime?                @db.Timestamptz(6)
+  created_at             DateTime?                @default(now()) @db.Timestamptz(6)
+  image_extraction_items image_extraction_items[]
+  image_uploads          image_uploads            @relation(fields: [image_upload_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users                  users?                   @relation(fields: [reviewed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([image_upload_id], map: "idx_image_extractions_image_upload_id")
+  @@index([status], map: "idx_image_extractions_status")
+}
+
+model image_uploads {
+  id                      Int                 @id @default(autoincrement())
+  pet_id                  Int
+  uploaded_by             Int
+  filename                String              @db.VarChar(255)
+  original_filename       String              @db.VarChar(255)
+  file_path               String
+  file_size               Int
+  mime_type               String              @db.VarChar(100)
+  status                  String              @default("pending") @db.VarChar(50)
+  document_type           String?             @db.VarChar(100)
+  processing_started_at   DateTime?           @db.Timestamptz(6)
+  processing_completed_at DateTime?           @db.Timestamptz(6)
+  error_message           String?
+  created_at              DateTime?           @default(now()) @db.Timestamptz(6)
+  image_extractions       image_extractions[]
+  pets                    pets                @relation(fields: [pet_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users                   users               @relation(fields: [uploaded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([pet_id], map: "idx_image_uploads_pet_id")
+  @@index([status], map: "idx_image_uploads_status")
+  @@index([uploaded_by], map: "idx_image_uploads_uploaded_by")
+}
+
+model password_reset_tokens {
+  id         Int       @id @default(autoincrement())
+  user_id    Int
+  token      String    @unique @db.VarChar(64)
+  expires_at DateTime  @db.Timestamptz(6)
+  used_at    DateTime? @db.Timestamptz(6)
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([expires_at], map: "idx_password_reset_tokens_expires_at")
+  @@index([token], map: "idx_password_reset_tokens_token")
+}
+
+model pdf_extraction_items {
+  id                  Int             @id @default(autoincrement())
+  extraction_id       Int
+  record_type         String          @db.VarChar(50)
+  extracted_data      Json
+  confidence_score    Decimal?        @db.Decimal(3, 2)
+  user_modified_data  Json?
+  status              String          @default("pending") @db.VarChar(50)
+  created_record_id   Int?
+  created_record_type String?         @db.VarChar(50)
+  created_at          DateTime?       @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime?       @default(now()) @db.Timestamptz(6)
+  pdf_extractions     pdf_extractions @relation(fields: [extraction_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([extraction_id], map: "idx_pdf_extraction_items_extraction_id")
+  @@index([status], map: "idx_pdf_extraction_items_status")
+}
+
+model pdf_extractions {
+  id                   Int                    @id @default(autoincrement())
+  pdf_upload_id        Int
+  raw_extraction       Json?
+  mapped_data          Json?
+  extraction_model     String?                @db.VarChar(100)
+  tokens_used          Int?
+  status               String                 @default("pending_review") @db.VarChar(50)
+  reviewed_by          Int?
+  reviewed_at          DateTime?              @db.Timestamptz(6)
+  created_at           DateTime?              @default(now()) @db.Timestamptz(6)
+  pdf_extraction_items pdf_extraction_items[]
+  pdf_uploads          pdf_uploads            @relation(fields: [pdf_upload_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users                users?                 @relation(fields: [reviewed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([pdf_upload_id], map: "idx_pdf_extractions_pdf_upload_id")
+  @@index([status], map: "idx_pdf_extractions_status")
+}
+
+model pdf_uploads {
+  id                      Int               @id @default(autoincrement())
+  pet_id                  Int
+  uploaded_by             Int
+  filename                String            @db.VarChar(255)
+  original_filename       String            @db.VarChar(255)
+  file_path               String
+  file_size               Int
+  mime_type               String            @db.VarChar(100)
+  status                  String            @default("pending") @db.VarChar(50)
+  document_type           String?           @db.VarChar(100)
+  processing_started_at   DateTime?         @db.Timestamptz(6)
+  processing_completed_at DateTime?         @db.Timestamptz(6)
+  error_message           String?
+  created_at              DateTime?         @default(now()) @db.Timestamptz(6)
+  audit_log               audit_log[]
+  pdf_extractions         pdf_extractions[]
+  pets                    pets              @relation(fields: [pet_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users                   users             @relation(fields: [uploaded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([pet_id], map: "idx_pdf_uploads_pet_id")
+  @@index([status], map: "idx_pdf_uploads_status")
+  @@index([uploaded_by], map: "idx_pdf_uploads_uploaded_by")
+}
+
+model pet_alerts {
+  id         Int       @id @default(autoincrement())
+  pet_id     Int
+  alert_text String    @db.VarChar(200)
+  is_active  Boolean   @default(true)
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  pets       pets      @relation(fields: [pet_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([pet_id], map: "idx_pet_alerts_pet_id")
+}
+
+model pet_allergies {
+  id           Int       @id @default(autoincrement())
+  pet_id       Int
+  allergen     String    @db.VarChar(255)
+  reaction     String?
+  severity     String?   @db.VarChar(50)
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+  show_on_card Boolean   @default(false)
+  pets         pets      @relation(fields: [pet_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([pet_id], map: "idx_pet_allergies_pet_id")
+}
+
+model pet_conditions {
+  id                       Int       @id @default(autoincrement())
+  pet_id                   Int
+  name                     String    @db.VarChar(255)
+  diagnosed_date           DateTime? @db.Date
+  notes                    String?
+  severity                 String?   @db.VarChar(50)
+  created_at               DateTime? @default(now()) @db.Timestamptz(6)
+  is_active                Boolean   @default(true)
+  show_on_card             Boolean   @default(false)
+  diagnosed_date_precision String?   @default("day") @db.VarChar(10)
+  pets                     pets      @relation(fields: [pet_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([pet_id], map: "idx_pet_conditions_pet_id")
+}
+
+model pet_emergency_contacts {
+  id           Int       @id @default(autoincrement())
+  pet_id       Int
+  name         String    @db.VarChar(255)
+  relationship String?   @db.VarChar(100)
+  phone        String    @db.VarChar(50)
+  email        String?   @db.VarChar(255)
+  is_primary   Boolean?  @default(false)
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+  pets         pets      @relation(fields: [pet_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([pet_id], map: "idx_pet_emergency_contacts_pet_id")
+}
+
+model pet_invitations {
+  id          Int       @id @default(autoincrement())
+  pet_id      Int
+  email       String    @db.VarChar(255)
+  role        String    @default("viewer") @db.VarChar(20)
+  invite_code String    @unique @db.VarChar(32)
+  invited_by  Int
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  expires_at  DateTime  @db.Timestamptz(6)
+  accepted_at DateTime? @db.Timestamptz(6)
+  users       users     @relation(fields: [invited_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pets        pets      @relation(fields: [pet_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([email], map: "idx_pet_invitations_email")
+  @@index([invite_code], map: "idx_pet_invitations_invite_code")
+}
+
+model pet_medications {
+  id                   Int       @id @default(autoincrement())
+  pet_id               Int
+  name                 String    @db.VarChar(255)
+  dosage               String?   @db.VarChar(100)
+  frequency            String?   @db.VarChar(100)
+  start_date           DateTime? @db.Date
+  end_date             DateTime? @db.Date
+  prescribing_vet      String?   @db.VarChar(255)
+  notes                String?
+  is_active            Boolean?  @default(true)
+  created_at           DateTime? @default(now()) @db.Timestamptz(6)
+  show_on_card         Boolean   @default(false)
+  start_date_precision String?   @default("day") @db.VarChar(10)
+  end_date_precision   String?   @default("day") @db.VarChar(10)
+  pets                 pets      @relation(fields: [pet_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([pet_id], map: "idx_pet_medications_pet_id")
+}
+
+model pet_owners {
+  id                                 Int       @id @default(autoincrement())
+  pet_id                             Int
+  user_id                            Int
+  role                               String    @default("viewer") @db.VarChar(20)
+  invited_by                         Int?
+  invited_at                         DateTime? @default(now()) @db.Timestamptz(6)
+  accepted_at                        DateTime? @db.Timestamptz(6)
+  users_pet_owners_invited_byTousers users?    @relation("pet_owners_invited_byTousers", fields: [invited_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pets                               pets      @relation(fields: [pet_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users_pet_owners_user_idTousers    users     @relation("pet_owners_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([pet_id, user_id])
+  @@index([pet_id], map: "idx_pet_owners_pet_id")
+  @@index([user_id], map: "idx_pet_owners_user_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model pet_reminder_notifications {
+  id                  Int                @id @default(autoincrement())
+  reminder_rule_id    Int
+  recipient_user_id   Int
+  pet_id              Int
+  record_type         String             @db.VarChar(20)
+  record_id           Int
+  due_date            DateTime           @db.Date
+  channel             String             @default("email") @db.VarChar(20)
+  status              String             @default("queued") @db.VarChar(20)
+  queued_at           DateTime?          @default(now()) @db.Timestamptz(6)
+  sent_at             DateTime?          @db.Timestamptz(6)
+  failed_at           DateTime?          @db.Timestamptz(6)
+  provider_message_id String?
+  error_message       String?
+  pets                pets               @relation(fields: [pet_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users               users              @relation(fields: [recipient_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  pet_reminder_rules  pet_reminder_rules @relation(fields: [reminder_rule_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([reminder_rule_id, recipient_user_id, due_date, channel], map: "pet_reminder_notifications_unique_send")
+  @@index([reminder_rule_id], map: "idx_pet_reminder_notifications_rule_id")
+  @@index([status, queued_at], map: "idx_pet_reminder_notifications_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model pet_reminder_rules {
+  id                                                 Int                          @id @default(autoincrement())
+  pet_id                                             Int
+  record_type                                        String                       @db.VarChar(20)
+  record_id                                          Int
+  channel                                            String                       @default("email") @db.VarChar(20)
+  lead_time_value                                    Int
+  lead_time_unit                                     String                       @db.VarChar(20)
+  next_due_date                                      DateTime                     @db.Date
+  recurrence_value                                   Int?
+  recurrence_unit                                    String?                      @db.VarChar(20)
+  is_enabled                                         Boolean                      @default(true)
+  created_by_user_id                                 Int?
+  updated_by_user_id                                 Int?
+  created_at                                         DateTime?                    @default(now()) @db.Timestamptz(6)
+  updated_at                                         DateTime?                    @default(now()) @db.Timestamptz(6)
+  pet_reminder_notifications                         pet_reminder_notifications[]
+  users_pet_reminder_rules_created_by_user_idTousers users?                       @relation("pet_reminder_rules_created_by_user_idTousers", fields: [created_by_user_id], references: [id], onUpdate: NoAction)
+  pets                                               pets                         @relation(fields: [pet_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users_pet_reminder_rules_updated_by_user_idTousers users?                       @relation("pet_reminder_rules_updated_by_user_idTousers", fields: [updated_by_user_id], references: [id], onUpdate: NoAction)
+
+  @@unique([record_type, record_id, channel], map: "pet_reminder_rules_unique_record_channel")
+  @@index([is_enabled, next_due_date, record_type, channel], map: "idx_pet_reminder_rules_due_scan")
+  @@index([pet_id], map: "idx_pet_reminder_rules_pet_id")
+}
+
+model pet_vaccinations {
+  id                          Int       @id @default(autoincrement())
+  pet_id                      Int
+  name                        String    @db.VarChar(255)
+  administered_date           DateTime  @db.Date
+  expiration_date             DateTime? @db.Date
+  administered_by             String?   @db.VarChar(255)
+  lot_number                  String?   @db.VarChar(100)
+  created_at                  DateTime? @default(now()) @db.Timestamptz(6)
+  administered_date_precision String?   @default("day") @db.VarChar(10)
+  expiration_date_precision   String?   @default("day") @db.VarChar(10)
+  show_on_card                Boolean   @default(false)
+  pets                        pets      @relation(fields: [pet_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([pet_id], map: "idx_pet_vaccinations_pet_id")
+}
+
+model pet_vets {
+  id          Int       @id @default(autoincrement())
+  pet_id      Int
+  clinic_name String    @db.VarChar(255)
+  vet_name    String?   @db.VarChar(255)
+  phone       String?   @db.VarChar(50)
+  email       String?   @db.VarChar(255)
+  address     String?
+  is_primary  Boolean?  @default(true)
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  pets        pets      @relation(fields: [pet_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([pet_id], map: "idx_pet_vets_pet_id")
+}
+
+model pets {
+  id                         Int                          @id @default(autoincrement())
+  user_id                    Int
+  share_id                   String                       @unique @db.VarChar(21)
+  name                       String                       @db.VarChar(255)
+  species                    String                       @db.VarChar(50)
+  breed                      String?                      @db.VarChar(100)
+  date_of_birth              DateTime?                    @db.Date
+  weight_kg                  Decimal?                     @db.Decimal(5, 2)
+  sex                        String?                      @db.VarChar(20)
+  microchip_id               String?                      @db.VarChar(100)
+  photo_url                  String?
+  special_instructions       String?
+  created_at                 DateTime?                    @default(now()) @db.Timestamptz(6)
+  updated_at                 DateTime?                    @default(now()) @db.Timestamptz(6)
+  weight_unit                String?                      @default("kg") @db.VarChar(3)
+  is_fixed                   Boolean?                     @default(false)
+  age                        Int?
+  color_markings             String?                      @db.VarChar(255)
+  document_uploads           document_uploads[]
+  image_uploads              image_uploads[]
+  pdf_uploads                pdf_uploads[]
+  pet_alerts                 pet_alerts[]
+  pet_allergies              pet_allergies[]
+  pet_conditions             pet_conditions[]
+  pet_emergency_contacts     pet_emergency_contacts[]
+  pet_invitations            pet_invitations[]
+  pet_medications            pet_medications[]
+  pet_owners                 pet_owners[]
+  pet_reminder_notifications pet_reminder_notifications[]
+  pet_reminder_rules         pet_reminder_rules[]
+  pet_vaccinations           pet_vaccinations[]
+  pet_vets                   pet_vets[]
+  users                      users                        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  share_tokens               share_tokens[]
+
+  @@index([share_id], map: "idx_pets_share_id")
+  @@index([user_id], map: "idx_pets_user_id")
+}
+
+model share_tokens {
+  id               Int       @id @default(autoincrement())
+  pet_id           Int
+  token            String    @unique @db.VarChar(32)
+  label            String?   @db.VarChar(100)
+  pin_hash         String?   @db.VarChar(255)
+  expires_at       DateTime? @db.Timestamptz(6)
+  created_by       Int
+  created_at       DateTime? @default(now()) @db.Timestamptz(6)
+  access_count     Int?      @default(0)
+  last_accessed_at DateTime? @db.Timestamptz(6)
+  is_active        Boolean?  @default(true)
+  users            users     @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pets             pets      @relation(fields: [pet_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([expires_at], map: "idx_share_tokens_expires_at")
+  @@index([pet_id], map: "idx_share_tokens_pet_id")
+  @@index([token], map: "idx_share_tokens_token")
+}
+
+model subscription_config {
+  id         Int       @id @default(autoincrement())
+  key        String    @unique @db.VarChar(100)
+  value      Json
+  updated_at DateTime? @default(now()) @db.Timestamptz(6)
+  updated_by Int?
+  users      users?    @relation(fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([key], map: "idx_subscription_config_key")
+}
+
+model users {
+  id                                                              Int                          @id @default(autoincrement())
+  email                                                           String                       @unique @db.VarChar(255)
+  password_hash                                                   String                       @db.VarChar(255)
+  name                                                            String                       @db.VarChar(255)
+  phone                                                           String?                      @db.VarChar(50)
+  created_at                                                      DateTime?                    @default(now()) @db.Timestamptz(6)
+  updated_at                                                      DateTime?                    @default(now()) @db.Timestamptz(6)
+  is_admin                                                        Boolean                      @default(false)
+  stripe_customer_id                                              String?                      @db.VarChar(255)
+  subscription_status                                             String?                      @default("free") @db.VarChar(50)
+  subscription_tier                                               String?                      @default("free") @db.VarChar(50)
+  subscription_current_period_end                                 DateTime?                    @db.Timestamptz(6)
+  subscription_stripe_id                                          String?                      @db.VarChar(255)
+  audit_log                                                       audit_log[]
+  document_extractions                                            document_extractions[]
+  document_uploads                                                document_uploads[]
+  email_templates                                                 email_templates[]
+  image_extractions                                               image_extractions[]
+  image_uploads                                                   image_uploads[]
+  password_reset_tokens                                           password_reset_tokens[]
+  pdf_extractions                                                 pdf_extractions[]
+  pdf_uploads                                                     pdf_uploads[]
+  pet_invitations                                                 pet_invitations[]
+  pet_owners_pet_owners_invited_byTousers                         pet_owners[]                 @relation("pet_owners_invited_byTousers")
+  pet_owners_pet_owners_user_idTousers                            pet_owners[]                 @relation("pet_owners_user_idTousers")
+  pet_reminder_notifications                                      pet_reminder_notifications[]
+  pet_reminder_rules_pet_reminder_rules_created_by_user_idTousers pet_reminder_rules[]         @relation("pet_reminder_rules_created_by_user_idTousers")
+  pet_reminder_rules_pet_reminder_rules_updated_by_user_idTousers pet_reminder_rules[]         @relation("pet_reminder_rules_updated_by_user_idTousers")
+  pets                                                            pets[]
+  share_tokens                                                    share_tokens[]
+  subscription_config                                             subscription_config[]
+
+  @@index([is_admin], map: "idx_users_is_admin", where: raw("(is_admin = true)"))
+  @@index([stripe_customer_id], map: "idx_users_stripe_customer_id")
+  @@index([subscription_status], map: "idx_users_subscription_status")
+}

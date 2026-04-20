@@ -32,37 +32,12 @@ The most relevant non-obvious ones are:
 
 ## Fresh Database Bootstrap
 
-This repo still uses manually maintained migration scripts. A fresh local database needs the migration chain below, not just `db:migrate:dev`.
+This repo now uses Prisma Migrate with a baseline migration for fresh databases and a one-time baseline-resolve step for existing databases.
 
 Run from the repo root after `docker compose up`:
 
 ```bash
-for script in \
-  db:migrate:dev \
-  db:migrate:admin-role:dev \
-  db:migrate:owners:dev \
-  db:migrate:pdf-import:dev \
-  db:migrate:weight-units:dev \
-  db:migrate:sex-fixed:dev \
-  db:migrate:password-reset:dev \
-  db:migrate:share-tokens:dev \
-  db:migrate:image-import:dev \
-  db:migrate:document-import:dev \
-  db:migrate:image-metadata:dev \
-  db:migrate:cms:dev \
-  db:migrate:subscriptions:dev \
-  db:migrate:alerts:dev \
-  db:migrate:vaccination-show-on-card:dev \
-  db:migrate:date-precision:dev \
-  db:migrate:allergy-show-on-card:dev \
-  db:migrate:document-groups:dev \
-  db:migrate:soft-delete:dev \
-  db:migrate:pet-age-color:dev \
-  db:migrate:email-templates:dev \
-  db:migrate:reminders:dev
-do
-  docker compose exec backend npm run "$script"
-done
+docker compose exec backend npm run db:migrate
 ```
 
 Then seed the app data:
@@ -110,12 +85,12 @@ Relevant files:
 
 When adding a new migration:
 
-1. Create the migration file under `backend/src/db/`.
-2. Add both production and `:dev` scripts in [backend/package.json](../backend/package.json).
-3. Add the production migration step to [.github/workflows/deploy.yml](../.github/workflows/deploy.yml).
-4. If a fresh database needs the migration, add it to the bootstrap sequence in this document.
+1. Update `backend/prisma/schema.prisma`.
+2. Run `npm run db:migrate:dev -- --name <descriptive_name>` from `backend/`.
+3. Commit the generated migration under `backend/prisma/migrations/`.
+4. Regenerate the Prisma client if needed with `npm run prisma:generate`.
 
-There is currently no tracked migration runner table. The deploy and bootstrap sequences are manual and order-dependent.
+Existing environments are baselined automatically the first time `npm run db:migrate` runs after the Prisma cutover. Fresh databases apply `0_init` and later migrations normally. Prisma tracks history in `_prisma_migrations`.
 
 ## Preview Environments
 
@@ -143,7 +118,7 @@ What actually happens:
 - GitHub Actions builds and pushes `ghcr.io/gulati8/furevercare-web:latest`
 - the workflow deploys to EC2 via AWS SSM
 - production compose is written to `/srv/furevercare/docker-compose.prod.yml`
-- migration scripts are run one-by-one
+- `npm run db:migrate` runs Prisma baseline/resolve logic and `prisma migrate deploy`
 - `docker compose up -d` restarts the production stack
 
 Primary sources:

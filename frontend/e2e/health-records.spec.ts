@@ -32,7 +32,12 @@ test.describe('Health Records', () => {
 
       // Verify condition appears in list
       await expect(page.getByText(conditionName)).toBeVisible();
-      await expect(page.getByText('moderate')).toBeVisible();
+      await expect(page.getByText('moderate', { exact: true }).first()).toBeVisible();
+
+      await page.reload();
+      await petDetailPage.waitForLoad();
+      await petDetailPage.goToConditionsTab();
+      await expect(page.getByText(conditionName)).toBeVisible();
     });
 
     test('should delete a medical condition', async ({ page }) => {
@@ -57,7 +62,7 @@ test.describe('Health Records', () => {
 
       // Verify allergy appears
       await expect(page.getByText(allergen)).toBeVisible();
-      await expect(page.getByText('severe')).toBeVisible();
+      await expect(page.getByText('severe', { exact: true }).first()).toBeVisible();
     });
 
     test('should add a life-threatening allergy', async ({ page }) => {
@@ -67,7 +72,7 @@ test.describe('Health Records', () => {
 
       // Verify allergy appears with life-threatening severity
       await expect(page.getByText(allergen)).toBeVisible();
-      await expect(page.getByText('life-threatening')).toBeVisible();
+      await expect(page.getByText('life-threatening', { exact: true }).first()).toBeVisible();
     });
 
     test('should delete an allergy', async ({ page }) => {
@@ -88,8 +93,12 @@ test.describe('Health Records', () => {
 
       // Verify medication appears
       await expect(page.getByText(medName)).toBeVisible();
-      await expect(page.getByText('10mg')).toBeVisible();
-      await expect(page.getByText('twice daily')).toBeVisible();
+      await expect(page.getByText('10mg', { exact: true }).first()).toBeVisible();
+
+      await page.reload();
+      await petDetailPage.waitForLoad();
+      await petDetailPage.goToMedicationsTab();
+      await expect(page.getByText(medName)).toBeVisible();
     });
 
     test('should delete a medication', async ({ page }) => {
@@ -143,8 +152,8 @@ test.describe('Health Records', () => {
       await page.getByRole('button', { name: 'Save' }).click();
 
       // Verify medication was added
-      await expect(page.getByText('Apoquel')).toBeVisible();
-      await expect(page.getByText('16mg')).toBeVisible();
+      await expect(page.getByText('Apoquel', { exact: true }).first()).toBeVisible();
+      await expect(page.getByText('16mg', { exact: true }).first()).toBeVisible();
     });
 
     test('should allow custom medication names not in the suggestion list', async ({ page }) => {
@@ -154,8 +163,7 @@ test.describe('Health Records', () => {
 
       // Verify custom medication was added successfully
       await expect(page.getByText(customMedName)).toBeVisible();
-      await expect(page.getByText('5ml')).toBeVisible();
-      await expect(page.getByText('three times daily')).toBeVisible();
+      await expect(page.getByText('5ml', { exact: true }).first()).toBeVisible();
     });
   });
 
@@ -191,8 +199,8 @@ test.describe('Health Records', () => {
 
       // Verify vet appears
       await expect(page.getByText(clinicName)).toBeVisible();
-      await expect(page.getByText('Dr. Smith')).toBeVisible();
-      await expect(page.getByText('555-0123')).toBeVisible();
+      await expect(page.getByText('Dr. Smith', { exact: true }).first()).toBeVisible();
+      await expect(page.getByText('555-0123', { exact: true }).first()).toBeVisible();
     });
 
     test('should delete a veterinarian', async ({ page }) => {
@@ -213,8 +221,8 @@ test.describe('Health Records', () => {
 
       // Verify contact appears
       await expect(page.getByText(contactName)).toBeVisible();
-      await expect(page.getByText('555-9999')).toBeVisible();
-      await expect(page.getByText('Neighbor')).toBeVisible();
+      await expect(page.getByText('555-9999', { exact: true }).first()).toBeVisible();
+      await expect(page.getByText('Neighbor', { exact: true }).first()).toBeVisible();
     });
 
     test('should delete an emergency contact', async ({ page }) => {

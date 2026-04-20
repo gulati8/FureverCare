@@ -18,19 +18,19 @@ export class AddPetModal {
 
   constructor(page: Page) {
     this.page = page;
-    this.modal = page.locator('.fixed.inset-0').filter({ hasText: 'Add New Pet' });
-    this.nameInput = this.modal.getByLabel('Pet Name *');
-    this.speciesSelect = this.modal.getByLabel('Species *');
-    this.breedInput = this.modal.getByLabel('Breed');
-    this.dobInput = this.modal.getByLabel('Date of Birth');
-    this.sexSelect = this.modal.getByLabel('Sex');
-    this.isFixedCheckbox = this.modal.getByLabel('Spayed / Neutered');
-    this.weightInput = this.modal.getByLabel('Weight');
-    this.weightUnitSelect = this.modal.getByLabel('Weight Unit');
-    this.microchipInput = this.modal.getByLabel('Microchip ID');
-    this.submitButton = this.modal.getByRole('button', { name: 'Add Pet' });
+    this.modal = page.locator('main > div').filter({ hasText: 'Add New Pet' }).last();
+    this.nameInput = this.modal.getByRole('textbox').first();
+    this.speciesSelect = this.modal.locator('select').nth(0);
+    this.breedInput = this.modal.getByRole('textbox').nth(1);
+    this.dobInput = this.modal.getByRole('textbox').nth(2);
+    this.sexSelect = this.modal.locator('select').nth(1);
+    this.isFixedCheckbox = this.modal.getByRole('checkbox', { name: 'Spayed / Neutered' });
+    this.weightInput = this.modal.getByRole('spinbutton');
+    this.weightUnitSelect = this.modal.locator('select').nth(2);
+    this.microchipInput = this.modal.getByRole('textbox').nth(3);
+    this.submitButton = this.modal.locator('form').getByRole('button', { name: 'Add Pet' });
     this.cancelButton = this.modal.getByRole('button', { name: 'Cancel' });
-    this.closeButton = this.modal.locator('button').filter({ has: this.page.locator('svg') }).first();
+    this.closeButton = this.modal.locator('button').first();
   }
 
   async isVisible() {

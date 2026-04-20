@@ -1,7 +1,8 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import { pool, query, queryOne } from '../db/pool.js';
 import { config } from '../config/index.js';
+import { prisma } from '../db/prisma.js';
+import { stripUndefined } from './prisma-helpers.js';
 
 export type SubscriptionStatus = 'free' | 'trialing' | 'active' | 'past_due' | 'canceled';
 export type SubscriptionTier = 'free' | 'premium';
@@ -32,28 +33,32 @@ export interface CreateUserInput {
 export async function createUser(input: CreateUserInput): Promise<User> {
   const passwordHash = await bcrypt.hash(input.password, 12);
 
-  const result = await queryOne<User>(
-    `INSERT INTO users (email, password_hash, name, phone)
-     VALUES ($1, $2, $3, $4)
-     RETURNING *`,
-    [input.email.toLowerCase(), passwordHash, input.name, input.phone || null]
-  );
+  const result = await prisma.users.create({
+    data: {
+      email: input.email.toLowerCase(),
+      password_hash: passwordHash,
+      name: input.name,
+      phone: input.phone || null,
+    },
+  });
 
-  return result!;
+  return result as User;
 }
 
 export async function findUserByEmail(email: string): Promise<User | null> {
-  return queryOne<User>(
-    'SELECT * FROM users WHERE email = $1',
-    [email.toLowerCase()]
-  );
+  return prisma.users.findUnique({
+    where: {
+      email: email.toLowerCase(),
+    },
+  }) as Promise<User | null>;
 }
 
 export async function findUserById(id: number): Promise<User | null> {
-  return queryOne<User>(
-    'SELECT * FROM users WHERE id = $1',
-    [id]
-  );
+  return prisma.users.findUnique({
+    where: {
+      id,
+    },
+  }) as Promise<User | null>;
 }
 
 export async function verifyPassword(user: User, password: string): Promise<boolean> {
@@ -61,28 +66,24 @@ export async function verifyPassword(user: User, password: string): Promise<bool
 }
 
 export async function updateUser(id: number, updates: Partial<Pick<User, 'name' | 'phone'>>): Promise<User | null> {
-  const fields: string[] = [];
-  const values: any[] = [];
-  let paramCount = 1;
+  const data = stripUndefined({
+    name: updates.name,
+    phone: updates.phone,
+    updated_at: new Date(),
+  });
 
-  if (updates.name !== undefined) {
-    fields.push(`name = $${paramCount++}`);
-    values.push(updates.name);
-  }
-  if (updates.phone !== undefined) {
-    fields.push(`phone = $${paramCount++}`);
-    values.push(updates.phone);
+  if (Object.keys(data).length === 1) {
+    return findUserById(id);
   }
 
-  if (fields.length === 0) return findUserById(id);
+  const users = await prisma.users.updateManyAndReturn({
+    where: {
+      id,
+    },
+    data,
+  });
 
-  fields.push(`updated_at = CURRENT_TIMESTAMP`);
-  values.push(id);
-
-  return queryOne<User>(
-    `UPDATE users SET ${fields.join(', ')} WHERE id = $${paramCount} RETURNING *`,
-    values
-  );
+  return (users[0] as User | undefined) ?? null;
 }
 
 // Password reset functions
@@ -98,12 +99,15 @@ export interface PasswordResetToken {
 
 export async function createPasswordResetToken(userId: number): Promise<string> {
   // Invalidate any existing unused tokens for this user
-  await query(
-    `UPDATE password_reset_tokens
-     SET used_at = CURRENT_TIMESTAMP
-     WHERE user_id = $1 AND used_at IS NULL`,
-    [userId]
-  );
+  await prisma.password_reset_tokens.updateMany({
+    where: {
+      user_id: userId,
+      used_at: null,
+    },
+    data: {
+      used_at: new Date(),
+    },
+  });
 
   // Generate a secure random token
   const token = crypto.randomBytes(32).toString('hex');
@@ -112,49 +116,60 @@ export async function createPasswordResetToken(userId: number): Promise<string> 
   const expiresAt = new Date();
   expiresAt.setMinutes(expiresAt.getMinutes() + config.passwordReset.tokenExpiryMinutes);
 
-  await query(
-    `INSERT INTO password_reset_tokens (user_id, token, expires_at)
-     VALUES ($1, $2, $3)`,
-    [userId, token, expiresAt]
-  );
+  await prisma.password_reset_tokens.create({
+    data: {
+      user_id: userId,
+      token,
+      expires_at: expiresAt,
+    },
+  });
 
   return token;
 }
 
 export async function findValidPasswordResetToken(token: string): Promise<PasswordResetToken | null> {
-  return queryOne<PasswordResetToken>(
-    `SELECT * FROM password_reset_tokens
-     WHERE token = $1
-       AND expires_at > CURRENT_TIMESTAMP
-       AND used_at IS NULL`,
-    [token]
-  );
+  return prisma.password_reset_tokens.findFirst({
+    where: {
+      token,
+      expires_at: {
+        gt: new Date(),
+      },
+      used_at: null,
+    },
+  }) as Promise<PasswordResetToken | null>;
 }
 
 export async function usePasswordResetToken(token: string): Promise<boolean> {
-  const result = await pool.query(
-    `UPDATE password_reset_tokens
-     SET used_at = CURRENT_TIMESTAMP
-     WHERE token = $1
-       AND expires_at > CURRENT_TIMESTAMP
-       AND used_at IS NULL`,
-    [token]
-  );
+  const result = await prisma.password_reset_tokens.updateMany({
+    where: {
+      token,
+      expires_at: {
+        gt: new Date(),
+      },
+      used_at: null,
+    },
+    data: {
+      used_at: new Date(),
+    },
+  });
 
-  return (result.rowCount ?? 0) > 0;
+  return result.count > 0;
 }
 
 export async function updateUserPassword(userId: number, newPassword: string): Promise<boolean> {
   const passwordHash = await bcrypt.hash(newPassword, 12);
 
-  const result = await pool.query(
-    `UPDATE users
-     SET password_hash = $1, updated_at = CURRENT_TIMESTAMP
-     WHERE id = $2`,
-    [passwordHash, userId]
-  );
+  const result = await prisma.users.updateMany({
+    where: {
+      id: userId,
+    },
+    data: {
+      password_hash: passwordHash,
+      updated_at: new Date(),
+    },
+  });
 
-  return (result.rowCount ?? 0) > 0;
+  return result.count > 0;
 }
 
 // Subscription-related functions
@@ -176,63 +191,54 @@ export interface SubscriptionInfo {
 }
 
 export async function updateSubscription(userId: number, updates: SubscriptionUpdates): Promise<User> {
-  const fields: string[] = [];
-  const values: any[] = [];
-  let paramCount = 1;
+  const data = stripUndefined({
+    stripe_customer_id: updates.stripe_customer_id,
+    subscription_status: updates.subscription_status,
+    subscription_tier: updates.subscription_tier,
+    subscription_current_period_end: updates.subscription_current_period_end,
+    subscription_stripe_id: updates.subscription_stripe_id,
+    updated_at: new Date(),
+  });
 
-  if (updates.stripe_customer_id !== undefined) {
-    fields.push(`stripe_customer_id = $${paramCount++}`);
-    values.push(updates.stripe_customer_id);
-  }
-  if (updates.subscription_status !== undefined) {
-    fields.push(`subscription_status = $${paramCount++}`);
-    values.push(updates.subscription_status);
-  }
-  if (updates.subscription_tier !== undefined) {
-    fields.push(`subscription_tier = $${paramCount++}`);
-    values.push(updates.subscription_tier);
-  }
-  if (updates.subscription_current_period_end !== undefined) {
-    fields.push(`subscription_current_period_end = $${paramCount++}`);
-    values.push(updates.subscription_current_period_end);
-  }
-  if (updates.subscription_stripe_id !== undefined) {
-    fields.push(`subscription_stripe_id = $${paramCount++}`);
-    values.push(updates.subscription_stripe_id);
-  }
-
-  if (fields.length === 0) {
+  if (Object.keys(data).length === 1) {
     const user = await findUserById(userId);
     if (!user) throw new Error('User not found');
     return user;
   }
 
-  fields.push(`updated_at = CURRENT_TIMESTAMP`);
-  values.push(userId);
-
-  const result = await queryOne<User>(
-    `UPDATE users SET ${fields.join(', ')} WHERE id = $${paramCount} RETURNING *`,
-    values
-  );
+  const users = await prisma.users.updateManyAndReturn({
+    where: {
+      id: userId,
+    },
+    data,
+  });
+  const result = users[0];
 
   if (!result) throw new Error('User not found');
-  return result;
+  return result as User;
 }
 
 export async function findUserByStripeCustomerId(stripeCustomerId: string): Promise<User | null> {
-  return queryOne<User>(
-    'SELECT * FROM users WHERE stripe_customer_id = $1',
-    [stripeCustomerId]
-  );
+  return prisma.users.findFirst({
+    where: {
+      stripe_customer_id: stripeCustomerId,
+    },
+  }) as Promise<User | null>;
 }
 
 export async function getUserSubscriptionInfo(userId: number): Promise<SubscriptionInfo> {
-  const result = await queryOne<SubscriptionInfo>(
-    `SELECT subscription_status, subscription_tier, subscription_current_period_end,
-            subscription_stripe_id, stripe_customer_id
-     FROM users WHERE id = $1`,
-    [userId]
-  );
+  const result = await prisma.users.findUnique({
+    where: {
+      id: userId,
+    },
+    select: {
+      subscription_status: true,
+      subscription_tier: true,
+      subscription_current_period_end: true,
+      subscription_stripe_id: true,
+      stripe_customer_id: true,
+    },
+  });
 
   if (!result) {
     return {
@@ -244,7 +250,13 @@ export async function getUserSubscriptionInfo(userId: number): Promise<Subscript
     };
   }
 
-  return result;
+  return {
+    subscription_status: (result.subscription_status as SubscriptionStatus | null) ?? 'free',
+    subscription_tier: (result.subscription_tier as SubscriptionTier | null) ?? 'free',
+    subscription_current_period_end: result.subscription_current_period_end,
+    subscription_stripe_id: result.subscription_stripe_id,
+    stripe_customer_id: result.stripe_customer_id,
+  };
 }
 
 const FREE_TIER_PET_LIMIT = Infinity; // Beta: unlimited pets for all users
@@ -258,20 +270,20 @@ export async function canUserAddPet(userId: number): Promise<{allowed: boolean, 
 
   // Premium users have unlimited pets
   if (user.subscription_tier === 'premium') {
-    const countResult = await queryOne<{ count: string }>(
-      `SELECT COUNT(*) as count FROM pets WHERE user_id = $1`,
-      [userId]
-    );
-    const petCount = parseInt(countResult?.count || '0', 10);
+    const petCount = await prisma.pets.count({
+      where: {
+        user_id: userId,
+      },
+    });
     return { allowed: true, petCount, limit: Infinity };
   }
 
   // Free tier users have a pet limit
-  const countResult = await queryOne<{ count: string }>(
-    `SELECT COUNT(*) as count FROM pets WHERE user_id = $1`,
-    [userId]
-  );
-  const petCount = parseInt(countResult?.count || '0', 10);
+  const petCount = await prisma.pets.count({
+    where: {
+      user_id: userId,
+    },
+  });
 
   if (petCount >= FREE_TIER_PET_LIMIT) {
     return {

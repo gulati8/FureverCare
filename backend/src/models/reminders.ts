@@ -1,5 +1,7 @@
-import type { PoolClient } from 'pg';
-import { query, queryOne } from '../db/pool.js';
+import { Prisma } from '../generated/prisma/client.js';
+import { prisma } from '../db/prisma.js';
+
+type PrismaClientLike = typeof prisma | Prisma.TransactionClient;
 
 export type ReminderRecordType = 'vaccination' | 'medication';
 export type ReminderChannel = 'email';
@@ -71,12 +73,19 @@ export interface ReminderNotificationWithContext extends ReminderNotification {
   record_name: string;
 }
 
-function mapQueryOne<T>(result: { rows: T[] }): T | null {
-  return result.rows[0] ?? null;
-}
-
 function isReminderEnabled(reminder: ReminderConfigFields): boolean {
   return reminder.reminder_enabled && Boolean(reminder.reminder_next_due_date);
+}
+
+function startOfUtcDay(value: string | Date): Date {
+  const date = typeof value === 'string' ? new Date(`${value}T00:00:00.000Z`) : value;
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
+function addDays(date: Date, days: number): Date {
+  const next = new Date(date);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
 }
 
 export function getReminderSelectColumns(alias: string = 'rr'): string {
@@ -92,7 +101,7 @@ export function getReminderSelectColumns(alias: string = 'rr'): string {
 }
 
 export async function upsertReminderRuleForRecord(
-  client: PoolClient,
+  client: PrismaClientLike,
   {
     petId,
     recordType,
@@ -108,124 +117,224 @@ export async function upsertReminderRuleForRecord(
   }
 ): Promise<ReminderRule | null> {
   if (!isReminderEnabled(reminder)) {
-    await client.query(
-      'DELETE FROM pet_reminder_rules WHERE record_type = $1 AND record_id = $2',
-      [recordType, recordId]
-    );
+    await client.pet_reminder_rules.deleteMany({
+      where: {
+        record_type: recordType,
+        record_id: recordId,
+      },
+    });
     return null;
   }
 
   const channel = reminder.reminder_channel ?? 'email';
-  const result = await client.query<ReminderRule>(
-    `INSERT INTO pet_reminder_rules (
-       pet_id,
-       record_type,
-       record_id,
-       channel,
-       lead_time_value,
-       lead_time_unit,
-       next_due_date,
-       recurrence_value,
-       recurrence_unit,
-       is_enabled,
-       created_by_user_id,
-       updated_by_user_id
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, $10, $10)
-     ON CONFLICT (record_type, record_id, channel)
-     DO UPDATE SET
-       pet_id = EXCLUDED.pet_id,
-       lead_time_value = EXCLUDED.lead_time_value,
-       lead_time_unit = EXCLUDED.lead_time_unit,
-       next_due_date = EXCLUDED.next_due_date,
-       recurrence_value = EXCLUDED.recurrence_value,
-       recurrence_unit = EXCLUDED.recurrence_unit,
-       is_enabled = true,
-       updated_by_user_id = EXCLUDED.updated_by_user_id,
-       updated_at = CURRENT_TIMESTAMP
-     RETURNING *`,
-    [
-      petId,
-      recordType,
-      recordId,
+  const existing = await client.pet_reminder_rules.findFirst({
+    where: {
+      record_type: recordType,
+      record_id: recordId,
       channel,
-      reminder.reminder_lead_time_value,
-      reminder.reminder_lead_time_unit,
-      reminder.reminder_next_due_date,
-      reminder.reminder_recurrence_value,
-      reminder.reminder_recurrence_unit,
-      userId ?? null,
-    ]
-  );
+    },
+  });
 
-  return mapQueryOne(result);
+  const payload = {
+    pet_id: petId,
+    record_type: recordType,
+    record_id: recordId,
+    channel,
+    lead_time_value: reminder.reminder_lead_time_value!,
+    lead_time_unit: reminder.reminder_lead_time_unit!,
+    next_due_date: reminder.reminder_next_due_date!,
+    recurrence_value: reminder.reminder_recurrence_value,
+    recurrence_unit: reminder.reminder_recurrence_unit,
+    is_enabled: true,
+    updated_by_user_id: userId ?? null,
+    updated_at: new Date(),
+  };
+
+  const result = existing
+    ? await client.pet_reminder_rules.update({
+        where: {
+          id: existing.id,
+        },
+        data: payload,
+      })
+    : await client.pet_reminder_rules.create({
+        data: {
+          ...payload,
+          created_by_user_id: userId ?? null,
+        },
+      });
+
+  return {
+    id: result.id,
+    pet_id: result.pet_id,
+    record_type: result.record_type as ReminderRecordType,
+    record_id: result.record_id,
+    channel: result.channel as ReminderChannel,
+    lead_time_value: result.lead_time_value,
+    lead_time_unit: result.lead_time_unit as ReminderLeadTimeUnit,
+    next_due_date: result.next_due_date,
+    recurrence_value: result.recurrence_value,
+    recurrence_unit: result.recurrence_unit as ReminderRecurrenceUnit | null,
+    is_enabled: result.is_enabled,
+    created_by_user_id: result.created_by_user_id,
+    updated_by_user_id: result.updated_by_user_id,
+    created_at: result.created_at ?? new Date(),
+    updated_at: result.updated_at ?? new Date(),
+  };
 }
 
 export async function deleteReminderRuleForRecord(
-  client: PoolClient,
+  client: PrismaClientLike,
   recordType: ReminderRecordType,
   recordId: number
 ): Promise<void> {
-  await client.query(
-    'DELETE FROM pet_reminder_rules WHERE record_type = $1 AND record_id = $2',
-    [recordType, recordId]
-  );
+  await client.pet_reminder_rules.deleteMany({
+    where: {
+      record_type: recordType,
+      record_id: recordId,
+    },
+  });
 }
 
 export async function getReminderRecipients(petId: number): Promise<ReminderRecipient[]> {
-  return query<ReminderRecipient>(
-    `SELECT u.id AS user_id, u.email AS user_email, u.name AS user_name, po.role
-     FROM pet_owners po
-     JOIN users u ON u.id = po.user_id
-     WHERE po.pet_id = $1
-       AND po.accepted_at IS NOT NULL
-       AND po.role IN ('owner', 'editor')
-     ORDER BY po.role = 'owner' DESC, po.accepted_at ASC`,
-    [petId]
-  );
+  const owners = await prisma.pet_owners.findMany({
+    where: {
+      pet_id: petId,
+      accepted_at: {
+        not: null,
+      },
+      role: {
+        in: ['owner', 'editor'],
+      },
+    },
+    include: {
+      users_pet_owners_user_idTousers: {
+        select: {
+          id: true,
+          email: true,
+          name: true,
+        },
+      },
+    },
+    orderBy: [
+      {
+        role: 'asc',
+      },
+      {
+        accepted_at: 'asc',
+      },
+    ],
+  });
+
+  return owners
+    .sort((a, b) => {
+      if (a.role === b.role) {
+        return (a.accepted_at?.getTime() ?? 0) - (b.accepted_at?.getTime() ?? 0);
+      }
+      return a.role === 'owner' ? -1 : 1;
+    })
+    .map((owner) => ({
+      user_id: owner.users_pet_owners_user_idTousers.id,
+      user_email: owner.users_pet_owners_user_idTousers.email,
+      user_name: owner.users_pet_owners_user_idTousers.name,
+      role: owner.role as 'owner' | 'editor',
+    }));
 }
 
 export async function getDueReminderRules(processingDate: string): Promise<ReminderProcessingRule[]> {
-  return query<ReminderProcessingRule>(
-    `SELECT rr.*, p.name AS pet_name,
-            CASE
-              WHEN rr.record_type = 'vaccination' THEN v.name
-              WHEN rr.record_type = 'medication' THEN m.name
-            END AS record_name
-     FROM pet_reminder_rules rr
-     JOIN pets p ON p.id = rr.pet_id
-     LEFT JOIN pet_vaccinations v
-       ON rr.record_type = 'vaccination'
-      AND v.id = rr.record_id
-      AND v.pet_id = rr.pet_id
-     LEFT JOIN pet_medications m
-       ON rr.record_type = 'medication'
-      AND m.id = rr.record_id
-      AND m.pet_id = rr.pet_id
-      AND m.is_active = true
-     WHERE rr.is_enabled = true
-       AND $1::date BETWEEN
-         (
-           rr.next_due_date
-           - (
-               CASE
-                 WHEN rr.lead_time_unit = 'weeks' THEN rr.lead_time_value * 7
-                 ELSE rr.lead_time_value
-               END * INTERVAL '1 day'
-             )
-         )::date
-         AND rr.next_due_date
-       AND (
-         (rr.record_type = 'vaccination' AND v.id IS NOT NULL)
-         OR
-         (rr.record_type = 'medication' AND m.id IS NOT NULL)
-       )
-     ORDER BY rr.next_due_date ASC, rr.id ASC`,
-    [processingDate]
-  );
+  const processingDay = startOfUtcDay(processingDate);
+  const rules = await prisma.pet_reminder_rules.findMany({
+    where: {
+      is_enabled: true,
+    },
+    include: {
+      pets: {
+        select: {
+          name: true,
+        },
+      },
+    },
+    orderBy: [
+      {
+        next_due_date: 'asc',
+      },
+      {
+        id: 'asc',
+      },
+    ],
+  });
+
+  const dueRules: ReminderProcessingRule[] = [];
+
+  for (const rule of rules) {
+    const dueDate = startOfUtcDay(rule.next_due_date);
+    const leadDays =
+      rule.lead_time_unit === 'weeks'
+        ? rule.lead_time_value * 7
+        : rule.lead_time_value;
+    const firstSendDate = addDays(dueDate, -leadDays);
+
+    if (processingDay < firstSendDate || processingDay > dueDate) {
+      continue;
+    }
+
+    let recordName: string | null = null;
+
+    if (rule.record_type === 'vaccination') {
+      const vaccination = await prisma.pet_vaccinations.findFirst({
+        where: {
+          id: rule.record_id,
+          pet_id: rule.pet_id,
+        },
+        select: {
+          name: true,
+        },
+      });
+      recordName = vaccination?.name ?? null;
+    } else if (rule.record_type === 'medication') {
+      const medication = await prisma.pet_medications.findFirst({
+        where: {
+          id: rule.record_id,
+          pet_id: rule.pet_id,
+          is_active: true,
+        },
+        select: {
+          name: true,
+        },
+      });
+      recordName = medication?.name ?? null;
+    }
+
+    if (!recordName) {
+      continue;
+    }
+
+    dueRules.push({
+      id: rule.id,
+      pet_id: rule.pet_id,
+      record_type: rule.record_type as ReminderRecordType,
+      record_id: rule.record_id,
+      channel: rule.channel as ReminderChannel,
+      lead_time_value: rule.lead_time_value,
+      lead_time_unit: rule.lead_time_unit as ReminderLeadTimeUnit,
+      next_due_date: rule.next_due_date,
+      recurrence_value: rule.recurrence_value,
+      recurrence_unit: rule.recurrence_unit as ReminderRecurrenceUnit | null,
+      is_enabled: rule.is_enabled,
+      created_by_user_id: rule.created_by_user_id,
+      updated_by_user_id: rule.updated_by_user_id,
+      created_at: rule.created_at ?? new Date(),
+      updated_at: rule.updated_at ?? new Date(),
+      pet_name: rule.pets.name,
+      record_name: recordName,
+    });
+  }
+
+  return dueRules;
 }
 
 export async function queueReminderNotifications(
-  client: PoolClient,
+  client: PrismaClientLike,
   {
     rule,
     recipients,
@@ -237,32 +346,43 @@ export async function queueReminderNotifications(
   const inserted: ReminderNotification[] = [];
 
   for (const recipient of recipients) {
-    const result = await client.query<ReminderNotification>(
-      `INSERT INTO pet_reminder_notifications (
-         reminder_rule_id,
-         recipient_user_id,
-         pet_id,
-         record_type,
-         record_id,
-         due_date,
-         channel,
-         status
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'queued')
-       ON CONFLICT (reminder_rule_id, recipient_user_id, due_date, channel) DO NOTHING
-       RETURNING *`,
-      [
-        rule.id,
-        recipient.user_id,
-        rule.pet_id,
-        rule.record_type,
-        rule.record_id,
-        rule.next_due_date,
-        rule.channel,
-      ]
-    );
+    try {
+      const created = await client.pet_reminder_notifications.create({
+        data: {
+          reminder_rule_id: rule.id,
+          recipient_user_id: recipient.user_id,
+          pet_id: rule.pet_id,
+          record_type: rule.record_type,
+          record_id: rule.record_id,
+          due_date: rule.next_due_date,
+          channel: rule.channel,
+          status: 'queued',
+        },
+      });
 
-    if (result.rows[0]) {
-      inserted.push(result.rows[0]);
+      inserted.push({
+        id: created.id,
+        reminder_rule_id: created.reminder_rule_id,
+        recipient_user_id: created.recipient_user_id,
+        pet_id: created.pet_id,
+        record_type: created.record_type as ReminderRecordType,
+        record_id: created.record_id,
+        due_date: created.due_date,
+        channel: created.channel as ReminderChannel,
+        status: created.status as ReminderNotificationStatus,
+        queued_at: created.queued_at ?? new Date(),
+        sent_at: created.sent_at,
+        failed_at: created.failed_at,
+        provider_message_id: created.provider_message_id,
+        error_message: created.error_message,
+      });
+    } catch (error) {
+      if (
+        !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+        error.code !== 'P2002'
+      ) {
+        throw error;
+      }
     }
   }
 
@@ -270,89 +390,199 @@ export async function queueReminderNotifications(
 }
 
 export async function advanceMedicationReminderRule(
-  client: PoolClient,
+  client: PrismaClientLike,
   ruleId: number,
   expectedDueDate: Date
 ): Promise<ReminderRule | null> {
-  const result = await client.query<ReminderRule>(
-    `UPDATE pet_reminder_rules
-     SET next_due_date = CASE
-           WHEN recurrence_unit = 'months' THEN (next_due_date + make_interval(months => recurrence_value))::date
-           WHEN recurrence_unit = 'years' THEN (next_due_date + make_interval(years => recurrence_value))::date
-           ELSE next_due_date
-         END,
-         updated_at = CURRENT_TIMESTAMP
-     WHERE id = $1
-       AND next_due_date = $2
-       AND record_type = 'medication'
-       AND recurrence_value IS NOT NULL
-       AND recurrence_unit IS NOT NULL
-     RETURNING *`,
-    [ruleId, expectedDueDate]
-  );
+  const rule = await client.pet_reminder_rules.findFirst({
+    where: {
+      id: ruleId,
+      next_due_date: expectedDueDate,
+      record_type: 'medication',
+      recurrence_value: {
+        not: null,
+      },
+      recurrence_unit: {
+        not: null,
+      },
+    },
+  });
 
-  return mapQueryOne(result);
+  if (!rule || !rule.recurrence_value || !rule.recurrence_unit) {
+    return null;
+  }
+
+  const nextDueDate = new Date(rule.next_due_date);
+  if (rule.recurrence_unit === 'months') {
+    nextDueDate.setUTCMonth(nextDueDate.getUTCMonth() + rule.recurrence_value);
+  } else if (rule.recurrence_unit === 'years') {
+    nextDueDate.setUTCFullYear(nextDueDate.getUTCFullYear() + rule.recurrence_value);
+  }
+
+  const updated = await client.pet_reminder_rules.update({
+    where: {
+      id: rule.id,
+    },
+    data: {
+      next_due_date: nextDueDate,
+      updated_at: new Date(),
+    },
+  });
+
+  return {
+    id: updated.id,
+    pet_id: updated.pet_id,
+    record_type: updated.record_type as ReminderRecordType,
+    record_id: updated.record_id,
+    channel: updated.channel as ReminderChannel,
+    lead_time_value: updated.lead_time_value,
+    lead_time_unit: updated.lead_time_unit as ReminderLeadTimeUnit,
+    next_due_date: updated.next_due_date,
+    recurrence_value: updated.recurrence_value,
+    recurrence_unit: updated.recurrence_unit as ReminderRecurrenceUnit | null,
+    is_enabled: updated.is_enabled,
+    created_by_user_id: updated.created_by_user_id,
+    updated_by_user_id: updated.updated_by_user_id,
+    created_at: updated.created_at ?? new Date(),
+    updated_at: updated.updated_at ?? new Date(),
+  };
 }
 
 export async function getQueuedReminderNotifications(): Promise<ReminderNotification[]> {
-  return query<ReminderNotification>(
-    `SELECT *
-     FROM pet_reminder_notifications
-     WHERE status = 'queued'
-       AND sent_at IS NULL
-     ORDER BY queued_at ASC, id ASC`
-  );
+  const notifications = await prisma.pet_reminder_notifications.findMany({
+    where: {
+      status: 'queued',
+      sent_at: null,
+    },
+    orderBy: [
+      {
+        queued_at: 'asc',
+      },
+      {
+        id: 'asc',
+      },
+    ],
+  });
+
+  return notifications.map((notification) => ({
+    id: notification.id,
+    reminder_rule_id: notification.reminder_rule_id,
+    recipient_user_id: notification.recipient_user_id,
+    pet_id: notification.pet_id,
+    record_type: notification.record_type as ReminderRecordType,
+    record_id: notification.record_id,
+    due_date: notification.due_date,
+    channel: notification.channel as ReminderChannel,
+    status: notification.status as ReminderNotificationStatus,
+    queued_at: notification.queued_at ?? new Date(),
+    sent_at: notification.sent_at,
+    failed_at: notification.failed_at,
+    provider_message_id: notification.provider_message_id,
+    error_message: notification.error_message,
+  }));
 }
 
 export async function getReminderNotificationById(
   id: number
 ): Promise<ReminderNotificationWithContext | null> {
-  return queryOne<ReminderNotificationWithContext>(
-    `SELECT rn.*, u.email AS recipient_email, u.name AS recipient_name, p.name AS pet_name,
-            CASE
-              WHEN rn.record_type = 'vaccination' THEN v.name
-              WHEN rn.record_type = 'medication' THEN m.name
-            END AS record_name
-     FROM pet_reminder_notifications rn
-     JOIN users u ON u.id = rn.recipient_user_id
-     JOIN pets p ON p.id = rn.pet_id
-     LEFT JOIN pet_vaccinations v
-       ON rn.record_type = 'vaccination'
-      AND v.id = rn.record_id
-     LEFT JOIN pet_medications m
-       ON rn.record_type = 'medication'
-      AND m.id = rn.record_id
-     WHERE rn.id = $1`,
-    [id]
-  );
+  const notification = await prisma.pet_reminder_notifications.findUnique({
+    where: {
+      id,
+    },
+    include: {
+      users: {
+        select: {
+          email: true,
+          name: true,
+        },
+      },
+      pets: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
+
+  if (!notification) {
+    return null;
+  }
+
+  let recordName: string | null = null;
+  if (notification.record_type === 'vaccination') {
+    const vaccination = await prisma.pet_vaccinations.findUnique({
+      where: {
+        id: notification.record_id,
+      },
+      select: {
+        name: true,
+      },
+    });
+    recordName = vaccination?.name ?? null;
+  } else if (notification.record_type === 'medication') {
+    const medication = await prisma.pet_medications.findUnique({
+      where: {
+        id: notification.record_id,
+      },
+      select: {
+        name: true,
+      },
+    });
+    recordName = medication?.name ?? null;
+  }
+
+  return {
+    id: notification.id,
+    reminder_rule_id: notification.reminder_rule_id,
+    recipient_user_id: notification.recipient_user_id,
+    pet_id: notification.pet_id,
+    record_type: notification.record_type as ReminderRecordType,
+    record_id: notification.record_id,
+    due_date: notification.due_date,
+    channel: notification.channel as ReminderChannel,
+    status: notification.status as ReminderNotificationStatus,
+    queued_at: notification.queued_at ?? new Date(),
+    sent_at: notification.sent_at,
+    failed_at: notification.failed_at,
+    provider_message_id: notification.provider_message_id,
+    error_message: notification.error_message,
+    recipient_email: notification.users.email,
+    recipient_name: notification.users.name,
+    pet_name: notification.pets.name,
+    record_name: recordName ?? 'Record',
+  };
 }
 
 export async function markReminderNotificationSent(
   id: number,
   providerMessageId: string | null
 ): Promise<void> {
-  await query(
-    `UPDATE pet_reminder_notifications
-     SET status = 'sent',
-         sent_at = CURRENT_TIMESTAMP,
-         failed_at = NULL,
-         error_message = NULL,
-         provider_message_id = $2
-     WHERE id = $1`,
-    [id, providerMessageId]
-  );
+  await prisma.pet_reminder_notifications.updateMany({
+    where: {
+      id,
+    },
+    data: {
+      status: 'sent',
+      sent_at: new Date(),
+      failed_at: null,
+      error_message: null,
+      provider_message_id: providerMessageId,
+    },
+  });
 }
 
 export async function markReminderNotificationFailed(
   id: number,
   errorMessage: string
 ): Promise<void> {
-  await query(
-    `UPDATE pet_reminder_notifications
-     SET status = 'failed',
-         failed_at = CURRENT_TIMESTAMP,
-         error_message = $2
-     WHERE id = $1`,
-    [id, errorMessage]
-  );
+  await prisma.pet_reminder_notifications.updateMany({
+    where: {
+      id,
+    },
+    data: {
+      status: 'failed',
+      failed_at: new Date(),
+      error_message: errorMessage,
+    },
+  });
 }

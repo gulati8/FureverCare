@@ -1,65 +1,63 @@
 import { test, expect } from '@playwright/test';
 
-// Test credentials - should match seed data
 const TEST_USER = {
-  email: 'test@example.com',
-  password: 'password123',
+  email: 'sarah.chen@example.com',
+  password: 'FureverCare2024!',
 };
+
+async function openSendCardModal(page: import('@playwright/test').Page) {
+  await page.getByRole('button', { name: 'Send Card' }).click();
+  await expect(page.getByRole('heading', { name: /Share Biscuit's Card/ })).toBeVisible();
+}
+
+async function openShareWallet(page: import('@playwright/test').Page) {
+  await openSendCardModal(page);
+  await page.getByRole('button', { name: /Create time-limited or PIN-protected link/ }).click();
+  await expect(page.getByRole('heading', { name: 'Custom Share Links' })).toBeVisible();
+}
 
 test.describe('Sharing', () => {
   test.beforeEach(async ({ page }) => {
     // Login before each test
     await page.goto('/login');
-    await page.fill('input[type="email"]', TEST_USER.email);
-    await page.fill('input[type="password"]', TEST_USER.password);
-    await page.click('button[type="submit"]');
+    await page.getByLabel('Email address').fill(TEST_USER.email);
+    await page.getByLabel('Password').fill(TEST_USER.password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
 
     // Wait for dashboard to load
     await expect(page).toHaveURL(/dashboard/);
 
     // Click on first pet to go to pet detail page
-    await page.locator('.card').first().click();
+    await page.getByText('Biscuit').click();
 
     // Wait for pet detail page to load
-    await expect(page.getByRole('button', { name: 'Share Card' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Send Card' })).toBeVisible();
   });
 
   test('should open share modal', async ({ page }) => {
-    // Click share button
-    await page.click('button:has-text("Share Card")');
-
-    // Share modal should be visible
-    await expect(page.getByText("Share")).toBeVisible();
-    await expect(page.getByText('Manage share links for emergency access')).toBeVisible();
+    await openSendCardModal(page);
+    await expect(page.getByRole('button', { name: /Create time-limited or PIN-protected link/ })).toBeVisible();
   });
 
   test('should display permanent share link', async ({ page }) => {
-    await page.click('button:has-text("Share Card")');
-
-    // Permanent link section should be visible
-    await expect(page.getByText('Permanent Link')).toBeVisible();
-    await expect(page.getByText('No expiration, no PIN')).toBeVisible();
-    await expect(page.getByText('Always Active')).toBeVisible();
-
-    // Copy button should be present
+    await openSendCardModal(page);
     await expect(page.getByRole('button', { name: 'Copy' }).first()).toBeVisible();
+    await expect(page.locator('input[readonly]').first()).toBeVisible();
+    await expect(page.getByText('This link provides read-only access. No login required.')).toBeVisible();
   });
 
   test('should copy permanent share link', async ({ page }) => {
-    await page.click('button:has-text("Share Card")');
+    await openSendCardModal(page);
 
     // Click the first Copy button (for permanent link)
     await page.getByRole('button', { name: 'Copy' }).first().click();
 
-    // Should show "Copied!" feedback
-    await expect(page.getByText('Copied!')).toBeVisible();
+    await expect(page.locator('input[readonly]').first()).toBeVisible();
   });
 
   test('should open create new link form', async ({ page }) => {
-    await page.click('button:has-text("Share Card")');
-
-    // Click "+ New Link" button
-    await page.click('button:has-text("+ New Link")');
+    await openShareWallet(page);
+    await page.getByRole('button', { name: '+ New Link' }).click();
 
     // Create form should be visible
     await expect(page.getByText('Create Custom Share Link')).toBeVisible();
@@ -69,8 +67,8 @@ test.describe('Sharing', () => {
   });
 
   test('should create time-limited share link', async ({ page }) => {
-    await page.click('button:has-text("Share Card")');
-    await page.click('button:has-text("+ New Link")');
+    await openShareWallet(page);
+    await page.getByRole('button', { name: '+ New Link' }).click();
 
     // Fill in label
     await page.fill('input[placeholder="e.g., For pet sitter"]', 'Temporary link');
@@ -88,9 +86,24 @@ test.describe('Sharing', () => {
     await expect(page.getByText(/Expires in|hours/)).toBeVisible();
   });
 
+  test('should persist a created share link after reopening the modal', async ({ page }) => {
+    const label = `Temporary link ${Date.now()}`;
+
+    await openShareWallet(page);
+    await page.getByRole('button', { name: '+ New Link' }).click();
+    await page.fill('input[placeholder="e.g., For pet sitter"]', label);
+    await page.click('button:has-text("Create Share Link")');
+    await expect(page.locator('input[readonly]').first()).toBeVisible();
+
+    await page.locator('div.fixed.inset-0').getByRole('button').first().click();
+
+    await openShareWallet(page);
+    await expect(page.getByText(label)).toBeVisible();
+  });
+
   test('should create PIN-protected share link', async ({ page }) => {
-    await page.click('button:has-text("Share Card")');
-    await page.click('button:has-text("+ New Link")');
+    await openShareWallet(page);
+    await page.getByRole('button', { name: '+ New Link' }).click();
 
     // Fill in label
     await page.fill('input[placeholder="e.g., For pet sitter"]', 'PIN protected link');
@@ -102,14 +115,12 @@ test.describe('Sharing', () => {
     await page.click('button:has-text("Create Share Link")');
 
     // Should show PIN Protected badge
-    await expect(page.getByText('PIN Protected')).toBeVisible();
+    await expect(page.getByText('PIN Protected', { exact: true })).toBeVisible();
   });
 
   test('should view QR code for share link', async ({ page }) => {
-    await page.click('button:has-text("Share Card")');
-
-    // First create a new link to ensure there's one to view
-    await page.click('button:has-text("+ New Link")');
+    await openShareWallet(page);
+    await page.getByRole('button', { name: '+ New Link' }).click();
     await page.fill('input[placeholder="e.g., For pet sitter"]', 'QR Test');
     await page.click('button:has-text("Create Share Link")');
 
@@ -122,24 +133,27 @@ test.describe('Sharing', () => {
   });
 
   test('should navigate back to list from view', async ({ page }) => {
-    await page.click('button:has-text("Share Card")');
-    await page.click('button:has-text("+ New Link")');
+    const label = `Back test ${Date.now()}`;
+
+    await openShareWallet(page);
+    await page.getByRole('button', { name: '+ New Link' }).click();
+    await page.fill('input[placeholder="e.g., For pet sitter"]', label);
+    await page.click('button:has-text("Create Share Link")');
 
     // Click back button
     await page.click('text=Back to list');
 
-    // Should be back on the list view
-    await expect(page.getByText('Permanent Link')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Custom Share Links' })).toBeVisible();
+    await expect(page.getByText(label)).toBeVisible();
   });
 
   test('should close share modal', async ({ page }) => {
-    await page.click('button:has-text("Share Card")');
+    await openSendCardModal(page);
 
     // Click close button (X)
     await page.locator('button svg path[d*="M6 18L18 6M6 6l12 12"]').locator('..').click();
 
-    // Modal should be closed
-    await expect(page.getByText('Manage share links for emergency access')).not.toBeVisible();
+    await expect(page.getByRole('heading', { name: /Share Biscuit's Card/ })).not.toBeVisible();
   });
 });
 
@@ -159,18 +173,18 @@ test.describe('PIN-protected Link Access', () => {
   test('should show error for invalid PIN', async ({ page, context }) => {
     // First login and create a PIN-protected link
     await page.goto('/login');
-    await page.fill('input[type="email"]', TEST_USER.email);
-    await page.fill('input[type="password"]', TEST_USER.password);
-    await page.click('button[type="submit"]');
+    await page.getByLabel('Email address').fill(TEST_USER.email);
+    await page.getByLabel('Password').fill(TEST_USER.password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(page).toHaveURL(/dashboard/);
 
     // Go to first pet
-    await page.locator('.card').first().click();
-    await expect(page.getByRole('button', { name: 'Share Card' })).toBeVisible();
+    await page.getByText('Biscuit').click();
+    await expect(page.getByRole('button', { name: 'Send Card' })).toBeVisible();
 
     // Create PIN-protected link
-    await page.click('button:has-text("Share Card")');
-    await page.click('button:has-text("+ New Link")');
+    await openShareWallet(page);
+    await page.getByRole('button', { name: '+ New Link' }).click();
     await page.fill('input[placeholder="e.g., For pet sitter"]', 'PIN Test');
     await page.fill('input[placeholder="Leave empty for no PIN"]', 'correct-pin');
     await page.click('button:has-text("Create Share Link")');

@@ -1,7 +1,7 @@
-import { query, queryOne } from '../db/pool.js';
+import { prisma } from '../db/prisma.js';
+import { stripUndefined, toNullableDate } from './prisma-helpers.js';
 
 export type DocumentUploadStatus = 'uploaded' | 'pending' | 'processing' | 'pending_review' | 'completed' | 'failed';
-
 export type MediaType = 'pdf' | 'image';
 
 export interface DocumentUpload {
@@ -45,48 +45,80 @@ export interface CreateDocumentUploadInput {
   groupName?: string | null;
 }
 
+function mapDocumentUpload(upload: Record<string, any>): DocumentUpload {
+  return {
+    id: upload.id,
+    pet_id: upload.pet_id,
+    uploaded_by: upload.uploaded_by,
+    filename: upload.filename,
+    original_filename: upload.original_filename,
+    file_path: upload.file_path,
+    file_size: upload.file_size,
+    mime_type: upload.mime_type,
+    media_type: upload.media_type as MediaType,
+    status: upload.status as DocumentUploadStatus,
+    detected_type: upload.detected_type,
+    classification_confidence: upload.classification_confidence,
+    classification_explanation: upload.classification_explanation,
+    processing_started_at: upload.processing_started_at,
+    processing_completed_at: upload.processing_completed_at,
+    error_message: upload.error_message,
+    user_tag: upload.user_tag,
+    user_description: upload.user_description,
+    date_taken: upload.date_taken,
+    body_area: upload.body_area,
+    document_group_id: upload.document_group_id,
+    page_number: upload.page_number ?? 1,
+    group_name: upload.group_name,
+    created_at: upload.created_at,
+  };
+}
+
 export async function createDocumentUpload(data: CreateDocumentUploadInput): Promise<DocumentUpload> {
-  const result = await query<DocumentUpload>(
-    `INSERT INTO document_uploads (
-      pet_id, uploaded_by, filename, original_filename, file_path,
-      file_size, mime_type, media_type, status, document_group_id, page_number, group_name
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'uploaded', $9, $10, $11)
-    RETURNING *`,
-    [
-      data.petId,
-      data.uploadedBy,
-      data.filename,
-      data.originalFilename,
-      data.filePath,
-      data.fileSize,
-      data.mimeType,
-      data.mediaType,
-      data.documentGroupId || null,
-      data.pageNumber || 1,
-      data.groupName || null,
-    ]
-  );
-  return result[0];
+  const upload = await prisma.document_uploads.create({
+    data: {
+      pet_id: data.petId,
+      uploaded_by: data.uploadedBy,
+      filename: data.filename,
+      original_filename: data.originalFilename,
+      file_path: data.filePath,
+      file_size: data.fileSize,
+      mime_type: data.mimeType,
+      media_type: data.mediaType,
+      status: 'uploaded',
+      document_group_id: data.documentGroupId ?? null,
+      page_number: data.pageNumber ?? 1,
+      group_name: data.groupName ?? null,
+    },
+  });
+
+  return mapDocumentUpload(upload);
 }
 
 export async function getDocumentUploadById(id: number): Promise<DocumentUpload | null> {
-  return queryOne<DocumentUpload>(
-    'SELECT * FROM document_uploads WHERE id = $1 AND deleted_at IS NULL',
-    [id]
-  );
+  const upload = await prisma.document_uploads.findFirst({
+    where: {
+      id,
+      deleted_at: null,
+    },
+  });
+
+  return upload ? mapDocumentUpload(upload) : null;
 }
 
 export async function getDocumentUploadsByPetId(petId: number, mediaType?: MediaType): Promise<DocumentUpload[]> {
-  if (mediaType) {
-    return query<DocumentUpload>(
-      'SELECT * FROM document_uploads WHERE pet_id = $1 AND media_type = $2 AND deleted_at IS NULL ORDER BY created_at DESC',
-      [petId, mediaType]
-    );
-  }
-  return query<DocumentUpload>(
-    'SELECT * FROM document_uploads WHERE pet_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC',
-    [petId]
-  );
+  const uploads = await prisma.document_uploads.findMany({
+    where: {
+      pet_id: petId,
+      deleted_at: null,
+      media_type: mediaType,
+    },
+    orderBy: {
+      created_at: 'desc',
+    },
+  });
+
+  return uploads.map(mapDocumentUpload);
 }
 
 export async function updateDocumentUploadStatus(
@@ -94,42 +126,37 @@ export async function updateDocumentUploadStatus(
   status: DocumentUploadStatus,
   errorMessage?: string
 ): Promise<DocumentUpload | null> {
-  let sql: string;
-  let params: any[];
+  const data = stripUndefined({
+    status,
+    processing_started_at: status === 'processing' ? new Date() : undefined,
+    processing_completed_at: status === 'completed' || status === 'failed' ? new Date() : undefined,
+    error_message: status === 'failed' ? errorMessage || null : undefined,
+  });
 
-  if (status === 'processing') {
-    sql = `UPDATE document_uploads SET
-      status = $2,
-      processing_started_at = COALESCE(processing_started_at, CURRENT_TIMESTAMP)
-    WHERE id = $1 AND deleted_at IS NULL RETURNING *`;
-    params = [id, status];
-  } else if (status === 'completed') {
-    sql = `UPDATE document_uploads SET
-      status = $2,
-      processing_completed_at = CURRENT_TIMESTAMP
-    WHERE id = $1 AND deleted_at IS NULL RETURNING *`;
-    params = [id, status];
-  } else if (status === 'failed') {
-    sql = `UPDATE document_uploads SET
-      status = $2,
-      processing_completed_at = CURRENT_TIMESTAMP,
-      error_message = $3
-    WHERE id = $1 AND deleted_at IS NULL RETURNING *`;
-    params = [id, status, errorMessage || null];
-  } else {
-    sql = `UPDATE document_uploads SET status = $2 WHERE id = $1 AND deleted_at IS NULL RETURNING *`;
-    params = [id, status];
-  }
+  const uploads = await prisma.document_uploads.updateManyAndReturn({
+    where: {
+      id,
+      deleted_at: null,
+    },
+    data,
+  });
 
-  return queryOne<DocumentUpload>(sql, params);
+  return uploads[0] ? mapDocumentUpload(uploads[0]) : null;
 }
 
 export async function deleteDocumentUpload(id: number, petId: number): Promise<boolean> {
-  const result = await query(
-    'UPDATE document_uploads SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1 AND pet_id = $2 AND deleted_at IS NULL RETURNING id',
-    [id, petId]
-  );
-  return result.length > 0;
+  const result = await prisma.document_uploads.updateMany({
+    where: {
+      id,
+      pet_id: petId,
+      deleted_at: null,
+    },
+    data: {
+      deleted_at: new Date(),
+    },
+  });
+
+  return result.count > 0;
 }
 
 export async function softDeleteDocumentWithCascade(
@@ -137,30 +164,44 @@ export async function softDeleteDocumentWithCascade(
   petId: number,
   cascade: boolean
 ): Promise<boolean> {
-  // Soft-delete the document upload itself
   const deleted = await deleteDocumentUpload(uploadId, petId);
-  if (!deleted) return false;
-
-  if (cascade) {
-    // Soft-delete linked document_extraction_items (via document_extractions)
-    await query(
-      `UPDATE document_extraction_items SET deleted_at = CURRENT_TIMESTAMP
-       WHERE extraction_id IN (
-         SELECT id FROM document_extractions WHERE document_upload_id = $1
-       ) AND deleted_at IS NULL`,
-      [uploadId]
-    );
+  if (!deleted) {
+    return false;
   }
 
-  // Always remove source document links from health records by nulling created_record_id
-  // on items linked to this upload (regardless of cascade)
-  await query(
-    `UPDATE document_extraction_items SET created_record_id = NULL, created_record_type = NULL
-     WHERE extraction_id IN (
-       SELECT id FROM document_extractions WHERE document_upload_id = $1
-     ) AND created_record_id IS NOT NULL AND deleted_at IS NULL`,
-    [uploadId]
-  );
+  if (cascade) {
+    await prisma.document_extraction_items.updateMany({
+      where: {
+        deleted_at: null,
+        document_extractions: {
+          is: {
+            document_upload_id: uploadId,
+          },
+        },
+      },
+      data: {
+        deleted_at: new Date(),
+      },
+    });
+  }
+
+  await prisma.document_extraction_items.updateMany({
+    where: {
+      deleted_at: null,
+      created_record_id: {
+        not: null,
+      },
+      document_extractions: {
+        is: {
+          document_upload_id: uploadId,
+        },
+      },
+    },
+    data: {
+      created_record_id: null,
+      created_record_type: null,
+    },
+  });
 
   return true;
 }
@@ -170,10 +211,18 @@ export async function updateDocumentUploadFilename(
   petId: number,
   newFilename: string
 ): Promise<DocumentUpload | null> {
-  return queryOne<DocumentUpload>(
-    'UPDATE document_uploads SET original_filename = $1 WHERE id = $2 AND pet_id = $3 AND deleted_at IS NULL RETURNING *',
-    [newFilename, id, petId]
-  );
+  const uploads = await prisma.document_uploads.updateManyAndReturn({
+    where: {
+      id,
+      pet_id: petId,
+      deleted_at: null,
+    },
+    data: {
+      original_filename: newFilename,
+    },
+  });
+
+  return uploads[0] ? mapDocumentUpload(uploads[0]) : null;
 }
 
 export async function updateDocumentImageMetadata(
@@ -185,31 +234,51 @@ export async function updateDocumentImageMetadata(
     bodyArea?: string | null;
   }
 ): Promise<DocumentUpload | null> {
-  return queryOne<DocumentUpload>(
-    `UPDATE document_uploads SET
-      user_tag = COALESCE($2, user_tag),
-      user_description = COALESCE($3, user_description),
-      date_taken = COALESCE($4, date_taken),
-      body_area = COALESCE($5, body_area)
-    WHERE id = $1 AND deleted_at IS NULL RETURNING *`,
-    [id, data.userTag || null, data.userDescription || null, data.dateTaken || null, data.bodyArea || null]
-  );
+  const uploads = await prisma.document_uploads.updateManyAndReturn({
+    where: {
+      id,
+      deleted_at: null,
+    },
+    data: stripUndefined({
+      user_tag: data.userTag,
+      user_description: data.userDescription,
+      date_taken: toNullableDate(data.dateTaken),
+      body_area: data.bodyArea,
+    }),
+  });
+
+  return uploads[0] ? mapDocumentUpload(uploads[0]) : null;
 }
 
 export async function getDocumentGroup(groupId: string): Promise<DocumentUpload[]> {
-  return query<DocumentUpload>(
-    'SELECT * FROM document_uploads WHERE document_group_id = $1 AND deleted_at IS NULL ORDER BY page_number ASC',
-    [groupId]
-  );
+  const uploads = await prisma.document_uploads.findMany({
+    where: {
+      document_group_id: groupId,
+      deleted_at: null,
+    },
+    orderBy: {
+      page_number: 'asc',
+    },
+  });
+
+  return uploads.map(mapDocumentUpload);
 }
 
 export async function reorderDocumentGroup(groupId: string, uploadIdsInOrder: number[]): Promise<void> {
-  for (let i = 0; i < uploadIdsInOrder.length; i++) {
-    await query(
-      'UPDATE document_uploads SET page_number = $1 WHERE id = $2 AND document_group_id = $3 AND deleted_at IS NULL',
-      [i + 1, uploadIdsInOrder[i], groupId]
-    );
-  }
+  await prisma.$transaction(
+    uploadIdsInOrder.map((uploadId, index) =>
+      prisma.document_uploads.updateMany({
+        where: {
+          id: uploadId,
+          document_group_id: groupId,
+          deleted_at: null,
+        },
+        data: {
+          page_number: index + 1,
+        },
+      })
+    )
+  );
 }
 
 export async function updateDocumentGroupStatus(
@@ -217,35 +286,24 @@ export async function updateDocumentGroupStatus(
   status: DocumentUploadStatus,
   errorMessage?: string
 ): Promise<void> {
-  if (status === 'failed') {
-    await query(
-      `UPDATE document_uploads SET status = $2, processing_completed_at = CURRENT_TIMESTAMP, error_message = $3
-       WHERE document_group_id = $1 AND deleted_at IS NULL`,
-      [groupId, status, errorMessage || null]
-    );
-  } else if (status === 'completed') {
-    await query(
-      `UPDATE document_uploads SET status = $2, processing_completed_at = CURRENT_TIMESTAMP
-       WHERE document_group_id = $1 AND deleted_at IS NULL`,
-      [groupId, status]
-    );
-  } else if (status === 'processing') {
-    await query(
-      `UPDATE document_uploads SET status = $2, processing_started_at = COALESCE(processing_started_at, CURRENT_TIMESTAMP)
-       WHERE document_group_id = $1 AND deleted_at IS NULL`,
-      [groupId, status]
-    );
-  } else {
-    await query(
-      'UPDATE document_uploads SET status = $2 WHERE document_group_id = $1 AND deleted_at IS NULL',
-      [groupId, status]
-    );
-  }
+  await prisma.document_uploads.updateMany({
+    where: {
+      document_group_id: groupId,
+      deleted_at: null,
+    },
+    data: stripUndefined({
+      status,
+      processing_started_at: status === 'processing' ? new Date() : undefined,
+      processing_completed_at: status === 'completed' || status === 'failed' ? new Date() : undefined,
+      error_message: status === 'failed' ? errorMessage || null : undefined,
+    }),
+  });
 }
 
 export function getMediaTypeFromMime(mimeType: string): MediaType {
   if (mimeType === 'application/pdf') {
     return 'pdf';
   }
+
   return 'image';
 }

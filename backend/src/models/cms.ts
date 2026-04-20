@@ -1,6 +1,5 @@
-import { pool, query, queryOne, transaction } from '../db/pool.js';
-
-// ============ Interfaces ============
+import { prisma } from '../db/prisma.js';
+import { stripUndefined } from './prisma-helpers.js';
 
 export interface CmsPage {
   id: number;
@@ -53,210 +52,259 @@ export interface UpdateBlockInput {
   is_visible?: boolean;
 }
 
-// ============ Page Functions ============
+function mapPage(page: Record<string, any>): CmsPage {
+  return {
+    id: page.id,
+    slug: page.slug,
+    title: page.title,
+    is_published: page.is_published ?? false,
+    created_at: page.created_at,
+    updated_at: page.updated_at,
+  };
+}
+
+function mapBlock(block: Record<string, any>): CmsBlock {
+  return {
+    id: block.id,
+    page_id: block.page_id,
+    block_type: block.block_type,
+    sort_order: block.sort_order,
+    content: (block.content ?? {}) as Record<string, any>,
+    is_visible: block.is_visible ?? true,
+    created_at: block.created_at,
+    updated_at: block.updated_at,
+  };
+}
 
 export async function findPageBySlug(slug: string): Promise<CmsPageWithBlocks | null> {
-  const page = await queryOne<CmsPage>(
-    `SELECT * FROM cms_pages WHERE slug = $1 AND is_published = true`,
-    [slug]
-  );
+  const page = await prisma.cms_pages.findFirst({
+    where: {
+      slug,
+      is_published: true,
+    },
+    include: {
+      cms_blocks: {
+        where: {
+          is_visible: true,
+        },
+        orderBy: {
+          sort_order: 'asc',
+        },
+      },
+    },
+  });
 
-  if (!page) return null;
+  if (!page) {
+    return null;
+  }
 
-  const blocks = await query<CmsBlock>(
-    `SELECT * FROM cms_blocks
-     WHERE page_id = $1 AND is_visible = true
-     ORDER BY sort_order ASC`,
-    [page.id]
-  );
-
-  return { ...page, blocks };
+  return {
+    ...mapPage(page),
+    blocks: page.cms_blocks.map(mapBlock),
+  };
 }
 
 export async function findAllPages(): Promise<CmsPage[]> {
-  return query<CmsPage>(
-    `SELECT * FROM cms_pages ORDER BY created_at DESC`
-  );
+  const pages = await prisma.cms_pages.findMany({
+    orderBy: {
+      created_at: 'desc',
+    },
+  });
+
+  return pages.map(mapPage);
 }
 
 export async function findPageById(id: number): Promise<CmsPage | null> {
-  return queryOne<CmsPage>(
-    `SELECT * FROM cms_pages WHERE id = $1`,
-    [id]
-  );
+  const page = await prisma.cms_pages.findUnique({
+    where: {
+      id,
+    },
+  });
+
+  return page ? mapPage(page) : null;
 }
 
 export async function findPageByIdWithBlocks(id: number): Promise<CmsPageWithBlocks | null> {
-  const page = await findPageById(id);
-  if (!page) return null;
+  const page = await prisma.cms_pages.findUnique({
+    where: {
+      id,
+    },
+    include: {
+      cms_blocks: {
+        orderBy: {
+          sort_order: 'asc',
+        },
+      },
+    },
+  });
 
-  const blocks = await query<CmsBlock>(
-    `SELECT * FROM cms_blocks WHERE page_id = $1 ORDER BY sort_order ASC`,
-    [page.id]
-  );
+  if (!page) {
+    return null;
+  }
 
-  return { ...page, blocks };
+  return {
+    ...mapPage(page),
+    blocks: page.cms_blocks.map(mapBlock),
+  };
 }
 
 export async function createPage(input: CreatePageInput): Promise<CmsPage> {
-  const result = await queryOne<CmsPage>(
-    `INSERT INTO cms_pages (slug, title, is_published)
-     VALUES ($1, $2, $3)
-     RETURNING *`,
-    [input.slug, input.title, input.is_published ?? false]
-  );
+  const page = await prisma.cms_pages.create({
+    data: {
+      slug: input.slug,
+      title: input.title,
+      is_published: input.is_published ?? false,
+    },
+  });
 
-  return result!;
+  return mapPage(page);
 }
 
 export async function updatePage(id: number, input: UpdatePageInput): Promise<CmsPage | null> {
-  const fields: string[] = [];
-  const values: any[] = [];
-  let paramCount = 1;
+  const data = stripUndefined({
+    slug: input.slug,
+    title: input.title,
+    is_published: input.is_published,
+    updated_at: new Date(),
+  });
 
-  if (input.slug !== undefined) {
-    fields.push(`slug = $${paramCount++}`);
-    values.push(input.slug);
-  }
-  if (input.title !== undefined) {
-    fields.push(`title = $${paramCount++}`);
-    values.push(input.title);
-  }
-  if (input.is_published !== undefined) {
-    fields.push(`is_published = $${paramCount++}`);
-    values.push(input.is_published);
+  if (Object.keys(data).length === 1) {
+    return findPageById(id);
   }
 
-  if (fields.length === 0) return findPageById(id);
+  const pages = await prisma.cms_pages.updateManyAndReturn({
+    where: {
+      id,
+    },
+    data,
+  });
 
-  fields.push(`updated_at = CURRENT_TIMESTAMP`);
-  values.push(id);
-
-  return queryOne<CmsPage>(
-    `UPDATE cms_pages SET ${fields.join(', ')} WHERE id = $${paramCount} RETURNING *`,
-    values
-  );
+  return pages[0] ? mapPage(pages[0]) : null;
 }
 
 export async function deletePage(id: number): Promise<boolean> {
-  const result = await pool.query(
-    `DELETE FROM cms_pages WHERE id = $1`,
-    [id]
-  );
-  return (result.rowCount ?? 0) > 0;
+  const result = await prisma.cms_pages.deleteMany({
+    where: {
+      id,
+    },
+  });
+
+  return result.count > 0;
 }
 
 export async function publishPage(id: number): Promise<CmsPage | null> {
-  return queryOne<CmsPage>(
-    `UPDATE cms_pages
-     SET is_published = true, updated_at = CURRENT_TIMESTAMP
-     WHERE id = $1
-     RETURNING *`,
-    [id]
-  );
+  const pages = await prisma.cms_pages.updateManyAndReturn({
+    where: {
+      id,
+    },
+    data: {
+      is_published: true,
+      updated_at: new Date(),
+    },
+  });
+
+  return pages[0] ? mapPage(pages[0]) : null;
 }
 
 export async function unpublishPage(id: number): Promise<CmsPage | null> {
-  return queryOne<CmsPage>(
-    `UPDATE cms_pages
-     SET is_published = false, updated_at = CURRENT_TIMESTAMP
-     WHERE id = $1
-     RETURNING *`,
-    [id]
-  );
+  const pages = await prisma.cms_pages.updateManyAndReturn({
+    where: {
+      id,
+    },
+    data: {
+      is_published: false,
+      updated_at: new Date(),
+    },
+  });
+
+  return pages[0] ? mapPage(pages[0]) : null;
 }
 
-// ============ Block Functions ============
-
 export async function findBlocksByPageId(pageId: number): Promise<CmsBlock[]> {
-  return query<CmsBlock>(
-    `SELECT * FROM cms_blocks WHERE page_id = $1 ORDER BY sort_order ASC`,
-    [pageId]
-  );
+  const blocks = await prisma.cms_blocks.findMany({
+    where: {
+      page_id: pageId,
+    },
+    orderBy: {
+      sort_order: 'asc',
+    },
+  });
+
+  return blocks.map(mapBlock);
 }
 
 export async function findBlockById(id: number): Promise<CmsBlock | null> {
-  return queryOne<CmsBlock>(
-    `SELECT * FROM cms_blocks WHERE id = $1`,
-    [id]
-  );
+  const block = await prisma.cms_blocks.findUnique({
+    where: {
+      id,
+    },
+  });
+
+  return block ? mapBlock(block) : null;
 }
 
 export async function createBlock(input: CreateBlockInput): Promise<CmsBlock> {
-  const result = await queryOne<CmsBlock>(
-    `INSERT INTO cms_blocks (page_id, block_type, sort_order, content, is_visible)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING *`,
-    [
-      input.page_id,
-      input.block_type,
-      input.sort_order,
-      JSON.stringify(input.content),
-      input.is_visible ?? true
-    ]
-  );
+  const block = await prisma.cms_blocks.create({
+    data: {
+      page_id: input.page_id,
+      block_type: input.block_type,
+      sort_order: input.sort_order,
+      content: input.content,
+      is_visible: input.is_visible ?? true,
+    },
+  });
 
-  return result!;
+  return mapBlock(block);
 }
 
 export async function updateBlock(id: number, input: UpdateBlockInput): Promise<CmsBlock | null> {
-  const fields: string[] = [];
-  const values: any[] = [];
-  let paramCount = 1;
+  const data = stripUndefined({
+    block_type: input.block_type,
+    sort_order: input.sort_order,
+    content: input.content,
+    is_visible: input.is_visible,
+    updated_at: new Date(),
+  });
 
-  if (input.block_type !== undefined) {
-    fields.push(`block_type = $${paramCount++}`);
-    values.push(input.block_type);
-  }
-  if (input.sort_order !== undefined) {
-    fields.push(`sort_order = $${paramCount++}`);
-    values.push(input.sort_order);
-  }
-  if (input.content !== undefined) {
-    fields.push(`content = $${paramCount++}`);
-    values.push(JSON.stringify(input.content));
-  }
-  if (input.is_visible !== undefined) {
-    fields.push(`is_visible = $${paramCount++}`);
-    values.push(input.is_visible);
+  if (Object.keys(data).length === 1) {
+    return findBlockById(id);
   }
 
-  if (fields.length === 0) return findBlockById(id);
+  const blocks = await prisma.cms_blocks.updateManyAndReturn({
+    where: {
+      id,
+    },
+    data,
+  });
 
-  fields.push(`updated_at = CURRENT_TIMESTAMP`);
-  values.push(id);
-
-  return queryOne<CmsBlock>(
-    `UPDATE cms_blocks SET ${fields.join(', ')} WHERE id = $${paramCount} RETURNING *`,
-    values
-  );
+  return blocks[0] ? mapBlock(blocks[0]) : null;
 }
 
 export async function deleteBlock(id: number): Promise<boolean> {
-  const result = await pool.query(
-    `DELETE FROM cms_blocks WHERE id = $1`,
-    [id]
-  );
-  return (result.rowCount ?? 0) > 0;
+  const result = await prisma.cms_blocks.deleteMany({
+    where: {
+      id,
+    },
+  });
+
+  return result.count > 0;
 }
 
 export async function reorderBlocks(pageId: number, blockIds: number[]): Promise<CmsBlock[]> {
-  return transaction(async (client) => {
-    // Update each block's sort_order based on its position in the array
-    for (let i = 0; i < blockIds.length; i++) {
-      await client.query(
-        `UPDATE cms_blocks
-         SET sort_order = $1, updated_at = CURRENT_TIMESTAMP
-         WHERE id = $2 AND page_id = $3`,
-        [i, blockIds[i], pageId]
-      );
-    }
+  await prisma.$transaction(
+    blockIds.map((blockId, index) =>
+      prisma.cms_blocks.updateMany({
+        where: {
+          id: blockId,
+          page_id: pageId,
+        },
+        data: {
+          sort_order: index,
+          updated_at: new Date(),
+        },
+      })
+    )
+  );
 
-    // Return the updated blocks
-    const result = await client.query(
-      `SELECT * FROM cms_blocks WHERE page_id = $1 ORDER BY sort_order ASC`,
-      [pageId]
-    );
-    return result.rows;
-  });
+  return findBlocksByPageId(pageId);
 }

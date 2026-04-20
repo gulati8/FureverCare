@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid';
 import bcrypt from 'bcryptjs';
-import { query, queryOne } from '../db/pool.js';
+import { prisma } from '../db/prisma.js';
 
 export interface ShareToken {
   id: number;
@@ -47,56 +47,82 @@ export async function createShareToken(input: CreateShareTokenInput): Promise<Sh
     expiresAt.setHours(expiresAt.getHours() + input.expires_in_hours);
   }
 
-  const result = await queryOne<ShareToken>(
-    `INSERT INTO share_tokens (pet_id, token, label, pin_hash, expires_at, created_by)
-     VALUES ($1, $2, $3, $4, $5, $6)
-     RETURNING *`,
-    [input.pet_id, token, input.label || null, pinHash, expiresAt, input.created_by]
-  );
+  const result = await prisma.share_tokens.create({
+    data: {
+      pet_id: input.pet_id,
+      token,
+      label: input.label || null,
+      pin_hash: pinHash,
+      expires_at: expiresAt,
+      created_by: input.created_by,
+    },
+  });
 
-  return result!;
+  return result as ShareToken;
 }
 
 export async function findShareTokenByToken(token: string): Promise<ShareToken | null> {
-  return queryOne<ShareToken>('SELECT * FROM share_tokens WHERE token = $1', [token]);
+  return prisma.share_tokens.findUnique({
+    where: {
+      token,
+    },
+  }) as Promise<ShareToken | null>;
 }
 
 export async function findShareTokenById(id: number): Promise<ShareToken | null> {
-  return queryOne<ShareToken>('SELECT * FROM share_tokens WHERE id = $1', [id]);
+  return prisma.share_tokens.findUnique({
+    where: {
+      id,
+    },
+  }) as Promise<ShareToken | null>;
 }
 
 export async function findShareTokensByPetId(petId: number): Promise<ShareToken[]> {
-  return query<ShareToken>(
-    'SELECT * FROM share_tokens WHERE pet_id = $1 ORDER BY created_at DESC',
-    [petId]
-  );
+  return prisma.share_tokens.findMany({
+    where: {
+      pet_id: petId,
+    },
+    orderBy: {
+      created_at: 'desc',
+    },
+  }) as Promise<ShareToken[]>;
 }
 
 export async function updateShareTokenAccess(token: string): Promise<void> {
-  await queryOne(
-    `UPDATE share_tokens
-     SET access_count = access_count + 1, last_accessed_at = CURRENT_TIMESTAMP
-     WHERE token = $1`,
-    [token]
-  );
+  await prisma.share_tokens.updateMany({
+    where: {
+      token,
+    },
+    data: {
+      access_count: {
+        increment: 1,
+      },
+      last_accessed_at: new Date(),
+    },
+  });
 }
 
 export async function deactivateShareToken(id: number, userId: number): Promise<boolean> {
-  const result = await queryOne<ShareToken>(
-    `UPDATE share_tokens SET is_active = false
-     WHERE id = $1 AND created_by = $2
-     RETURNING *`,
-    [id, userId]
-  );
-  return result !== null;
+  const result = await prisma.share_tokens.updateMany({
+    where: {
+      id,
+      created_by: userId,
+    },
+    data: {
+      is_active: false,
+    },
+  });
+  return result.count > 0;
 }
 
 export async function deleteShareToken(id: number, userId: number): Promise<boolean> {
-  const result = await queryOne<{ id: number }>(
-    'DELETE FROM share_tokens WHERE id = $1 AND created_by = $2 RETURNING id',
-    [id, userId]
-  );
-  return result !== null;
+  const result = await prisma.share_tokens.deleteMany({
+    where: {
+      id,
+      created_by: userId,
+    },
+  });
+  return result.count > 0;
 }
 
 export async function verifyShareTokenPin(token: string, pin: string): Promise<boolean> {

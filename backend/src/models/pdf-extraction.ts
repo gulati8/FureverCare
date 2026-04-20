@@ -1,4 +1,5 @@
-import { query, queryOne, transaction } from '../db/pool.js';
+import { prisma } from '../db/prisma.js';
+import { decimalToNumber, stripUndefined } from './prisma-helpers.js';
 
 export type ExtractionStatus = 'pending_review' | 'approved' | 'rejected' | 'partially_approved';
 export type ExtractionItemStatus = 'pending' | 'approved' | 'rejected' | 'modified';
@@ -46,126 +47,176 @@ export interface CreateExtractionItemInput {
   confidenceScore?: number;
 }
 
+function mapExtraction(extraction: Record<string, any>): PdfExtraction {
+  return {
+    id: extraction.id,
+    pdf_upload_id: extraction.pdf_upload_id,
+    raw_extraction: (extraction.raw_extraction ?? null) as Record<string, any> | null,
+    mapped_data: (extraction.mapped_data ?? null) as Record<string, any> | null,
+    extraction_model: extraction.extraction_model,
+    tokens_used: extraction.tokens_used,
+    status: extraction.status as ExtractionStatus,
+    reviewed_by: extraction.reviewed_by,
+    reviewed_at: extraction.reviewed_at,
+    created_at: extraction.created_at,
+  };
+}
+
+function mapExtractionItem(item: Record<string, any>): PdfExtractionItem {
+  return {
+    id: item.id,
+    extraction_id: item.extraction_id,
+    record_type: item.record_type as RecordType,
+    extracted_data: item.extracted_data as Record<string, any>,
+    confidence_score: decimalToNumber(item.confidence_score),
+    user_modified_data: (item.user_modified_data ?? null) as Record<string, any> | null,
+    status: item.status as ExtractionItemStatus,
+    created_record_id: item.created_record_id,
+    created_record_type: item.created_record_type,
+    created_at: item.created_at,
+    updated_at: item.updated_at,
+  };
+}
+
 export async function createExtraction(data: CreateExtractionInput): Promise<PdfExtraction> {
-  const result = await query<PdfExtraction>(
-    `INSERT INTO pdf_extractions (
-      pdf_upload_id, raw_extraction, mapped_data, extraction_model, tokens_used
-    ) VALUES ($1, $2, $3, $4, $5)
-    RETURNING *`,
-    [
-      data.pdfUploadId,
-      JSON.stringify(data.rawExtraction),
-      JSON.stringify(data.mappedData),
-      data.extractionModel,
-      data.tokensUsed,
-    ]
-  );
-  return result[0];
+  const extraction = await prisma.pdf_extractions.create({
+    data: {
+      pdf_upload_id: data.pdfUploadId,
+      raw_extraction: data.rawExtraction,
+      mapped_data: data.mappedData,
+      extraction_model: data.extractionModel,
+      tokens_used: data.tokensUsed,
+    },
+  });
+
+  return mapExtraction(extraction);
 }
 
 export async function createExtractionItem(data: CreateExtractionItemInput): Promise<PdfExtractionItem> {
-  const result = await query<PdfExtractionItem>(
-    `INSERT INTO pdf_extraction_items (
-      extraction_id, record_type, extracted_data, confidence_score
-    ) VALUES ($1, $2, $3, $4)
-    RETURNING *`,
-    [
-      data.extractionId,
-      data.recordType,
-      JSON.stringify(data.extractedData),
-      data.confidenceScore || null,
-    ]
-  );
-  return result[0];
+  const item = await prisma.pdf_extraction_items.create({
+    data: {
+      extraction_id: data.extractionId,
+      record_type: data.recordType,
+      extracted_data: data.extractedData,
+      confidence_score: data.confidenceScore ?? null,
+    },
+  });
+
+  return mapExtractionItem(item);
 }
 
 export async function createExtractionWithItems(
   extractionData: CreateExtractionInput,
   items: Omit<CreateExtractionItemInput, 'extractionId'>[]
 ): Promise<{ extraction: PdfExtraction; items: PdfExtractionItem[] }> {
-  return transaction(async (client) => {
-    // Create extraction
-    const extractionResult = await client.query(
-      `INSERT INTO pdf_extractions (
-        pdf_upload_id, raw_extraction, mapped_data, extraction_model, tokens_used
-      ) VALUES ($1, $2, $3, $4, $5)
-      RETURNING *`,
-      [
-        extractionData.pdfUploadId,
-        JSON.stringify(extractionData.rawExtraction),
-        JSON.stringify(extractionData.mappedData),
-        extractionData.extractionModel,
-        extractionData.tokensUsed,
-      ]
-    );
-    const extraction = extractionResult.rows[0] as PdfExtraction;
+  return prisma.$transaction(async (tx) => {
+    const extraction = await tx.pdf_extractions.create({
+      data: {
+        pdf_upload_id: extractionData.pdfUploadId,
+        raw_extraction: extractionData.rawExtraction,
+        mapped_data: extractionData.mappedData,
+        extraction_model: extractionData.extractionModel,
+        tokens_used: extractionData.tokensUsed,
+      },
+    });
 
-    // Create items
     const createdItems: PdfExtractionItem[] = [];
+
     for (const item of items) {
-      const itemResult = await client.query(
-        `INSERT INTO pdf_extraction_items (
-          extraction_id, record_type, extracted_data, confidence_score
-        ) VALUES ($1, $2, $3, $4)
-        RETURNING *`,
-        [
-          extraction.id,
-          item.recordType,
-          JSON.stringify(item.extractedData),
-          item.confidenceScore || null,
-        ]
-      );
-      createdItems.push(itemResult.rows[0] as PdfExtractionItem);
+      const created = await tx.pdf_extraction_items.create({
+        data: {
+          extraction_id: extraction.id,
+          record_type: item.recordType,
+          extracted_data: item.extractedData,
+          confidence_score: item.confidenceScore ?? null,
+        },
+      });
+      createdItems.push(mapExtractionItem(created));
     }
 
-    return { extraction, items: createdItems };
+    return {
+      extraction: mapExtraction(extraction),
+      items: createdItems,
+    };
   });
 }
 
 export async function getExtractionByPdfUploadId(pdfUploadId: number): Promise<PdfExtraction | null> {
-  return queryOne<PdfExtraction>(
-    'SELECT * FROM pdf_extractions WHERE pdf_upload_id = $1',
-    [pdfUploadId]
-  );
+  const extraction = await prisma.pdf_extractions.findFirst({
+    where: {
+      pdf_upload_id: pdfUploadId,
+    },
+  });
+
+  return extraction ? mapExtraction(extraction) : null;
 }
 
 export async function getExtractionById(id: number): Promise<PdfExtraction | null> {
-  return queryOne<PdfExtraction>(
-    'SELECT * FROM pdf_extractions WHERE id = $1',
-    [id]
-  );
+  const extraction = await prisma.pdf_extractions.findUnique({
+    where: {
+      id,
+    },
+  });
+
+  return extraction ? mapExtraction(extraction) : null;
 }
 
 export async function getExtractionItems(extractionId: number): Promise<PdfExtractionItem[]> {
-  return query<PdfExtractionItem>(
-    'SELECT * FROM pdf_extraction_items WHERE extraction_id = $1 ORDER BY id',
-    [extractionId]
-  );
+  const items = await prisma.pdf_extraction_items.findMany({
+    where: {
+      extraction_id: extractionId,
+    },
+    orderBy: {
+      id: 'asc',
+    },
+  });
+
+  return items.map(mapExtractionItem);
 }
 
 export async function getExtractionWithItems(pdfUploadId: number): Promise<{
   extraction: PdfExtraction;
   items: PdfExtractionItem[];
 } | null> {
-  const extraction = await getExtractionByPdfUploadId(pdfUploadId);
-  if (!extraction) return null;
+  const extraction = await prisma.pdf_extractions.findFirst({
+    where: {
+      pdf_upload_id: pdfUploadId,
+    },
+    include: {
+      pdf_extraction_items: {
+        orderBy: {
+          id: 'asc',
+        },
+      },
+    },
+  });
 
-  const items = await getExtractionItems(extraction.id);
-  return { extraction, items };
+  if (!extraction) {
+    return null;
+  }
+
+  return {
+    extraction: mapExtraction(extraction),
+    items: extraction.pdf_extraction_items.map(mapExtractionItem),
+  };
 }
 
 export async function updateExtractionItemData(
   itemId: number,
   modifiedData: Record<string, any>
 ): Promise<PdfExtractionItem | null> {
-  return queryOne<PdfExtractionItem>(
-    `UPDATE pdf_extraction_items SET
-      user_modified_data = $2,
-      status = 'modified',
-      updated_at = CURRENT_TIMESTAMP
-    WHERE id = $1 RETURNING *`,
-    [itemId, JSON.stringify(modifiedData)]
-  );
+  const items = await prisma.pdf_extraction_items.updateManyAndReturn({
+    where: {
+      id: itemId,
+    },
+    data: {
+      user_modified_data: modifiedData,
+      status: 'modified',
+      updated_at: new Date(),
+    },
+  });
+
+  return items[0] ? mapExtractionItem(items[0]) : null;
 }
 
 export async function updateExtractionItemStatus(
@@ -174,25 +225,19 @@ export async function updateExtractionItemStatus(
   createdRecordId?: number,
   createdRecordType?: string
 ): Promise<PdfExtractionItem | null> {
-  if (status === 'approved' && createdRecordId && createdRecordType) {
-    return queryOne<PdfExtractionItem>(
-      `UPDATE pdf_extraction_items SET
-        status = $2,
-        created_record_id = $3,
-        created_record_type = $4,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = $1 RETURNING *`,
-      [itemId, status, createdRecordId, createdRecordType]
-    );
-  }
+  const items = await prisma.pdf_extraction_items.updateManyAndReturn({
+    where: {
+      id: itemId,
+    },
+    data: stripUndefined({
+      status,
+      created_record_id: status === 'approved' ? createdRecordId : undefined,
+      created_record_type: status === 'approved' ? createdRecordType : undefined,
+      updated_at: new Date(),
+    }),
+  });
 
-  return queryOne<PdfExtractionItem>(
-    `UPDATE pdf_extraction_items SET
-      status = $2,
-      updated_at = CURRENT_TIMESTAMP
-    WHERE id = $1 RETURNING *`,
-    [itemId, status]
-  );
+  return items[0] ? mapExtractionItem(items[0]) : null;
 }
 
 export async function updateExtractionStatus(
@@ -200,34 +245,49 @@ export async function updateExtractionStatus(
   status: ExtractionStatus,
   reviewedBy: number
 ): Promise<PdfExtraction | null> {
-  return queryOne<PdfExtraction>(
-    `UPDATE pdf_extractions SET
-      status = $2,
-      reviewed_by = $3,
-      reviewed_at = CURRENT_TIMESTAMP
-    WHERE id = $1 RETURNING *`,
-    [extractionId, status, reviewedBy]
-  );
+  const extractions = await prisma.pdf_extractions.updateManyAndReturn({
+    where: {
+      id: extractionId,
+    },
+    data: {
+      status,
+      reviewed_by: reviewedBy,
+      reviewed_at: new Date(),
+    },
+  });
+
+  return extractions[0] ? mapExtraction(extractions[0]) : null;
 }
 
 export async function getExtractionItemById(itemId: number): Promise<PdfExtractionItem | null> {
-  return queryOne<PdfExtractionItem>(
-    'SELECT * FROM pdf_extraction_items WHERE id = $1',
-    [itemId]
-  );
+  const item = await prisma.pdf_extraction_items.findUnique({
+    where: {
+      id: itemId,
+    },
+  });
+
+  return item ? mapExtractionItem(item) : null;
 }
 
 export async function bulkUpdateExtractionItemsStatus(
   itemIds: number[],
   status: ExtractionItemStatus
 ): Promise<PdfExtractionItem[]> {
-  if (itemIds.length === 0) return [];
+  if (itemIds.length === 0) {
+    return [];
+  }
 
-  return query<PdfExtractionItem>(
-    `UPDATE pdf_extraction_items SET
-      status = $2,
-      updated_at = CURRENT_TIMESTAMP
-    WHERE id = ANY($1) RETURNING *`,
-    [itemIds, status]
-  );
+  const items = await prisma.pdf_extraction_items.updateManyAndReturn({
+    where: {
+      id: {
+        in: itemIds,
+      },
+    },
+    data: {
+      status,
+      updated_at: new Date(),
+    },
+  });
+
+  return items.map(mapExtractionItem);
 }

@@ -1,13 +1,21 @@
-import { query, queryOne, transaction } from '../db/pool.js';
-import { cacheDelete } from '../db/redis.js';
+import { Prisma } from '../generated/prisma/client.js';
+import { prisma } from '../db/prisma.js';
 import { logCreate, logUpdate, logDelete } from '../services/audit-logger.js';
-import { computeMatchScore, computeMultiFieldMatchScore, DEFAULT_MATCH_THRESHOLD } from '../services/match-scoring.js';
+import {
+  computeMatchScore,
+  computeMultiFieldMatchScore,
+  DEFAULT_MATCH_THRESHOLD,
+} from '../services/match-scoring.js';
 import {
   deleteReminderRuleForRecord,
-  getReminderSelectColumns,
   type ReminderConfigFields,
+  type ReminderRule,
   upsertReminderRuleForRecord,
 } from './reminders.js';
+import { stripUndefined, toNullableDate } from './prisma-helpers.js';
+
+type DatePrecision = 'day' | 'month' | 'year';
+type PrismaClientLike = typeof prisma | Prisma.TransactionClient;
 
 // Audit context for tracking changes
 export interface AuditContext {
@@ -32,6 +40,170 @@ function extractReminderConfig(
   };
 }
 
+function mapReminderConfig(rule?: ReminderRule | null): ReminderConfigFields {
+  return {
+    reminder_enabled: rule?.is_enabled ?? false,
+    reminder_channel: (rule?.channel as 'email' | null) ?? null,
+    reminder_lead_time_value: rule?.lead_time_value ?? null,
+    reminder_lead_time_unit:
+      (rule?.lead_time_unit as 'days' | 'weeks' | null) ?? null,
+    reminder_next_due_date: rule?.next_due_date ?? null,
+    reminder_recurrence_value: rule?.recurrence_value ?? null,
+    reminder_recurrence_unit:
+      (rule?.recurrence_unit as 'months' | 'years' | null) ?? null,
+  };
+}
+
+async function getReminderRuleForRecord(
+  client: PrismaClientLike,
+  recordType: 'medication' | 'vaccination',
+  recordId: number
+): Promise<ReminderRule | null> {
+  const rule = await client.pet_reminder_rules.findFirst({
+    where: {
+      record_type: recordType,
+      record_id: recordId,
+      channel: 'email',
+    },
+  });
+
+  if (!rule) {
+    return null;
+  }
+
+  return {
+    id: rule.id,
+    pet_id: rule.pet_id,
+    record_type: rule.record_type as 'medication' | 'vaccination',
+    record_id: rule.record_id,
+    channel: rule.channel as 'email',
+    lead_time_value: rule.lead_time_value,
+    lead_time_unit: rule.lead_time_unit as 'days' | 'weeks',
+    next_due_date: rule.next_due_date,
+    recurrence_value: rule.recurrence_value,
+    recurrence_unit: rule.recurrence_unit as 'months' | 'years' | null,
+    is_enabled: rule.is_enabled,
+    created_by_user_id: rule.created_by_user_id,
+    updated_by_user_id: rule.updated_by_user_id,
+    created_at: rule.created_at ?? new Date(),
+    updated_at: rule.updated_at ?? new Date(),
+  };
+}
+
+function mapPetVet(record: Record<string, any>): PetVet {
+  return {
+    ...record,
+    is_primary: record.is_primary ?? false,
+    created_at: record.created_at ?? new Date(),
+  } as PetVet;
+}
+
+function mapPetCondition(record: Record<string, any>): PetCondition {
+  return {
+    ...record,
+    diagnosed_date_precision:
+      (record.diagnosed_date_precision as DatePrecision | null) ?? 'day',
+    is_active: record.is_active ?? true,
+    show_on_card: record.show_on_card ?? false,
+    created_at: record.created_at ?? new Date(),
+  } as PetCondition;
+}
+
+function mapPetAllergy(record: Record<string, any>): PetAllergy {
+  return {
+    ...record,
+    show_on_card: record.show_on_card ?? false,
+    created_at: record.created_at ?? new Date(),
+  } as PetAllergy;
+}
+
+function mapPetMedication(
+  record: Record<string, any>,
+  reminderRule?: ReminderRule | null
+): PetMedication {
+  return {
+    ...record,
+    start_date_precision: (record.start_date_precision as DatePrecision | null) ?? 'day',
+    end_date_precision: (record.end_date_precision as DatePrecision | null) ?? 'day',
+    is_active: record.is_active ?? true,
+    show_on_card: record.show_on_card ?? false,
+    created_at: record.created_at ?? new Date(),
+    ...mapReminderConfig(reminderRule),
+  } as PetMedication;
+}
+
+function mapPetVaccination(
+  record: Record<string, any>,
+  reminderRule?: ReminderRule | null
+): PetVaccination {
+  return {
+    ...record,
+    administered_date_precision:
+      (record.administered_date_precision as DatePrecision | null) ?? 'day',
+    expiration_date_precision:
+      (record.expiration_date_precision as DatePrecision | null) ?? 'day',
+    show_on_card: record.show_on_card ?? false,
+    created_at: record.created_at ?? new Date(),
+    ...mapReminderConfig(reminderRule),
+  } as PetVaccination;
+}
+
+function mapPetEmergencyContact(record: Record<string, any>): PetEmergencyContact {
+  return {
+    ...record,
+    is_primary: record.is_primary ?? false,
+    created_at: record.created_at ?? new Date(),
+  } as PetEmergencyContact;
+}
+
+function mapPetAlert(record: Record<string, any>): PetAlert {
+  return {
+    ...record,
+    is_active: record.is_active ?? true,
+    created_at: record.created_at ?? new Date(),
+  } as PetAlert;
+}
+
+async function findMedicationWithReminder(
+  client: PrismaClientLike,
+  petId: number,
+  medicationId: number
+): Promise<PetMedication | null> {
+  const medication = await client.pet_medications.findFirst({
+    where: {
+      id: medicationId,
+      pet_id: petId,
+    },
+  });
+
+  if (!medication) {
+    return null;
+  }
+
+  const reminderRule = await getReminderRuleForRecord(client, 'medication', medication.id);
+  return mapPetMedication(medication, reminderRule);
+}
+
+async function findVaccinationWithReminder(
+  client: PrismaClientLike,
+  petId: number,
+  vaccinationId: number
+): Promise<PetVaccination | null> {
+  const vaccination = await client.pet_vaccinations.findFirst({
+    where: {
+      id: vaccinationId,
+      pet_id: petId,
+    },
+  });
+
+  if (!vaccination) {
+    return null;
+  }
+
+  const reminderRule = await getReminderRuleForRecord(client, 'vaccination', vaccination.id);
+  return mapPetVaccination(vaccination, reminderRule);
+}
+
 // Veterinarian
 export interface PetVet {
   id: number;
@@ -45,22 +217,37 @@ export interface PetVet {
   created_at: Date;
 }
 
-export async function createPetVet(petId: number, data: Omit<PetVet, 'id' | 'pet_id' | 'created_at'>, audit?: AuditContext): Promise<PetVet> {
-  // If is_primary is not explicitly set, default based on whether there are existing vets
+export async function createPetVet(
+  petId: number,
+  data: Omit<PetVet, 'id' | 'pet_id' | 'created_at'>,
+  audit?: AuditContext
+): Promise<PetVet> {
   let isPrimary = data.is_primary;
   if (isPrimary === undefined) {
-    const existingVets = await query<PetVet>('SELECT id FROM pet_vets WHERE pet_id = $1 LIMIT 1', [petId]);
-    isPrimary = existingVets.length === 0; // true if no existing vets, false otherwise
+    const existingVetCount = await prisma.pet_vets.count({
+      where: {
+        pet_id: petId,
+      },
+    });
+    isPrimary = existingVetCount === 0;
   }
 
-  const result = await queryOne<PetVet>(
-    `INSERT INTO pet_vets (pet_id, clinic_name, vet_name, phone, email, address, is_primary)
-     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-    [petId, data.clinic_name, data.vet_name, data.phone, data.email, data.address, isPrimary]
-  );
+  const result = await prisma.pet_vets.create({
+    data: {
+      pet_id: petId,
+      clinic_name: data.clinic_name,
+      vet_name: data.vet_name,
+      phone: data.phone,
+      email: data.email,
+      address: data.address,
+      is_primary: isPrimary,
+    },
+  });
 
-  if (audit && result) {
-    await logCreate('pet_vets', result.id, data, audit.userId, {
+  const vet = mapPetVet(result);
+
+  if (audit) {
+    await logCreate('pet_vets', vet.id, data, audit.userId, {
       source: audit.source,
       sourcePdfUploadId: audit.sourcePdfUploadId,
       ipAddress: audit.ipAddress,
@@ -68,41 +255,65 @@ export async function createPetVet(petId: number, data: Omit<PetVet, 'id' | 'pet
     });
   }
 
-  return result!;
+  return vet;
 }
 
 export async function getPetVets(petId: number): Promise<PetVet[]> {
-  return query<PetVet>('SELECT * FROM pet_vets WHERE pet_id = $1 ORDER BY is_primary DESC, created_at', [petId]);
+  const vets = await prisma.pet_vets.findMany({
+    where: {
+      pet_id: petId,
+    },
+    orderBy: [
+      {
+        is_primary: 'desc',
+      },
+      {
+        created_at: 'asc',
+      },
+    ],
+  });
+
+  return vets.map(mapPetVet);
 }
 
-export async function updatePetVet(id: number, petId: number, updates: Partial<Omit<PetVet, 'id' | 'pet_id' | 'created_at'>>, audit?: AuditContext): Promise<PetVet | null> {
-  // Get existing record for audit
-  const existing = await queryOne<PetVet>('SELECT * FROM pet_vets WHERE id = $1 AND pet_id = $2', [id, petId]);
+export async function updatePetVet(
+  id: number,
+  petId: number,
+  updates: Partial<Omit<PetVet, 'id' | 'pet_id' | 'created_at'>>,
+  audit?: AuditContext
+): Promise<PetVet | null> {
+  const existing = await prisma.pet_vets.findFirst({
+    where: {
+      id,
+      pet_id: petId,
+    },
+  });
 
-  const fields: string[] = [];
-  const values: any[] = [];
-  let paramCount = 1;
+  const data = stripUndefined({
+    clinic_name: updates.clinic_name,
+    vet_name: updates.vet_name,
+    phone: updates.phone,
+    email: updates.email,
+    address: updates.address,
+    is_primary: updates.is_primary,
+  });
 
-  const allowedFields = ['clinic_name', 'vet_name', 'phone', 'email', 'address', 'is_primary'];
-
-  for (const field of allowedFields) {
-    if ((updates as any)[field] !== undefined) {
-      fields.push(`${field} = $${paramCount++}`);
-      values.push((updates as any)[field]);
-    }
+  if (Object.keys(data).length === 0) {
+    return null;
   }
 
-  if (fields.length === 0) return null;
+  const records = await prisma.pet_vets.updateManyAndReturn({
+    where: {
+      id,
+      pet_id: petId,
+    },
+    data,
+  });
 
-  values.push(id, petId);
-
-  const result = await queryOne<PetVet>(
-    `UPDATE pet_vets SET ${fields.join(', ')} WHERE id = $${paramCount} AND pet_id = $${paramCount + 1} RETURNING *`,
-    values
-  );
+  const result = records[0] ? mapPetVet(records[0]) : null;
 
   if (audit && existing && result) {
-    await logUpdate('pet_vets', id, existing, result, audit.userId, {
+    await logUpdate('pet_vets', id, mapPetVet(existing), result, audit.userId, {
       source: audit.source,
       ipAddress: audit.ipAddress,
       userAgent: audit.userAgent,
@@ -117,41 +328,49 @@ export async function findDuplicateVets(
   clinicName: string,
   vetName?: string,
   threshold: number = DEFAULT_MATCH_THRESHOLD
-): Promise<{ vet: PetVet, score: number }[]> {
+): Promise<{ vet: PetVet; score: number }[]> {
   const allVets = await getPetVets(petId);
-
-  const matches: { vet: PetVet, score: number }[] = [];
+  const matches: { vet: PetVet; score: number }[] = [];
 
   for (const vet of allVets) {
-    // Multi-field scoring: clinic_name (70%) + vet_name (30%)
-    const fields: { a: string, b: string, weight: number }[] = [
-      { a: clinicName, b: vet.clinic_name, weight: 0.7 }
+    const fields: { a: string; b: string; weight: number }[] = [
+      { a: clinicName, b: vet.clinic_name, weight: 0.7 },
     ];
 
-    // Include vet_name in scoring if provided and vet has a vet_name
     if (vetName && vet.vet_name) {
       fields.push({ a: vetName, b: vet.vet_name, weight: 0.3 });
     }
 
     const score = computeMultiFieldMatchScore(fields);
-
     if (score >= threshold) {
       matches.push({ vet, score });
     }
   }
 
-  // Sort by score descending
   return matches.sort((a, b) => b.score - a.score);
 }
 
-export async function deletePetVet(id: number, petId: number, audit?: AuditContext): Promise<boolean> {
-  // Get existing record for audit
-  const existing = await queryOne<PetVet>('SELECT * FROM pet_vets WHERE id = $1 AND pet_id = $2', [id, petId]);
+export async function deletePetVet(
+  id: number,
+  petId: number,
+  audit?: AuditContext
+): Promise<boolean> {
+  const existing = await prisma.pet_vets.findFirst({
+    where: {
+      id,
+      pet_id: petId,
+    },
+  });
 
-  await query('DELETE FROM pet_vets WHERE id = $1 AND pet_id = $2', [id, petId]);
+  await prisma.pet_vets.deleteMany({
+    where: {
+      id,
+      pet_id: petId,
+    },
+  });
 
   if (audit && existing) {
-    await logDelete('pet_vets', id, existing, audit.userId, {
+    await logDelete('pet_vets', id, mapPetVet(existing), audit.userId, {
       source: audit.source,
       ipAddress: audit.ipAddress,
       userAgent: audit.userAgent,
@@ -161,32 +380,55 @@ export async function deletePetVet(id: number, petId: number, audit?: AuditConte
   return true;
 }
 
-export async function setPrimaryVet(petId: number, vetId: number, audit?: AuditContext): Promise<PetVet> {
-  return transaction(async (client) => {
-    // Get the vet we're setting as primary (to verify it exists)
-    const targetVet = await client.query('SELECT * FROM pet_vets WHERE id = $1 AND pet_id = $2', [vetId, petId]);
-    if (!targetVet.rows || targetVet.rows.length === 0) {
+export async function setPrimaryVet(
+  petId: number,
+  vetId: number,
+  audit?: AuditContext
+): Promise<PetVet> {
+  return prisma.$transaction(async (tx) => {
+    const targetVet = await tx.pet_vets.findFirst({
+      where: {
+        id: vetId,
+        pet_id: petId,
+      },
+    });
+
+    if (!targetVet) {
       throw new Error('Vet not found');
     }
 
-    // Get all vets for audit logging
-    const allVetsResult = await client.query('SELECT * FROM pet_vets WHERE pet_id = $1', [petId]);
-    const oldVets = allVetsResult.rows;
+    const oldVets = (await tx.pet_vets.findMany({
+      where: {
+        pet_id: petId,
+      },
+    })).map(mapPetVet);
 
-    // Set all vets to is_primary = false
-    await client.query('UPDATE pet_vets SET is_primary = false WHERE pet_id = $1', [petId]);
+    await tx.pet_vets.updateMany({
+      where: {
+        pet_id: petId,
+      },
+      data: {
+        is_primary: false,
+      },
+    });
 
-    // Set the target vet to is_primary = true
-    const result = await client.query(
-      'UPDATE pet_vets SET is_primary = true WHERE id = $1 AND pet_id = $2 RETURNING *',
-      [vetId, petId]
-    );
+    const updatedRecords = await tx.pet_vets.updateManyAndReturn({
+      where: {
+        id: vetId,
+        pet_id: petId,
+      },
+      data: {
+        is_primary: true,
+      },
+    });
 
-    const updatedVet = result.rows[0];
+    const updatedVet = updatedRecords[0] ? mapPetVet(updatedRecords[0]) : null;
+    if (!updatedVet) {
+      throw new Error('Vet not found');
+    }
 
-    // Audit logging - log the primary vet change
-    if (audit && updatedVet) {
-      const oldVet = oldVets.find((v: PetVet) => v.id === vetId);
+    if (audit) {
+      const oldVet = oldVets.find((vet) => vet.id === vetId);
       if (oldVet) {
         await logUpdate('pet_vets', vetId, oldVet, updatedVet, audit.userId, {
           source: audit.source || 'manual',
@@ -195,15 +437,20 @@ export async function setPrimaryVet(petId: number, vetId: number, audit?: AuditC
         });
       }
 
-      // Also log updates for any previously primary vets that were demoted
-      for (const oldVet of oldVets) {
-        if (oldVet.id !== vetId && oldVet.is_primary) {
-          const demotedVet = { ...oldVet, is_primary: false };
-          await logUpdate('pet_vets', oldVet.id, oldVet, demotedVet, audit.userId, {
-            source: audit.source || 'manual',
-            ipAddress: audit.ipAddress,
-            userAgent: audit.userAgent,
-          });
+      for (const oldVetEntry of oldVets) {
+        if (oldVetEntry.id !== vetId && oldVetEntry.is_primary) {
+          await logUpdate(
+            'pet_vets',
+            oldVetEntry.id,
+            oldVetEntry,
+            { ...oldVetEntry, is_primary: false },
+            audit.userId,
+            {
+              source: audit.source || 'manual',
+              ipAddress: audit.ipAddress,
+              userAgent: audit.userAgent,
+            }
+          );
         }
       }
     }
@@ -218,7 +465,7 @@ export interface PetCondition {
   pet_id: number;
   name: string;
   diagnosed_date: Date | null;
-  diagnosed_date_precision: 'day' | 'month' | 'year';
+  diagnosed_date_precision: DatePrecision;
   notes: string | null;
   severity: string | null;
   is_active: boolean;
@@ -226,15 +473,28 @@ export interface PetCondition {
   created_at: Date;
 }
 
-export async function createPetCondition(petId: number, data: Omit<PetCondition, 'id' | 'pet_id' | 'created_at'>, audit?: AuditContext): Promise<PetCondition> {
-  const result = await queryOne<PetCondition>(
-    `INSERT INTO pet_conditions (pet_id, name, diagnosed_date, diagnosed_date_precision, notes, severity, is_active, show_on_card)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-    [petId, data.name, data.diagnosed_date, data.diagnosed_date_precision || 'day', data.notes, data.severity, data.is_active ?? true, data.show_on_card ?? false]
-  );
+export async function createPetCondition(
+  petId: number,
+  data: Omit<PetCondition, 'id' | 'pet_id' | 'created_at'>,
+  audit?: AuditContext
+): Promise<PetCondition> {
+  const result = await prisma.pet_conditions.create({
+    data: {
+      pet_id: petId,
+      name: data.name,
+      diagnosed_date: data.diagnosed_date,
+      diagnosed_date_precision: data.diagnosed_date_precision || 'day',
+      notes: data.notes,
+      severity: data.severity,
+      is_active: data.is_active ?? true,
+      show_on_card: data.show_on_card ?? false,
+    },
+  });
 
-  if (audit && result) {
-    await logCreate('pet_conditions', result.id, data, audit.userId, {
+  const condition = mapPetCondition(result);
+
+  if (audit) {
+    await logCreate('pet_conditions', condition.id, data, audit.userId, {
       source: audit.source,
       sourcePdfUploadId: audit.sourcePdfUploadId,
       ipAddress: audit.ipAddress,
@@ -242,45 +502,77 @@ export async function createPetCondition(petId: number, data: Omit<PetCondition,
     });
   }
 
-  return result!;
+  return condition;
 }
 
 export async function getPetConditions(petId: number): Promise<PetCondition[]> {
-  return query<PetCondition>('SELECT * FROM pet_conditions WHERE pet_id = $1 ORDER BY is_active DESC, created_at DESC', [petId]);
+  const conditions = await prisma.pet_conditions.findMany({
+    where: {
+      pet_id: petId,
+    },
+    orderBy: [
+      {
+        is_active: 'desc',
+      },
+      {
+        created_at: 'desc',
+      },
+    ],
+  });
+
+  return conditions.map(mapPetCondition);
 }
 
-export async function updatePetCondition(id: number, petId: number, updates: Partial<Omit<PetCondition, 'id' | 'pet_id' | 'created_at'>>, audit?: AuditContext): Promise<PetCondition | null> {
-  // Get existing record for audit
-  const existing = await queryOne<PetCondition>('SELECT * FROM pet_conditions WHERE id = $1 AND pet_id = $2', [id, petId]);
+export async function updatePetCondition(
+  id: number,
+  petId: number,
+  updates: Partial<Omit<PetCondition, 'id' | 'pet_id' | 'created_at'>>,
+  audit?: AuditContext
+): Promise<PetCondition | null> {
+  const existing = await prisma.pet_conditions.findFirst({
+    where: {
+      id,
+      pet_id: petId,
+    },
+  });
 
-  const fields: string[] = [];
-  const values: any[] = [];
-  let paramCount = 1;
+  const data = stripUndefined({
+    name: updates.name,
+    diagnosed_date: updates.diagnosed_date,
+    diagnosed_date_precision: updates.diagnosed_date_precision,
+    notes: updates.notes,
+    severity: updates.severity,
+    is_active: updates.is_active,
+    show_on_card: updates.show_on_card,
+  });
 
-  const allowedFields = ['name', 'diagnosed_date', 'diagnosed_date_precision', 'notes', 'severity', 'is_active', 'show_on_card'];
-
-  for (const field of allowedFields) {
-    if ((updates as any)[field] !== undefined) {
-      fields.push(`${field} = $${paramCount++}`);
-      values.push((updates as any)[field]);
-    }
+  if (Object.keys(data).length === 0) {
+    return null;
   }
 
-  if (fields.length === 0) return null;
+  const records = await prisma.pet_conditions.updateManyAndReturn({
+    where: {
+      id,
+      pet_id: petId,
+    },
+    data,
+  });
 
-  values.push(id, petId);
-
-  const result = await queryOne<PetCondition>(
-    `UPDATE pet_conditions SET ${fields.join(', ')} WHERE id = $${paramCount} AND pet_id = $${paramCount + 1} RETURNING *`,
-    values
-  );
+  const result = records[0] ? mapPetCondition(records[0]) : null;
 
   if (audit && existing && result) {
-    await logUpdate('pet_conditions', id, existing, result, audit.userId, {
-      source: audit.source,
-      ipAddress: audit.ipAddress,
-      userAgent: audit.userAgent,
-    });
+    await logUpdate(
+      'pet_conditions',
+      id,
+      mapPetCondition(existing),
+      result,
+      audit.userId,
+      {
+        source: audit.source,
+        ipAddress: audit.ipAddress,
+        userAgent: audit.userAgent,
+      }
+    );
   }
 
   return result;
@@ -290,30 +582,41 @@ export async function findDuplicateConditions(
   petId: number,
   name: string,
   threshold: number = DEFAULT_MATCH_THRESHOLD
-): Promise<{ condition: PetCondition, score: number }[]> {
+): Promise<{ condition: PetCondition; score: number }[]> {
   const allConditions = await getPetConditions(petId);
-
-  const matches: { condition: PetCondition, score: number }[] = [];
+  const matches: { condition: PetCondition; score: number }[] = [];
 
   for (const condition of allConditions) {
     const score = computeMatchScore(name, condition.name);
-
     if (score >= threshold) {
       matches.push({ condition, score });
     }
   }
 
-  // Sort by score descending
   return matches.sort((a, b) => b.score - a.score);
 }
 
-export async function deletePetCondition(id: number, petId: number, audit?: AuditContext): Promise<boolean> {
-  const existing = await queryOne<PetCondition>('SELECT * FROM pet_conditions WHERE id = $1 AND pet_id = $2', [id, petId]);
+export async function deletePetCondition(
+  id: number,
+  petId: number,
+  audit?: AuditContext
+): Promise<boolean> {
+  const existing = await prisma.pet_conditions.findFirst({
+    where: {
+      id,
+      pet_id: petId,
+    },
+  });
 
-  await query('DELETE FROM pet_conditions WHERE id = $1 AND pet_id = $2', [id, petId]);
+  await prisma.pet_conditions.deleteMany({
+    where: {
+      id,
+      pet_id: petId,
+    },
+  });
 
   if (audit && existing) {
-    await logDelete('pet_conditions', id, existing, audit.userId, {
+    await logDelete('pet_conditions', id, mapPetCondition(existing), audit.userId, {
       source: audit.source,
       ipAddress: audit.ipAddress,
       userAgent: audit.userAgent,
@@ -334,17 +637,28 @@ export interface PetAllergy {
   created_at: Date;
 }
 
-export async function createPetAllergy(petId: number, data: Omit<PetAllergy, 'id' | 'pet_id' | 'created_at'>, audit?: AuditContext): Promise<PetAllergy> {
-  // Default show_on_card to true for life-threatening/severe allergies
-  const showOnCard = data.show_on_card ?? (data.severity === 'life-threatening' || data.severity === 'severe');
-  const result = await queryOne<PetAllergy>(
-    `INSERT INTO pet_allergies (pet_id, allergen, reaction, severity, show_on_card)
-     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [petId, data.allergen, data.reaction, data.severity, showOnCard]
-  );
+export async function createPetAllergy(
+  petId: number,
+  data: Omit<PetAllergy, 'id' | 'pet_id' | 'created_at'>,
+  audit?: AuditContext
+): Promise<PetAllergy> {
+  const showOnCard =
+    data.show_on_card ?? (data.severity === 'life-threatening' || data.severity === 'severe');
 
-  if (audit && result) {
-    await logCreate('pet_allergies', result.id, data, audit.userId, {
+  const result = await prisma.pet_allergies.create({
+    data: {
+      pet_id: petId,
+      allergen: data.allergen,
+      reaction: data.reaction,
+      severity: data.severity,
+      show_on_card: showOnCard,
+    },
+  });
+
+  const allergy = mapPetAllergy(result);
+
+  if (audit) {
+    await logCreate('pet_allergies', allergy.id, data, audit.userId, {
       source: audit.source,
       sourcePdfUploadId: audit.sourcePdfUploadId,
       ipAddress: audit.ipAddress,
@@ -352,56 +666,95 @@ export async function createPetAllergy(petId: number, data: Omit<PetAllergy, 'id
     });
   }
 
-  return result!;
+  return allergy;
 }
 
 export async function getPetAllergies(petId: number): Promise<PetAllergy[]> {
-  return query<PetAllergy>('SELECT * FROM pet_allergies WHERE pet_id = $1 ORDER BY created_at DESC', [petId]);
+  const allergies = await prisma.pet_allergies.findMany({
+    where: {
+      pet_id: petId,
+    },
+    orderBy: {
+      created_at: 'desc',
+    },
+  });
+
+  return allergies.map(mapPetAllergy);
 }
 
-export async function updatePetAllergy(id: number, petId: number, updates: Partial<Omit<PetAllergy, 'id' | 'pet_id' | 'created_at'>>, audit?: AuditContext): Promise<PetAllergy | null> {
-  const existing = await queryOne<PetAllergy>('SELECT * FROM pet_allergies WHERE id = $1 AND pet_id = $2', [id, petId]);
+export async function updatePetAllergy(
+  id: number,
+  petId: number,
+  updates: Partial<Omit<PetAllergy, 'id' | 'pet_id' | 'created_at'>>,
+  audit?: AuditContext
+): Promise<PetAllergy | null> {
+  const existing = await prisma.pet_allergies.findFirst({
+    where: {
+      id,
+      pet_id: petId,
+    },
+  });
 
-  const fields: string[] = [];
-  const values: any[] = [];
-  let paramCount = 1;
+  const data = stripUndefined({
+    allergen: updates.allergen,
+    reaction: updates.reaction,
+    severity: updates.severity,
+    show_on_card: updates.show_on_card,
+  });
 
-  const allowedFields = ['allergen', 'reaction', 'severity', 'show_on_card'];
-
-  for (const field of allowedFields) {
-    if ((updates as any)[field] !== undefined) {
-      fields.push(`${field} = $${paramCount++}`);
-      values.push((updates as any)[field]);
-    }
+  if (Object.keys(data).length === 0) {
+    return null;
   }
 
-  if (fields.length === 0) return null;
+  const records = await prisma.pet_allergies.updateManyAndReturn({
+    where: {
+      id,
+      pet_id: petId,
+    },
+    data,
+  });
 
-  values.push(id, petId);
-
-  const result = await queryOne<PetAllergy>(
-    `UPDATE pet_allergies SET ${fields.join(', ')} WHERE id = $${paramCount} AND pet_id = $${paramCount + 1} RETURNING *`,
-    values
-  );
+  const result = records[0] ? mapPetAllergy(records[0]) : null;
 
   if (audit && existing && result) {
-    await logUpdate('pet_allergies', id, existing, result, audit.userId, {
-      source: audit.source,
-      ipAddress: audit.ipAddress,
-      userAgent: audit.userAgent,
-    });
+    await logUpdate(
+      'pet_allergies',
+      id,
+      mapPetAllergy(existing),
+      result,
+      audit.userId,
+      {
+        source: audit.source,
+        ipAddress: audit.ipAddress,
+        userAgent: audit.userAgent,
+      }
+    );
   }
 
   return result;
 }
 
-export async function deletePetAllergy(id: number, petId: number, audit?: AuditContext): Promise<boolean> {
-  const existing = await queryOne<PetAllergy>('SELECT * FROM pet_allergies WHERE id = $1 AND pet_id = $2', [id, petId]);
+export async function deletePetAllergy(
+  id: number,
+  petId: number,
+  audit?: AuditContext
+): Promise<boolean> {
+  const existing = await prisma.pet_allergies.findFirst({
+    where: {
+      id,
+      pet_id: petId,
+    },
+  });
 
-  await query('DELETE FROM pet_allergies WHERE id = $1 AND pet_id = $2', [id, petId]);
+  await prisma.pet_allergies.deleteMany({
+    where: {
+      id,
+      pet_id: petId,
+    },
+  });
 
   if (audit && existing) {
-    await logDelete('pet_allergies', id, existing, audit.userId, {
+    await logDelete('pet_allergies', id, mapPetAllergy(existing), audit.userId, {
       source: audit.source,
       ipAddress: audit.ipAddress,
       userAgent: audit.userAgent,
@@ -419,9 +772,9 @@ export interface PetMedication {
   dosage: string | null;
   frequency: string | null;
   start_date: Date | null;
-  start_date_precision: 'day' | 'month' | 'year';
+  start_date_precision: DatePrecision;
   end_date: Date | null;
-  end_date_precision: 'day' | 'month' | 'year';
+  end_date_precision: DatePrecision;
   prescribing_vet: string | null;
   notes: string | null;
   is_active: boolean;
@@ -436,46 +789,32 @@ export interface PetMedication {
   created_at: Date;
 }
 
-export async function createPetMedication(petId: number, data: Omit<PetMedication, 'id' | 'pet_id' | 'created_at'>, audit?: AuditContext): Promise<PetMedication> {
+export async function createPetMedication(
+  petId: number,
+  data: Omit<PetMedication, 'id' | 'pet_id' | 'created_at'>,
+  audit?: AuditContext
+): Promise<PetMedication> {
   const reminder = extractReminderConfig(data);
 
-  const result = await transaction(async (client) => {
-    const inserted = await client.query(
-      `INSERT INTO pet_medications (
-         pet_id,
-         name,
-         dosage,
-         frequency,
-         start_date,
-         start_date_precision,
-         end_date,
-         end_date_precision,
-         prescribing_vet,
-         notes,
-         is_active,
-         show_on_card
-       )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-       RETURNING *`,
-      [
-        petId,
-        data.name,
-        data.dosage,
-        data.frequency,
-        data.start_date,
-        data.start_date_precision || 'day',
-        data.end_date,
-        data.end_date_precision || 'day',
-        data.prescribing_vet,
-        data.notes,
-        data.is_active ?? true,
-        data.show_on_card ?? false,
-      ]
-    );
+  const result = await prisma.$transaction(async (tx) => {
+    const medication = await tx.pet_medications.create({
+      data: {
+        pet_id: petId,
+        name: data.name,
+        dosage: data.dosage,
+        frequency: data.frequency,
+        start_date: data.start_date,
+        start_date_precision: data.start_date_precision || 'day',
+        end_date: data.end_date,
+        end_date_precision: data.end_date_precision || 'day',
+        prescribing_vet: data.prescribing_vet,
+        notes: data.notes,
+        is_active: data.is_active ?? true,
+        show_on_card: data.show_on_card ?? false,
+      },
+    });
 
-    const medication = inserted.rows[0] as PetMedication;
-
-    await upsertReminderRuleForRecord(client, {
+    await upsertReminderRuleForRecord(tx, {
       petId,
       recordType: 'medication',
       recordId: medication.id,
@@ -483,21 +822,14 @@ export async function createPetMedication(petId: number, data: Omit<PetMedicatio
       userId: audit?.userId,
     });
 
-    const withReminder = await client.query(
-      `SELECT m.*, ${getReminderSelectColumns('rr')}
-       FROM pet_medications m
-       LEFT JOIN pet_reminder_rules rr
-         ON rr.record_type = 'medication'
-        AND rr.record_id = m.id
-        AND rr.channel = 'email'
-       WHERE m.id = $1 AND m.pet_id = $2`,
-      [medication.id, petId]
-    );
-
-    return withReminder.rows[0] as PetMedication;
+    return findMedicationWithReminder(tx, petId, medication.id);
   });
 
-  if (audit && result) {
+  if (!result) {
+    throw new Error('Failed to create medication');
+  }
+
+  if (audit) {
     await logCreate('pet_medications', result.id, data, audit.userId, {
       source: audit.source,
       sourcePdfUploadId: audit.sourcePdfUploadId,
@@ -510,16 +842,54 @@ export async function createPetMedication(petId: number, data: Omit<PetMedicatio
 }
 
 export async function getPetMedications(petId: number): Promise<PetMedication[]> {
-  return query<PetMedication>(
-    `SELECT m.*, ${getReminderSelectColumns('rr')}
-     FROM pet_medications m
-     LEFT JOIN pet_reminder_rules rr
-       ON rr.record_type = 'medication'
-      AND rr.record_id = m.id
-      AND rr.channel = 'email'
-     WHERE m.pet_id = $1
-     ORDER BY m.is_active DESC, m.created_at DESC`,
-    [petId]
+  const [medications, reminderRules] = await Promise.all([
+    prisma.pet_medications.findMany({
+      where: {
+        pet_id: petId,
+      },
+      orderBy: [
+        {
+          is_active: 'desc',
+        },
+        {
+          created_at: 'desc',
+        },
+      ],
+    }),
+    prisma.pet_reminder_rules.findMany({
+      where: {
+        pet_id: petId,
+        record_type: 'medication',
+        channel: 'email',
+      },
+    }),
+  ]);
+
+  const reminderMap = new Map(
+    reminderRules.map((rule) => [
+      rule.record_id,
+      {
+        id: rule.id,
+        pet_id: rule.pet_id,
+        record_type: rule.record_type as 'medication',
+        record_id: rule.record_id,
+        channel: rule.channel as 'email',
+        lead_time_value: rule.lead_time_value,
+        lead_time_unit: rule.lead_time_unit as 'days' | 'weeks',
+        next_due_date: rule.next_due_date,
+        recurrence_value: rule.recurrence_value,
+        recurrence_unit: rule.recurrence_unit as 'months' | 'years' | null,
+        is_enabled: rule.is_enabled,
+        created_by_user_id: rule.created_by_user_id,
+        updated_by_user_id: rule.updated_by_user_id,
+        created_at: rule.created_at ?? new Date(),
+        updated_at: rule.updated_at ?? new Date(),
+      } satisfies ReminderRule,
+    ])
+  );
+
+  return medications.map((medication) =>
+    mapPetMedication(medication, reminderMap.get(medication.id))
   );
 }
 
@@ -527,18 +897,15 @@ export async function findPetMedicationByName(
   petId: number,
   name: string,
   threshold: number = 0.9
-): Promise<{ medication: PetMedication, score: number } | null> {
+): Promise<{ medication: PetMedication; score: number } | null> {
   const allMedications = await getPetMedications(petId);
 
-  let bestMatch: { medication: PetMedication, score: number } | null = null;
+  let bestMatch: { medication: PetMedication; score: number } | null = null;
 
   for (const medication of allMedications) {
     const score = computeMatchScore(name, medication.name);
-
-    if (score >= threshold) {
-      if (!bestMatch || score > bestMatch.score) {
-        bestMatch = { medication, score };
-      }
+    if (score >= threshold && (!bestMatch || score > bestMatch.score)) {
+      bestMatch = { medication, score };
     }
   }
 
@@ -549,53 +916,31 @@ export async function findDuplicateMedications(
   petId: number,
   name: string,
   threshold: number = DEFAULT_MATCH_THRESHOLD
-): Promise<{ medication: PetMedication, score: number }[]> {
+): Promise<{ medication: PetMedication; score: number }[]> {
   const allMedications = await getPetMedications(petId);
-
-  const matches: { medication: PetMedication, score: number }[] = [];
+  const matches: { medication: PetMedication; score: number }[] = [];
 
   for (const medication of allMedications) {
     const score = computeMatchScore(name, medication.name);
-
     if (score >= threshold) {
       matches.push({ medication, score });
     }
   }
 
-  // Sort by score descending
   return matches.sort((a, b) => b.score - a.score);
 }
 
-export async function updatePetMedication(id: number, petId: number, updates: Partial<Omit<PetMedication, 'id' | 'pet_id' | 'created_at'>>, audit?: AuditContext): Promise<PetMedication | null> {
-  // Get existing record for audit
-  const existing = await queryOne<PetMedication>(
-    `SELECT m.*, ${getReminderSelectColumns('rr')}
-     FROM pet_medications m
-     LEFT JOIN pet_reminder_rules rr
-       ON rr.record_type = 'medication'
-      AND rr.record_id = m.id
-      AND rr.channel = 'email'
-     WHERE m.id = $1 AND m.pet_id = $2`,
-    [id, petId]
-  );
+export async function updatePetMedication(
+  id: number,
+  petId: number,
+  updates: Partial<Omit<PetMedication, 'id' | 'pet_id' | 'created_at'>>,
+  audit?: AuditContext
+): Promise<PetMedication | null> {
+  const existing = await findMedicationWithReminder(prisma, petId, id);
 
-  const fields: string[] = [];
-  const values: any[] = [];
-  let paramCount = 1;
-  const reminderTouched = [
-    'reminder_enabled',
-    'reminder_channel',
-    'reminder_lead_time_value',
-    'reminder_lead_time_unit',
-    'reminder_next_due_date',
-    'reminder_recurrence_value',
-    'reminder_recurrence_unit',
-  ].some((field) => (updates as any)[field] !== undefined);
   const reminder = extractReminderConfig({
-    reminder_enabled:
-      updates.reminder_enabled ?? existing?.reminder_enabled ?? false,
-    reminder_channel:
-      updates.reminder_channel ?? existing?.reminder_channel ?? null,
+    reminder_enabled: updates.reminder_enabled ?? existing?.reminder_enabled ?? false,
+    reminder_channel: updates.reminder_channel ?? existing?.reminder_channel ?? null,
     reminder_lead_time_value:
       updates.reminder_lead_time_value ?? existing?.reminder_lead_time_value ?? null,
     reminder_lead_time_unit:
@@ -608,58 +953,45 @@ export async function updatePetMedication(id: number, petId: number, updates: Pa
       updates.reminder_recurrence_unit ?? existing?.reminder_recurrence_unit ?? null,
   });
 
-  const allowedFields = ['name', 'dosage', 'frequency', 'start_date', 'start_date_precision', 'end_date', 'end_date_precision', 'prescribing_vet', 'notes', 'is_active', 'show_on_card'];
+  const data = stripUndefined({
+    name: updates.name,
+    dosage: updates.dosage,
+    frequency: updates.frequency,
+    start_date: updates.start_date,
+    start_date_precision: updates.start_date_precision,
+    end_date: updates.end_date,
+    end_date_precision: updates.end_date_precision,
+    prescribing_vet: updates.prescribing_vet,
+    notes: updates.notes,
+    is_active: updates.is_active,
+    show_on_card: updates.show_on_card,
+  });
 
-  for (const field of allowedFields) {
-    if ((updates as any)[field] !== undefined) {
-      fields.push(`${field} = $${paramCount++}`);
-      values.push((updates as any)[field]);
-    }
-  }
-
-  if (fields.length > 0) {
-    values.push(id, petId);
-  }
-
-  const result = await transaction(async (client) => {
-    let medication = existing;
-    if (fields.length > 0) {
-      const updated = await client.query(
-        `UPDATE pet_medications SET ${fields.join(', ')} WHERE id = $${paramCount} AND pet_id = $${paramCount + 1} RETURNING *`,
-        values
-      );
-      medication = (updated.rows[0] as PetMedication | undefined) ?? null;
-    }
-
-    if (!medication) {
+  const result = await prisma.$transaction(async (tx) => {
+    if (!existing) {
       return null;
     }
 
-    await upsertReminderRuleForRecord(client, {
+    if (Object.keys(data).length > 0) {
+      await tx.pet_medications.updateMany({
+        where: {
+          id,
+          pet_id: petId,
+        },
+        data,
+      });
+    }
+
+    await upsertReminderRuleForRecord(tx, {
       petId,
       recordType: 'medication',
-      recordId: medication.id,
+      recordId: id,
       reminder,
       userId: audit?.userId,
     });
 
-    const withReminder = await client.query(
-      `SELECT m.*, ${getReminderSelectColumns('rr')}
-       FROM pet_medications m
-       LEFT JOIN pet_reminder_rules rr
-         ON rr.record_type = 'medication'
-        AND rr.record_id = m.id
-        AND rr.channel = 'email'
-       WHERE m.id = $1 AND m.pet_id = $2`,
-      [medication.id, petId]
-    );
-
-    return ((withReminder.rows[0] as PetMedication | undefined) ?? null);
+    return findMedicationWithReminder(tx, petId, id);
   });
-
-  if (!result && !existing && !reminderTouched) {
-    return null;
-  }
 
   if (audit && existing && result) {
     await logUpdate('pet_medications', id, existing, result, audit.userId, {
@@ -672,21 +1004,21 @@ export async function updatePetMedication(id: number, petId: number, updates: Pa
   return result;
 }
 
-export async function deletePetMedication(id: number, petId: number, audit?: AuditContext): Promise<boolean> {
-  const existing = await queryOne<PetMedication>(
-    `SELECT m.*, ${getReminderSelectColumns('rr')}
-     FROM pet_medications m
-     LEFT JOIN pet_reminder_rules rr
-       ON rr.record_type = 'medication'
-      AND rr.record_id = m.id
-      AND rr.channel = 'email'
-     WHERE m.id = $1 AND m.pet_id = $2`,
-    [id, petId]
-  );
+export async function deletePetMedication(
+  id: number,
+  petId: number,
+  audit?: AuditContext
+): Promise<boolean> {
+  const existing = await findMedicationWithReminder(prisma, petId, id);
 
-  await transaction(async (client) => {
-    await deleteReminderRuleForRecord(client, 'medication', id);
-    await client.query('DELETE FROM pet_medications WHERE id = $1 AND pet_id = $2', [id, petId]);
+  await prisma.$transaction(async (tx) => {
+    await deleteReminderRuleForRecord(tx, 'medication', id);
+    await tx.pet_medications.deleteMany({
+      where: {
+        id,
+        pet_id: petId,
+      },
+    });
   });
 
   if (audit && existing) {
@@ -706,9 +1038,9 @@ export interface PetVaccination {
   pet_id: number;
   name: string;
   administered_date: Date;
-  administered_date_precision: 'day' | 'month' | 'year';
+  administered_date_precision: DatePrecision;
   expiration_date: Date | null;
-  expiration_date_precision: 'day' | 'month' | 'year';
+  expiration_date_precision: DatePrecision;
   administered_by: string | null;
   lot_number: string | null;
   show_on_card: boolean;
@@ -722,7 +1054,11 @@ export interface PetVaccination {
   created_at: Date;
 }
 
-export async function createPetVaccination(petId: number, data: Omit<PetVaccination, 'id' | 'pet_id' | 'created_at'>, audit?: AuditContext): Promise<PetVaccination> {
+export async function createPetVaccination(
+  petId: number,
+  data: Omit<PetVaccination, 'id' | 'pet_id' | 'created_at'>,
+  audit?: AuditContext
+): Promise<PetVaccination> {
   const reminder = extractReminderConfig({
     ...data,
     reminder_next_due_date: data.expiration_date ?? null,
@@ -730,37 +1066,22 @@ export async function createPetVaccination(petId: number, data: Omit<PetVaccinat
     reminder_recurrence_unit: null,
   });
 
-  const result = await transaction(async (client) => {
-    const inserted = await client.query(
-      `INSERT INTO pet_vaccinations (
-         pet_id,
-         name,
-         administered_date,
-         administered_date_precision,
-         expiration_date,
-         expiration_date_precision,
-         administered_by,
-         lot_number,
-         show_on_card
-       )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-       RETURNING *`,
-      [
-        petId,
-        data.name,
-        data.administered_date,
-        data.administered_date_precision || 'day',
-        data.expiration_date,
-        data.expiration_date_precision || 'day',
-        data.administered_by,
-        data.lot_number,
-        data.show_on_card ?? false,
-      ]
-    );
+  const result = await prisma.$transaction(async (tx) => {
+    const vaccination = await tx.pet_vaccinations.create({
+      data: {
+        pet_id: petId,
+        name: data.name,
+        administered_date: data.administered_date,
+        administered_date_precision: data.administered_date_precision || 'day',
+        expiration_date: data.expiration_date,
+        expiration_date_precision: data.expiration_date_precision || 'day',
+        administered_by: data.administered_by,
+        lot_number: data.lot_number,
+        show_on_card: data.show_on_card ?? false,
+      },
+    });
 
-    const vaccination = inserted.rows[0] as PetVaccination;
-
-    await upsertReminderRuleForRecord(client, {
+    await upsertReminderRuleForRecord(tx, {
       petId,
       recordType: 'vaccination',
       recordId: vaccination.id,
@@ -768,21 +1089,14 @@ export async function createPetVaccination(petId: number, data: Omit<PetVaccinat
       userId: audit?.userId,
     });
 
-    const withReminder = await client.query(
-      `SELECT v.*, ${getReminderSelectColumns('rr')}
-       FROM pet_vaccinations v
-       LEFT JOIN pet_reminder_rules rr
-         ON rr.record_type = 'vaccination'
-        AND rr.record_id = v.id
-        AND rr.channel = 'email'
-       WHERE v.id = $1 AND v.pet_id = $2`,
-      [vaccination.id, petId]
-    );
-
-    return withReminder.rows[0] as PetVaccination;
+    return findVaccinationWithReminder(tx, petId, vaccination.id);
   });
 
-  if (audit && result) {
+  if (!result) {
+    throw new Error('Failed to create vaccination');
+  }
+
+  if (audit) {
     await logCreate('pet_vaccinations', result.id, data, audit.userId, {
       source: audit.source,
       sourcePdfUploadId: audit.sourcePdfUploadId,
@@ -795,49 +1109,68 @@ export async function createPetVaccination(petId: number, data: Omit<PetVaccinat
 }
 
 export async function getPetVaccinations(petId: number): Promise<PetVaccination[]> {
-  return query<PetVaccination>(
-    `SELECT v.*, ${getReminderSelectColumns('rr')}
-     FROM pet_vaccinations v
-     LEFT JOIN pet_reminder_rules rr
-       ON rr.record_type = 'vaccination'
-      AND rr.record_id = v.id
-      AND rr.channel = 'email'
-     WHERE v.pet_id = $1
-     ORDER BY v.administered_date DESC`,
-    [petId]
+  const [vaccinations, reminderRules] = await Promise.all([
+    prisma.pet_vaccinations.findMany({
+      where: {
+        pet_id: petId,
+      },
+      orderBy: {
+        administered_date: 'desc',
+      },
+    }),
+    prisma.pet_reminder_rules.findMany({
+      where: {
+        pet_id: petId,
+        record_type: 'vaccination',
+        channel: 'email',
+      },
+    }),
+  ]);
+
+  const reminderMap = new Map(
+    reminderRules.map((rule) => [
+      rule.record_id,
+      {
+        id: rule.id,
+        pet_id: rule.pet_id,
+        record_type: rule.record_type as 'vaccination',
+        record_id: rule.record_id,
+        channel: rule.channel as 'email',
+        lead_time_value: rule.lead_time_value,
+        lead_time_unit: rule.lead_time_unit as 'days' | 'weeks',
+        next_due_date: rule.next_due_date,
+        recurrence_value: rule.recurrence_value,
+        recurrence_unit: rule.recurrence_unit as 'months' | 'years' | null,
+        is_enabled: rule.is_enabled,
+        created_by_user_id: rule.created_by_user_id,
+        updated_by_user_id: rule.updated_by_user_id,
+        created_at: rule.created_at ?? new Date(),
+        updated_at: rule.updated_at ?? new Date(),
+      } satisfies ReminderRule,
+    ])
+  );
+
+  return vaccinations.map((vaccination) =>
+    mapPetVaccination(vaccination, reminderMap.get(vaccination.id))
   );
 }
 
-export async function updatePetVaccination(id: number, petId: number, updates: Partial<Omit<PetVaccination, 'id' | 'pet_id' | 'created_at'>>, audit?: AuditContext): Promise<PetVaccination | null> {
-  const existing = await queryOne<PetVaccination>(
-    `SELECT v.*, ${getReminderSelectColumns('rr')}
-     FROM pet_vaccinations v
-     LEFT JOIN pet_reminder_rules rr
-       ON rr.record_type = 'vaccination'
-      AND rr.record_id = v.id
-      AND rr.channel = 'email'
-     WHERE v.id = $1 AND v.pet_id = $2`,
-    [id, petId]
-  );
+export async function updatePetVaccination(
+  id: number,
+  petId: number,
+  updates: Partial<Omit<PetVaccination, 'id' | 'pet_id' | 'created_at'>>,
+  audit?: AuditContext
+): Promise<PetVaccination | null> {
+  const existing = await findVaccinationWithReminder(prisma, petId, id);
 
-  const fields: string[] = [];
-  const values: any[] = [];
-  let paramCount = 1;
-  const reminderTouched = [
-    'reminder_enabled',
-    'reminder_channel',
-    'reminder_lead_time_value',
-    'reminder_lead_time_unit',
-  ].some((field) => (updates as any)[field] !== undefined);
   const effectiveExpirationDate =
     updates.expiration_date !== undefined
       ? updates.expiration_date
       : existing?.expiration_date ?? null;
+
   const reminder = extractReminderConfig({
-    reminder_enabled:
-      updates.reminder_enabled ?? existing?.reminder_enabled ?? false,
-    reminder_channel:
-      updates.reminder_channel ?? existing?.reminder_channel ?? null,
+    reminder_enabled: updates.reminder_enabled ?? existing?.reminder_enabled ?? false,
+    reminder_channel: updates.reminder_channel ?? existing?.reminder_channel ?? null,
     reminder_lead_time_value:
       updates.reminder_lead_time_value ?? existing?.reminder_lead_time_value ?? null,
     reminder_lead_time_unit:
@@ -847,58 +1180,42 @@ export async function updatePetVaccination(id: number, petId: number, updates: P
     reminder_recurrence_unit: null,
   });
 
-  const allowedFields = ['name', 'administered_date', 'administered_date_precision', 'expiration_date', 'expiration_date_precision', 'administered_by', 'lot_number', 'show_on_card'];
+  const data = stripUndefined({
+    name: updates.name,
+    administered_date: updates.administered_date,
+    administered_date_precision: updates.administered_date_precision,
+    expiration_date: updates.expiration_date,
+    expiration_date_precision: updates.expiration_date_precision,
+    administered_by: updates.administered_by,
+    lot_number: updates.lot_number,
+    show_on_card: updates.show_on_card,
+  });
 
-  for (const field of allowedFields) {
-    if ((updates as any)[field] !== undefined) {
-      fields.push(`${field} = $${paramCount++}`);
-      values.push((updates as any)[field]);
-    }
-  }
-
-  if (fields.length > 0) {
-    values.push(id, petId);
-  }
-
-  const result = await transaction(async (client) => {
-    let vaccination = existing;
-    if (fields.length > 0) {
-      const updated = await client.query(
-        `UPDATE pet_vaccinations SET ${fields.join(', ')} WHERE id = $${paramCount} AND pet_id = $${paramCount + 1} RETURNING *`,
-        values
-      );
-      vaccination = (updated.rows[0] as PetVaccination | undefined) ?? null;
-    }
-
-    if (!vaccination) {
+  const result = await prisma.$transaction(async (tx) => {
+    if (!existing) {
       return null;
     }
 
-    await upsertReminderRuleForRecord(client, {
+    if (Object.keys(data).length > 0) {
+      await tx.pet_vaccinations.updateMany({
+        where: {
+          id,
+          pet_id: petId,
+        },
+        data,
+      });
+    }
+
+    await upsertReminderRuleForRecord(tx, {
       petId,
       recordType: 'vaccination',
-      recordId: vaccination.id,
+      recordId: id,
       reminder,
       userId: audit?.userId,
     });
 
-    const withReminder = await client.query(
-      `SELECT v.*, ${getReminderSelectColumns('rr')}
-       FROM pet_vaccinations v
-       LEFT JOIN pet_reminder_rules rr
-         ON rr.record_type = 'vaccination'
-        AND rr.record_id = v.id
-        AND rr.channel = 'email'
-       WHERE v.id = $1 AND v.pet_id = $2`,
-      [vaccination.id, petId]
-    );
-
-    return ((withReminder.rows[0] as PetVaccination | undefined) ?? null);
+    return findVaccinationWithReminder(tx, petId, id);
   });
-
-  if (!result && !existing && !reminderTouched) {
-    return null;
-  }
 
   if (audit && existing && result) {
     await logUpdate('pet_vaccinations', id, existing, result, audit.userId, {
@@ -911,21 +1228,21 @@ export async function updatePetVaccination(id: number, petId: number, updates: P
   return result;
 }
 
-export async function deletePetVaccination(id: number, petId: number, audit?: AuditContext): Promise<boolean> {
-  const existing = await queryOne<PetVaccination>(
-    `SELECT v.*, ${getReminderSelectColumns('rr')}
-     FROM pet_vaccinations v
-     LEFT JOIN pet_reminder_rules rr
-       ON rr.record_type = 'vaccination'
-      AND rr.record_id = v.id
-      AND rr.channel = 'email'
-     WHERE v.id = $1 AND v.pet_id = $2`,
-    [id, petId]
-  );
+export async function deletePetVaccination(
+  id: number,
+  petId: number,
+  audit?: AuditContext
+): Promise<boolean> {
+  const existing = await findVaccinationWithReminder(prisma, petId, id);
 
-  await transaction(async (client) => {
-    await deleteReminderRuleForRecord(client, 'vaccination', id);
-    await client.query('DELETE FROM pet_vaccinations WHERE id = $1 AND pet_id = $2', [id, petId]);
+  await prisma.$transaction(async (tx) => {
+    await deleteReminderRuleForRecord(tx, 'vaccination', id);
+    await tx.pet_vaccinations.deleteMany({
+      where: {
+        id,
+        pet_id: petId,
+      },
+    });
   });
 
   if (audit && existing) {
@@ -951,15 +1268,26 @@ export interface PetEmergencyContact {
   created_at: Date;
 }
 
-export async function createPetEmergencyContact(petId: number, data: Omit<PetEmergencyContact, 'id' | 'pet_id' | 'created_at'>, audit?: AuditContext): Promise<PetEmergencyContact> {
-  const result = await queryOne<PetEmergencyContact>(
-    `INSERT INTO pet_emergency_contacts (pet_id, name, relationship, phone, email, is_primary)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-    [petId, data.name, data.relationship, data.phone, data.email, data.is_primary ?? false]
-  );
+export async function createPetEmergencyContact(
+  petId: number,
+  data: Omit<PetEmergencyContact, 'id' | 'pet_id' | 'created_at'>,
+  audit?: AuditContext
+): Promise<PetEmergencyContact> {
+  const result = await prisma.pet_emergency_contacts.create({
+    data: {
+      pet_id: petId,
+      name: data.name,
+      relationship: data.relationship,
+      phone: data.phone,
+      email: data.email,
+      is_primary: data.is_primary ?? false,
+    },
+  });
 
-  if (audit && result) {
-    await logCreate('pet_emergency_contacts', result.id, data, audit.userId, {
+  const contact = mapPetEmergencyContact(result);
+
+  if (audit) {
+    await logCreate('pet_emergency_contacts', contact.id, data, audit.userId, {
       source: audit.source,
       sourcePdfUploadId: audit.sourcePdfUploadId,
       ipAddress: audit.ipAddress,
@@ -967,108 +1295,199 @@ export async function createPetEmergencyContact(petId: number, data: Omit<PetEme
     });
   }
 
-  return result!;
+  return contact;
 }
 
-export async function getPetEmergencyContacts(petId: number): Promise<PetEmergencyContact[]> {
-  return query<PetEmergencyContact>('SELECT * FROM pet_emergency_contacts WHERE pet_id = $1 ORDER BY is_primary DESC, created_at', [petId]);
+export async function getPetEmergencyContacts(
+  petId: number
+): Promise<PetEmergencyContact[]> {
+  const contacts = await prisma.pet_emergency_contacts.findMany({
+    where: {
+      pet_id: petId,
+    },
+    orderBy: [
+      {
+        is_primary: 'desc',
+      },
+      {
+        created_at: 'asc',
+      },
+    ],
+  });
+
+  return contacts.map(mapPetEmergencyContact);
 }
 
-export async function updatePetEmergencyContact(id: number, petId: number, updates: Partial<Omit<PetEmergencyContact, 'id' | 'pet_id' | 'created_at'>>, audit?: AuditContext): Promise<PetEmergencyContact | null> {
-  const existing = await queryOne<PetEmergencyContact>('SELECT * FROM pet_emergency_contacts WHERE id = $1 AND pet_id = $2', [id, petId]);
+export async function updatePetEmergencyContact(
+  id: number,
+  petId: number,
+  updates: Partial<Omit<PetEmergencyContact, 'id' | 'pet_id' | 'created_at'>>,
+  audit?: AuditContext
+): Promise<PetEmergencyContact | null> {
+  const existing = await prisma.pet_emergency_contacts.findFirst({
+    where: {
+      id,
+      pet_id: petId,
+    },
+  });
 
-  const fields: string[] = [];
-  const values: any[] = [];
-  let paramCount = 1;
+  const data = stripUndefined({
+    name: updates.name,
+    relationship: updates.relationship,
+    phone: updates.phone,
+    email: updates.email,
+    is_primary: updates.is_primary,
+  });
 
-  const allowedFields = ['name', 'relationship', 'phone', 'email', 'is_primary'];
-
-  for (const field of allowedFields) {
-    if ((updates as any)[field] !== undefined) {
-      fields.push(`${field} = $${paramCount++}`);
-      values.push((updates as any)[field]);
-    }
+  if (Object.keys(data).length === 0) {
+    return null;
   }
 
-  if (fields.length === 0) return null;
+  const records = await prisma.pet_emergency_contacts.updateManyAndReturn({
+    where: {
+      id,
+      pet_id: petId,
+    },
+    data,
+  });
 
-  values.push(id, petId);
-
-  const result = await queryOne<PetEmergencyContact>(
-    `UPDATE pet_emergency_contacts SET ${fields.join(', ')} WHERE id = $${paramCount} AND pet_id = $${paramCount + 1} RETURNING *`,
-    values
-  );
+  const result = records[0] ? mapPetEmergencyContact(records[0]) : null;
 
   if (audit && existing && result) {
-    await logUpdate('pet_emergency_contacts', id, existing, result, audit.userId, {
-      source: audit.source,
-      ipAddress: audit.ipAddress,
-      userAgent: audit.userAgent,
-    });
+    await logUpdate(
+      'pet_emergency_contacts',
+      id,
+      mapPetEmergencyContact(existing),
+      result,
+      audit.userId,
+      {
+        source: audit.source,
+        ipAddress: audit.ipAddress,
+        userAgent: audit.userAgent,
+      }
+    );
   }
 
   return result;
 }
 
-export async function deletePetEmergencyContact(id: number, petId: number, audit?: AuditContext): Promise<boolean> {
-  const existing = await queryOne<PetEmergencyContact>('SELECT * FROM pet_emergency_contacts WHERE id = $1 AND pet_id = $2', [id, petId]);
+export async function deletePetEmergencyContact(
+  id: number,
+  petId: number,
+  audit?: AuditContext
+): Promise<boolean> {
+  const existing = await prisma.pet_emergency_contacts.findFirst({
+    where: {
+      id,
+      pet_id: petId,
+    },
+  });
 
-  await query('DELETE FROM pet_emergency_contacts WHERE id = $1 AND pet_id = $2', [id, petId]);
+  await prisma.pet_emergency_contacts.deleteMany({
+    where: {
+      id,
+      pet_id: petId,
+    },
+  });
 
   if (audit && existing) {
-    await logDelete('pet_emergency_contacts', id, existing, audit.userId, {
-      source: audit.source,
-      ipAddress: audit.ipAddress,
-      userAgent: audit.userAgent,
-    });
+    await logDelete(
+      'pet_emergency_contacts',
+      id,
+      mapPetEmergencyContact(existing),
+      audit.userId,
+      {
+        source: audit.source,
+        ipAddress: audit.ipAddress,
+        userAgent: audit.userAgent,
+      }
+    );
   }
 
   return true;
 }
 
-export async function setPrimaryEmergencyContact(petId: number, contactId: number, audit?: AuditContext): Promise<PetEmergencyContact> {
-  return transaction(async (client) => {
-    // Get the contact we're setting as primary (to verify it exists)
-    const targetContact = await client.query('SELECT * FROM pet_emergency_contacts WHERE id = $1 AND pet_id = $2', [contactId, petId]);
-    if (!targetContact.rows || targetContact.rows.length === 0) {
+export async function setPrimaryEmergencyContact(
+  petId: number,
+  contactId: number,
+  audit?: AuditContext
+): Promise<PetEmergencyContact> {
+  return prisma.$transaction(async (tx) => {
+    const targetContact = await tx.pet_emergency_contacts.findFirst({
+      where: {
+        id: contactId,
+        pet_id: petId,
+      },
+    });
+
+    if (!targetContact) {
       throw new Error('Emergency contact not found');
     }
 
-    // Get all contacts for audit logging
-    const allContactsResult = await client.query('SELECT * FROM pet_emergency_contacts WHERE pet_id = $1', [petId]);
-    const oldContacts = allContactsResult.rows;
+    const oldContacts = (await tx.pet_emergency_contacts.findMany({
+      where: {
+        pet_id: petId,
+      },
+    })).map(mapPetEmergencyContact);
 
-    // Set all contacts to is_primary = false
-    await client.query('UPDATE pet_emergency_contacts SET is_primary = false WHERE pet_id = $1', [petId]);
+    await tx.pet_emergency_contacts.updateMany({
+      where: {
+        pet_id: petId,
+      },
+      data: {
+        is_primary: false,
+      },
+    });
 
-    // Set the target contact to is_primary = true
-    const result = await client.query(
-      'UPDATE pet_emergency_contacts SET is_primary = true WHERE id = $1 AND pet_id = $2 RETURNING *',
-      [contactId, petId]
-    );
+    const updatedRecords = await tx.pet_emergency_contacts.updateManyAndReturn({
+      where: {
+        id: contactId,
+        pet_id: petId,
+      },
+      data: {
+        is_primary: true,
+      },
+    });
 
-    const updatedContact = result.rows[0];
+    const updatedContact = updatedRecords[0]
+      ? mapPetEmergencyContact(updatedRecords[0])
+      : null;
 
-    // Audit logging - log the primary contact change
-    if (audit && updatedContact) {
-      const oldContact = oldContacts.find((c: PetEmergencyContact) => c.id === contactId);
+    if (!updatedContact) {
+      throw new Error('Emergency contact not found');
+    }
+
+    if (audit) {
+      const oldContact = oldContacts.find((contact) => contact.id === contactId);
       if (oldContact) {
-        await logUpdate('pet_emergency_contacts', contactId, oldContact, updatedContact, audit.userId, {
-          source: audit.source || 'manual',
-          ipAddress: audit.ipAddress,
-          userAgent: audit.userAgent,
-        });
-      }
-
-      // Also log updates for any previously primary contacts that were demoted
-      for (const oldContact of oldContacts) {
-        if (oldContact.id !== contactId && oldContact.is_primary) {
-          const demotedContact = { ...oldContact, is_primary: false };
-          await logUpdate('pet_emergency_contacts', oldContact.id, oldContact, demotedContact, audit.userId, {
+        await logUpdate(
+          'pet_emergency_contacts',
+          contactId,
+          oldContact,
+          updatedContact,
+          audit.userId,
+          {
             source: audit.source || 'manual',
             ipAddress: audit.ipAddress,
             userAgent: audit.userAgent,
-          });
+          }
+        );
+      }
+
+      for (const oldContactEntry of oldContacts) {
+        if (oldContactEntry.id !== contactId && oldContactEntry.is_primary) {
+          await logUpdate(
+            'pet_emergency_contacts',
+            oldContactEntry.id,
+            oldContactEntry,
+            { ...oldContactEntry, is_primary: false },
+            audit.userId,
+            {
+              source: audit.source || 'manual',
+              ipAddress: audit.ipAddress,
+              userAgent: audit.userAgent,
+            }
+          );
         }
       }
     }
@@ -1086,52 +1505,84 @@ export interface PetAlert {
   created_at: Date;
 }
 
-export async function createPetAlert(petId: number, data: { alert_text: string; is_active?: boolean }, audit?: AuditContext): Promise<PetAlert> {
-  const result = await queryOne<PetAlert>(
-    `INSERT INTO pet_alerts (pet_id, alert_text, is_active) VALUES ($1, $2, $3) RETURNING *`,
-    [petId, data.alert_text, data.is_active ?? true]
-  );
+export async function createPetAlert(
+  petId: number,
+  data: { alert_text: string; is_active?: boolean },
+  audit?: AuditContext
+): Promise<PetAlert> {
+  const result = await prisma.pet_alerts.create({
+    data: {
+      pet_id: petId,
+      alert_text: data.alert_text,
+      is_active: data.is_active ?? true,
+    },
+  });
 
-  if (audit && result) {
-    await logCreate('pet_alerts', result.id, data, audit.userId, {
+  const alert = mapPetAlert(result);
+
+  if (audit) {
+    await logCreate('pet_alerts', alert.id, data, audit.userId, {
       source: audit.source,
       ipAddress: audit.ipAddress,
       userAgent: audit.userAgent,
     });
   }
 
-  return result!;
+  return alert;
 }
 
 export async function getPetAlerts(petId: number): Promise<PetAlert[]> {
-  return query<PetAlert>('SELECT * FROM pet_alerts WHERE pet_id = $1 ORDER BY is_active DESC, created_at DESC', [petId]);
+  const alerts = await prisma.pet_alerts.findMany({
+    where: {
+      pet_id: petId,
+    },
+    orderBy: [
+      {
+        is_active: 'desc',
+      },
+      {
+        created_at: 'desc',
+      },
+    ],
+  });
+
+  return alerts.map(mapPetAlert);
 }
 
-export async function updatePetAlert(id: number, petId: number, updates: Partial<{ alert_text: string; is_active: boolean }>, audit?: AuditContext): Promise<PetAlert | null> {
-  const existing = await queryOne<PetAlert>('SELECT * FROM pet_alerts WHERE id = $1 AND pet_id = $2', [id, petId]);
+export async function updatePetAlert(
+  id: number,
+  petId: number,
+  updates: Partial<{ alert_text: string; is_active: boolean }>,
+  audit?: AuditContext
+): Promise<PetAlert | null> {
+  const existing = await prisma.pet_alerts.findFirst({
+    where: {
+      id,
+      pet_id: petId,
+    },
+  });
 
-  const fields: string[] = [];
-  const values: any[] = [];
-  let paramCount = 1;
+  const data = stripUndefined({
+    alert_text: updates.alert_text,
+    is_active: updates.is_active,
+  });
 
-  for (const field of ['alert_text', 'is_active']) {
-    if ((updates as any)[field] !== undefined) {
-      fields.push(`${field} = $${paramCount++}`);
-      values.push((updates as any)[field]);
-    }
+  if (Object.keys(data).length === 0) {
+    return null;
   }
 
-  if (fields.length === 0) return null;
+  const records = await prisma.pet_alerts.updateManyAndReturn({
+    where: {
+      id,
+      pet_id: petId,
+    },
+    data,
+  });
 
-  values.push(id, petId);
-
-  const result = await queryOne<PetAlert>(
-    `UPDATE pet_alerts SET ${fields.join(', ')} WHERE id = $${paramCount} AND pet_id = $${paramCount + 1} RETURNING *`,
-    values
-  );
+  const result = records[0] ? mapPetAlert(records[0]) : null;
 
   if (audit && existing && result) {
-    await logUpdate('pet_alerts', id, existing, result, audit.userId, {
+    await logUpdate('pet_alerts', id, mapPetAlert(existing), result, audit.userId, {
       source: audit.source,
       ipAddress: audit.ipAddress,
       userAgent: audit.userAgent,
@@ -1141,13 +1592,27 @@ export async function updatePetAlert(id: number, petId: number, updates: Partial
   return result;
 }
 
-export async function deletePetAlert(id: number, petId: number, audit?: AuditContext): Promise<boolean> {
-  const existing = await queryOne<PetAlert>('SELECT * FROM pet_alerts WHERE id = $1 AND pet_id = $2', [id, petId]);
+export async function deletePetAlert(
+  id: number,
+  petId: number,
+  audit?: AuditContext
+): Promise<boolean> {
+  const existing = await prisma.pet_alerts.findFirst({
+    where: {
+      id,
+      pet_id: petId,
+    },
+  });
 
-  await query('DELETE FROM pet_alerts WHERE id = $1 AND pet_id = $2', [id, petId]);
+  await prisma.pet_alerts.deleteMany({
+    where: {
+      id,
+      pet_id: petId,
+    },
+  });
 
   if (audit && existing) {
-    await logDelete('pet_alerts', id, existing, audit.userId, {
+    await logDelete('pet_alerts', id, mapPetAlert(existing), audit.userId, {
       source: audit.source,
       ipAddress: audit.ipAddress,
       userAgent: audit.userAgent,
