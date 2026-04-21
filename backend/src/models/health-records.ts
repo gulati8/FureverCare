@@ -34,7 +34,7 @@ function extractReminderConfig(
     reminder_channel: values.reminder_channel ?? null,
     reminder_lead_time_value: values.reminder_lead_time_value ?? null,
     reminder_lead_time_unit: values.reminder_lead_time_unit ?? null,
-    reminder_next_due_date: values.reminder_next_due_date ?? null,
+    reminder_next_due_date: toNullableDate(values.reminder_next_due_date) ?? null,
     reminder_recurrence_value: values.reminder_recurrence_value ?? null,
     reminder_recurrence_unit: values.reminder_recurrence_unit ?? null,
   };
@@ -803,9 +803,9 @@ export async function createPetMedication(
         name: data.name,
         dosage: data.dosage,
         frequency: data.frequency,
-        start_date: data.start_date,
+        start_date: toNullableDate(data.start_date) ?? null,
         start_date_precision: data.start_date_precision || 'day',
-        end_date: data.end_date,
+        end_date: toNullableDate(data.end_date) ?? null,
         end_date_precision: data.end_date_precision || 'day',
         prescribing_vet: data.prescribing_vet,
         notes: data.notes,
@@ -957,9 +957,9 @@ export async function updatePetMedication(
     name: updates.name,
     dosage: updates.dosage,
     frequency: updates.frequency,
-    start_date: updates.start_date,
+    start_date: toNullableDate(updates.start_date),
     start_date_precision: updates.start_date_precision,
-    end_date: updates.end_date,
+    end_date: toNullableDate(updates.end_date),
     end_date_precision: updates.end_date_precision,
     prescribing_vet: updates.prescribing_vet,
     notes: updates.notes,
@@ -1071,9 +1071,9 @@ export async function createPetVaccination(
       data: {
         pet_id: petId,
         name: data.name,
-        administered_date: data.administered_date,
+        administered_date: toNullableDate(data.administered_date)!,
         administered_date_precision: data.administered_date_precision || 'day',
-        expiration_date: data.expiration_date,
+        expiration_date: toNullableDate(data.expiration_date),
         expiration_date_precision: data.expiration_date_precision || 'day',
         administered_by: data.administered_by,
         lot_number: data.lot_number,
@@ -1182,9 +1182,12 @@ export async function updatePetVaccination(
 
   const data = stripUndefined({
     name: updates.name,
-    administered_date: updates.administered_date,
+    administered_date:
+      updates.administered_date === undefined
+        ? undefined
+        : toNullableDate(updates.administered_date) ?? undefined,
     administered_date_precision: updates.administered_date_precision,
-    expiration_date: updates.expiration_date,
+    expiration_date: toNullableDate(updates.expiration_date),
     expiration_date_precision: updates.expiration_date_precision,
     administered_by: updates.administered_by,
     lot_number: updates.lot_number,

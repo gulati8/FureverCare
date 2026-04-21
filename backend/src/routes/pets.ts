@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { Router, Response } from 'express';
 import { z } from 'zod';
 import { query as dbQuery } from '../db/pool.js';
@@ -237,6 +238,38 @@ function validateVaccinationReminderState(
   }
 
   return null;
+}
+
+function getHealthRecordSaveErrorResponse(
+  error: unknown,
+  fallbackMessage: string
+): { status: number; message: string } {
+  if (error instanceof Prisma.PrismaClientValidationError) {
+    return {
+      status: 400,
+      message: 'One of the reminder dates is invalid. Please review the reminder details and try again.',
+    };
+  }
+
+  if (
+    error instanceof Error &&
+    (
+      error.message.startsWith('Medication reminders require') ||
+      error.message.startsWith('Medication reminders must') ||
+      error.message.startsWith('Vaccination reminders require') ||
+      error.message.startsWith('Vaccination reminders must')
+    )
+  ) {
+    return {
+      status: 400,
+      message: error.message,
+    };
+  }
+
+  return {
+    status: 500,
+    message: fallbackMessage,
+  };
 }
 
 // Helper to verify pet access (any role)
@@ -599,7 +632,12 @@ router.post('/:id/medications', authenticate, validate(createMedicationSchema), 
     await invalidateCardCache(parseInt(req.params.id));
     res.status(201).json(medication);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to add medication' });
+    console.error('Failed to add medication:', error);
+    const { status, message } = getHealthRecordSaveErrorResponse(
+      error,
+      'We couldn’t save this medication. Please review the form and try again.'
+    );
+    res.status(status).json({ error: message });
   }
 });
 
@@ -629,7 +667,12 @@ router.patch('/:id/medications/:medId', authenticate, validate(updateMedicationS
     await invalidateCardCache(petId);
     res.json(medication);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update medication' });
+    console.error('Failed to update medication:', error);
+    const { status, message } = getHealthRecordSaveErrorResponse(
+      error,
+      'We couldn’t update this medication. Please review the reminder details and try again.'
+    );
+    res.status(status).json({ error: message });
   }
 });
 
@@ -676,7 +719,12 @@ router.post('/:id/vaccinations', authenticate, validate(createVaccinationSchema)
     await invalidateCardCache(parseInt(req.params.id));
     res.status(201).json(vaccination);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to add vaccination' });
+    console.error('Failed to add vaccination:', error);
+    const { status, message } = getHealthRecordSaveErrorResponse(
+      error,
+      'We couldn’t save this vaccination. Please review the form and try again.'
+    );
+    res.status(status).json({ error: message });
   }
 });
 
@@ -707,7 +755,12 @@ router.patch('/:id/vaccinations/:vacId', authenticate, validate(updateVaccinatio
     await invalidateCardCache(petId);
     res.json(vaccination);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update vaccination' });
+    console.error('Failed to update vaccination:', error);
+    const { status, message } = getHealthRecordSaveErrorResponse(
+      error,
+      'We couldn’t update this vaccination. Please review the reminder details and try again.'
+    );
+    res.status(status).json({ error: message });
   }
 });
 
