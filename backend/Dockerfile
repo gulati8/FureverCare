@@ -19,7 +19,7 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma.config.ts ./
 COPY prisma ./prisma
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev && npm run prisma:generate
 
 COPY --from=builder /app/dist ./dist
 
