@@ -1,4 +1,4 @@
-import { Prisma } from '../generated/prisma/client.js';
+import { Prisma } from '@prisma/client';
 
 export function stripUndefined<T extends Record<string, unknown>>(input: T): Partial<T> {
   return Object.fromEntries(

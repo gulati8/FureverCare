@@ -1,4 +1,4 @@
-import { Prisma } from '../generated/prisma/client.js';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../db/prisma.js';
 import { logCreate, logUpdate, logDelete } from '../services/audit-logger.js';
 import {
