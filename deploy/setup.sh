@@ -40,7 +40,6 @@ sleep 10
 
 echo "Running database migrations..."
 docker compose -f docker-compose.prod.yml exec -T backend npm run db:migrate
-docker compose -f docker-compose.prod.yml exec -T backend npm run db:migrate:owners
 
 echo "=== Setup Complete ==="
 echo ""

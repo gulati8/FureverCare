@@ -22,7 +22,7 @@ test.describe('Pet Management', () => {
     await expect(page.getByRole('heading', { name: 'My Pets' })).toBeVisible();
 
     // Verify Add Pet button exists
-    await expect(page.getByRole('button', { name: '+ Add Pet' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Add Pet' })).toBeVisible();
 
     // Verify seed pet "Biscuit" appears
     await expect(page.getByText('Biscuit')).toBeVisible();
@@ -32,7 +32,7 @@ test.describe('Pet Management', () => {
     const addPetModal = new AddPetModal(page);
 
     // Open Add Pet modal
-    await page.getByRole('button', { name: '+ Add Pet' }).click();
+    await page.getByRole('button', { name: 'Add Pet' }).click();
     await addPetModal.waitForModal();
 
     // Fill in pet details
@@ -53,6 +53,9 @@ test.describe('Pet Management', () => {
     // Wait for modal to close and verify pet appears on dashboard
     await expect(addPetModal.modal).not.toBeVisible();
     await expect(page.getByText(uniqueName)).toBeVisible();
+
+    await page.reload();
+    await expect(page.getByText(uniqueName)).toBeVisible();
   });
 
   test('should view pet detail page', async ({ page }) => {
@@ -66,82 +69,59 @@ test.describe('Pet Management', () => {
     expect(await petDetailPage.getPetName()).toContain('Biscuit');
 
     // Verify key elements are present
-    await expect(petDetailPage.editButton).toBeVisible();
+    await expect(petDetailPage.accessButton).toBeVisible();
     await expect(petDetailPage.shareCardButton).toBeVisible();
-    await expect(petDetailPage.deleteButton).toBeVisible();
 
-    // Verify tabs are present
-    await expect(petDetailPage.overviewTab).toBeVisible();
-    await expect(petDetailPage.conditionsTab).toBeVisible();
-    await expect(petDetailPage.allergiesTab).toBeVisible();
-    await expect(petDetailPage.medicationsTab).toBeVisible();
+    // Verify profile navigation is present
+    await expect(petDetailPage.overviewNav.first()).toBeVisible();
+    await expect(petDetailPage.healthRecordsNav.first()).toBeVisible();
+    await expect(petDetailPage.careTeamNav.first()).toBeVisible();
+    await expect(petDetailPage.activityNav.first()).toBeVisible();
   });
 
   test('should edit pet details', async ({ page }) => {
+    const petDetailPage = new PetDetailPage(page);
+
     // Navigate to pet detail
     await page.getByText('Biscuit').click();
-    await expect(page.getByRole('heading', { name: 'Biscuit' })).toBeVisible();
+    await petDetailPage.waitForLoad();
 
-    // Click Edit button
-    await page.getByRole('button', { name: 'Edit' }).click();
+    // Edit the inline microchip field on the overview tab.
+    await page.locator('dt').filter({ hasText: 'Microchip ID' }).locator('..').click();
 
-    // Verify edit modal opens
-    await expect(page.getByText('Edit Pet')).toBeVisible();
-
-    // Update a field (microchip ID)
-    const microchipInput = page.getByLabel('Microchip ID');
+    const microchipInput = page.getByPlaceholder('Microchip ID');
+    await expect(microchipInput).toBeVisible();
     await microchipInput.clear();
     const newMicrochipId = `CHIP${Date.now()}`;
     await microchipInput.fill(newMicrochipId);
 
-    // Save changes
-    await page.getByRole('button', { name: 'Save Changes' }).click();
-
-    // Verify modal closes
-    await expect(page.getByText('Edit Pet')).not.toBeVisible();
+    await page.getByRole('button', { name: 'Save' }).click();
 
     // Verify change persists (microchip shown on overview)
-    await expect(page.getByText(newMicrochipId)).toBeVisible();
+    await expect(page.getByText(newMicrochipId, { exact: true }).first()).toBeVisible();
+
+    await page.reload();
+    await expect(page.getByText(newMicrochipId, { exact: true }).first()).toBeVisible();
   });
 
-  test('should delete a pet with confirmation', async ({ page }) => {
-    const addPetModal = new AddPetModal(page);
+  test('should open the send card modal from pet detail', async ({ page }) => {
+    const petDetailPage = new PetDetailPage(page);
 
-    // First, create a pet to delete
-    await page.getByRole('button', { name: '+ Add Pet' }).click();
-    await addPetModal.waitForModal();
+    await page.getByText('Biscuit').click();
+    await petDetailPage.waitForLoad();
 
-    const deletablePetName = `DeleteMe_${Date.now()}`;
-    await addPetModal.fillPetDetails({
-      name: deletablePetName,
-      species: 'hamster',
-    });
-    await addPetModal.submit();
-    await expect(addPetModal.modal).not.toBeVisible();
-    await expect(page.getByText(deletablePetName)).toBeVisible();
+    await petDetailPage.shareCardButton.click();
 
-    // Navigate to the pet's detail page
-    await page.getByText(deletablePetName).click();
-    await expect(page.getByRole('heading', { name: deletablePetName })).toBeVisible();
-
-    // Set up dialog handler for confirmation
-    page.on('dialog', dialog => dialog.accept());
-
-    // Click delete
-    await page.getByRole('button', { name: 'Delete' }).click();
-
-    // Verify redirect to dashboard
-    await expect(page).toHaveURL('/dashboard');
-
-    // Verify pet no longer appears
-    await expect(page.getByText(deletablePetName)).not.toBeVisible();
+    await expect(page.getByRole('heading', { name: /Share Biscuit's Card/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Copy' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Create time-limited or PIN-protected link/ })).toBeVisible();
   });
 
   test('should cancel add pet modal', async ({ page }) => {
     const addPetModal = new AddPetModal(page);
 
     // Open Add Pet modal
-    await page.getByRole('button', { name: '+ Add Pet' }).click();
+    await page.getByRole('button', { name: 'Add Pet' }).click();
     await addPetModal.waitForModal();
 
     // Fill partial data

@@ -21,7 +21,8 @@ export default function VaccinationsTab({ petId, token, vaccinations, setVaccina
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [addError, setAddError] = useState<string | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
   const [addValues, setAddValues] = useState<Record<string, string | boolean>>({
     name: '',
     administered_date: '',
@@ -34,6 +35,9 @@ export default function VaccinationsTab({ petId, token, vaccinations, setVaccina
   });
 
   const toDateInput = (d: string | null) => d ? d.split('T')[0] : '';
+
+  const getSaveErrorMessage = (err: unknown, fallback: string) =>
+    err instanceof Error && err.message.trim() ? err.message : fallback;
 
   const buildVaccinationPayload = (
     values: Record<string, string | boolean>,
@@ -73,7 +77,7 @@ export default function VaccinationsTab({ petId, token, vaccinations, setVaccina
     if (!(values.name as string).trim() || !values.administered_date) return;
 
     try {
-      setError(null);
+      setAddError(null);
       const vac = await petsApi.addVaccination(
         petId,
         buildVaccinationPayload(values),
@@ -92,7 +96,12 @@ export default function VaccinationsTab({ petId, token, vaccinations, setVaccina
         reminder_lead_time_unit: 'days',
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save vaccination');
+      setAddError(
+        getSaveErrorMessage(
+          err,
+          'We couldn’t save this vaccination. Your changes are still here, so you can fix anything and try again.'
+        )
+      );
     }
   };
 
@@ -100,7 +109,7 @@ export default function VaccinationsTab({ petId, token, vaccinations, setVaccina
     if (!editingId || !(values.name as string).trim() || !values.administered_date) return;
 
     try {
-      setError(null);
+      setEditError(null);
       const updated = await petsApi.updateVaccination(
         petId,
         editingId,
@@ -113,7 +122,12 @@ export default function VaccinationsTab({ petId, token, vaccinations, setVaccina
       setVaccinations(vaccinations.map(v => v.id === editingId ? updated : v));
       setEditingId(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update vaccination');
+      setEditError(
+        getSaveErrorMessage(
+          err,
+          'We couldn’t update this vaccination. Your changes are still here, so you can adjust them and try again.'
+        )
+      );
     }
   };
 
@@ -132,22 +146,30 @@ export default function VaccinationsTab({ petId, token, vaccinations, setVaccina
     <div>
       <div className="flex justify-between items-center mb-4">
         <h3 className="section-title">Vaccinations</h3>
-        <button onClick={() => setShowForm(!showForm)} className="btn-primary text-sm">+ Add Vaccination</button>
+        <button
+          onClick={() => {
+            setAddError(null);
+            setShowForm(!showForm);
+          }}
+          className="btn-primary text-sm"
+        >
+          + Add Vaccination
+        </button>
       </div>
-
-      {error && (
-        <div className="mb-4 bg-danger-light border border-danger/20 text-danger px-4 py-3 rounded-lg text-sm">
-          {error}
-        </div>
-      )}
 
       {showForm && (
         <InlineEditForm
           fields={getVaccinationFields}
           values={addValues}
           onSave={handleAdd}
-          onCancel={() => setShowForm(false)}
+          onCancel={() => {
+            setAddError(null);
+            setShowForm(false);
+          }}
           className="mb-4"
+          resetKey="vaccination-add"
+          submitError={addError}
+          onChange={() => setAddError(null)}
         />
       )}
 
@@ -171,7 +193,13 @@ export default function VaccinationsTab({ petId, token, vaccinations, setVaccina
                     reminder_lead_time_unit: v.reminder_lead_time_unit || 'days',
                   }}
                   onSave={handleSaveEdit}
-                  onCancel={() => setEditingId(null)}
+                  onCancel={() => {
+                    setEditError(null);
+                    setEditingId(null);
+                  }}
+                  resetKey={v.id}
+                  submitError={editError}
+                  onChange={() => setEditError(null)}
                 />
               ) : (
                 <div className="flex justify-between items-start gap-4">
@@ -197,7 +225,15 @@ export default function VaccinationsTab({ petId, token, vaccinations, setVaccina
                   </div>
                   <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
                     <ShowOnCardButton active={v.show_on_card} onClick={() => handleToggleShowOnCard(v)} />
-                    <button onClick={() => setEditingId(v.id)} className="text-navy hover:text-primary-800 text-sm">Edit</button>
+                    <button
+                      onClick={() => {
+                        setEditError(null);
+                        setEditingId(v.id);
+                      }}
+                      className="text-navy hover:text-primary-800 text-sm"
+                    >
+                      Edit
+                    </button>
                     {deletingId === v.id ? (
                       <>
                         <span className="text-sm text-surface-500">Sure?</span>

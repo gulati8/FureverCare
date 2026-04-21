@@ -26,6 +26,7 @@ const authRateLimit = rateLimit({
   max: 15, // 15 attempts per window
   keyGenerator: getClientIp,
   store: createRedisStore('auth'),
+  skip: () => process.env.DISABLE_AUTH_RATE_LIMIT === 'true',
   message: { error: 'Too many login attempts, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,

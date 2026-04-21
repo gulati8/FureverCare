@@ -1,4 +1,5 @@
-import { query, queryOne, transaction } from '../db/pool.js';
+import { prisma } from '../db/prisma.js';
+import { decimalToNumber, stripUndefined } from './prisma-helpers.js';
 
 export type ExtractionStatus = 'pending_review' | 'approved' | 'rejected' | 'partially_approved';
 export type ExtractionItemStatus = 'pending' | 'approved' | 'rejected' | 'modified';
@@ -46,126 +47,176 @@ export interface CreateImageExtractionItemInput {
   confidenceScore?: number;
 }
 
+function mapExtraction(extraction: Record<string, any>): ImageExtraction {
+  return {
+    id: extraction.id,
+    image_upload_id: extraction.image_upload_id,
+    raw_extraction: (extraction.raw_extraction ?? null) as Record<string, any> | null,
+    mapped_data: (extraction.mapped_data ?? null) as Record<string, any> | null,
+    extraction_model: extraction.extraction_model,
+    tokens_used: extraction.tokens_used,
+    status: extraction.status as ExtractionStatus,
+    reviewed_by: extraction.reviewed_by,
+    reviewed_at: extraction.reviewed_at,
+    created_at: extraction.created_at,
+  };
+}
+
+function mapExtractionItem(item: Record<string, any>): ImageExtractionItem {
+  return {
+    id: item.id,
+    extraction_id: item.extraction_id,
+    record_type: item.record_type as RecordType,
+    extracted_data: item.extracted_data as Record<string, any>,
+    confidence_score: decimalToNumber(item.confidence_score),
+    user_modified_data: (item.user_modified_data ?? null) as Record<string, any> | null,
+    status: item.status as ExtractionItemStatus,
+    created_record_id: item.created_record_id,
+    created_record_type: item.created_record_type,
+    created_at: item.created_at,
+    updated_at: item.updated_at,
+  };
+}
+
 export async function createImageExtraction(data: CreateImageExtractionInput): Promise<ImageExtraction> {
-  const result = await query<ImageExtraction>(
-    `INSERT INTO image_extractions (
-      image_upload_id, raw_extraction, mapped_data, extraction_model, tokens_used
-    ) VALUES ($1, $2, $3, $4, $5)
-    RETURNING *`,
-    [
-      data.imageUploadId,
-      JSON.stringify(data.rawExtraction),
-      JSON.stringify(data.mappedData),
-      data.extractionModel,
-      data.tokensUsed,
-    ]
-  );
-  return result[0];
+  const extraction = await prisma.image_extractions.create({
+    data: {
+      image_upload_id: data.imageUploadId,
+      raw_extraction: data.rawExtraction,
+      mapped_data: data.mappedData,
+      extraction_model: data.extractionModel,
+      tokens_used: data.tokensUsed,
+    },
+  });
+
+  return mapExtraction(extraction);
 }
 
 export async function createImageExtractionItem(data: CreateImageExtractionItemInput): Promise<ImageExtractionItem> {
-  const result = await query<ImageExtractionItem>(
-    `INSERT INTO image_extraction_items (
-      extraction_id, record_type, extracted_data, confidence_score
-    ) VALUES ($1, $2, $3, $4)
-    RETURNING *`,
-    [
-      data.extractionId,
-      data.recordType,
-      JSON.stringify(data.extractedData),
-      data.confidenceScore || null,
-    ]
-  );
-  return result[0];
+  const item = await prisma.image_extraction_items.create({
+    data: {
+      extraction_id: data.extractionId,
+      record_type: data.recordType,
+      extracted_data: data.extractedData,
+      confidence_score: data.confidenceScore ?? null,
+    },
+  });
+
+  return mapExtractionItem(item);
 }
 
 export async function createImageExtractionWithItems(
   extractionData: CreateImageExtractionInput,
   items: Omit<CreateImageExtractionItemInput, 'extractionId'>[]
 ): Promise<{ extraction: ImageExtraction; items: ImageExtractionItem[] }> {
-  return transaction(async (client) => {
-    // Create extraction
-    const extractionResult = await client.query(
-      `INSERT INTO image_extractions (
-        image_upload_id, raw_extraction, mapped_data, extraction_model, tokens_used
-      ) VALUES ($1, $2, $3, $4, $5)
-      RETURNING *`,
-      [
-        extractionData.imageUploadId,
-        JSON.stringify(extractionData.rawExtraction),
-        JSON.stringify(extractionData.mappedData),
-        extractionData.extractionModel,
-        extractionData.tokensUsed,
-      ]
-    );
-    const extraction = extractionResult.rows[0] as ImageExtraction;
+  return prisma.$transaction(async (tx) => {
+    const extraction = await tx.image_extractions.create({
+      data: {
+        image_upload_id: extractionData.imageUploadId,
+        raw_extraction: extractionData.rawExtraction,
+        mapped_data: extractionData.mappedData,
+        extraction_model: extractionData.extractionModel,
+        tokens_used: extractionData.tokensUsed,
+      },
+    });
 
-    // Create items
     const createdItems: ImageExtractionItem[] = [];
+
     for (const item of items) {
-      const itemResult = await client.query(
-        `INSERT INTO image_extraction_items (
-          extraction_id, record_type, extracted_data, confidence_score
-        ) VALUES ($1, $2, $3, $4)
-        RETURNING *`,
-        [
-          extraction.id,
-          item.recordType,
-          JSON.stringify(item.extractedData),
-          item.confidenceScore || null,
-        ]
-      );
-      createdItems.push(itemResult.rows[0] as ImageExtractionItem);
+      const created = await tx.image_extraction_items.create({
+        data: {
+          extraction_id: extraction.id,
+          record_type: item.recordType,
+          extracted_data: item.extractedData,
+          confidence_score: item.confidenceScore ?? null,
+        },
+      });
+      createdItems.push(mapExtractionItem(created));
     }
 
-    return { extraction, items: createdItems };
+    return {
+      extraction: mapExtraction(extraction),
+      items: createdItems,
+    };
   });
 }
 
 export async function getImageExtractionByUploadId(imageUploadId: number): Promise<ImageExtraction | null> {
-  return queryOne<ImageExtraction>(
-    'SELECT * FROM image_extractions WHERE image_upload_id = $1',
-    [imageUploadId]
-  );
+  const extraction = await prisma.image_extractions.findFirst({
+    where: {
+      image_upload_id: imageUploadId,
+    },
+  });
+
+  return extraction ? mapExtraction(extraction) : null;
 }
 
 export async function getImageExtractionById(id: number): Promise<ImageExtraction | null> {
-  return queryOne<ImageExtraction>(
-    'SELECT * FROM image_extractions WHERE id = $1',
-    [id]
-  );
+  const extraction = await prisma.image_extractions.findUnique({
+    where: {
+      id,
+    },
+  });
+
+  return extraction ? mapExtraction(extraction) : null;
 }
 
 export async function getImageExtractionItems(extractionId: number): Promise<ImageExtractionItem[]> {
-  return query<ImageExtractionItem>(
-    'SELECT * FROM image_extraction_items WHERE extraction_id = $1 ORDER BY id',
-    [extractionId]
-  );
+  const items = await prisma.image_extraction_items.findMany({
+    where: {
+      extraction_id: extractionId,
+    },
+    orderBy: {
+      id: 'asc',
+    },
+  });
+
+  return items.map(mapExtractionItem);
 }
 
 export async function getImageExtractionWithItems(imageUploadId: number): Promise<{
   extraction: ImageExtraction;
   items: ImageExtractionItem[];
 } | null> {
-  const extraction = await getImageExtractionByUploadId(imageUploadId);
-  if (!extraction) return null;
+  const extraction = await prisma.image_extractions.findFirst({
+    where: {
+      image_upload_id: imageUploadId,
+    },
+    include: {
+      image_extraction_items: {
+        orderBy: {
+          id: 'asc',
+        },
+      },
+    },
+  });
 
-  const items = await getImageExtractionItems(extraction.id);
-  return { extraction, items };
+  if (!extraction) {
+    return null;
+  }
+
+  return {
+    extraction: mapExtraction(extraction),
+    items: extraction.image_extraction_items.map(mapExtractionItem),
+  };
 }
 
 export async function updateImageExtractionItemData(
   itemId: number,
   modifiedData: Record<string, any>
 ): Promise<ImageExtractionItem | null> {
-  return queryOne<ImageExtractionItem>(
-    `UPDATE image_extraction_items SET
-      user_modified_data = $2,
-      status = 'modified',
-      updated_at = CURRENT_TIMESTAMP
-    WHERE id = $1 RETURNING *`,
-    [itemId, JSON.stringify(modifiedData)]
-  );
+  const items = await prisma.image_extraction_items.updateManyAndReturn({
+    where: {
+      id: itemId,
+    },
+    data: {
+      user_modified_data: modifiedData,
+      status: 'modified',
+      updated_at: new Date(),
+    },
+  });
+
+  return items[0] ? mapExtractionItem(items[0]) : null;
 }
 
 export async function updateImageExtractionItemStatus(
@@ -174,25 +225,19 @@ export async function updateImageExtractionItemStatus(
   createdRecordId?: number,
   createdRecordType?: string
 ): Promise<ImageExtractionItem | null> {
-  if (status === 'approved' && createdRecordId && createdRecordType) {
-    return queryOne<ImageExtractionItem>(
-      `UPDATE image_extraction_items SET
-        status = $2,
-        created_record_id = $3,
-        created_record_type = $4,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = $1 RETURNING *`,
-      [itemId, status, createdRecordId, createdRecordType]
-    );
-  }
+  const items = await prisma.image_extraction_items.updateManyAndReturn({
+    where: {
+      id: itemId,
+    },
+    data: stripUndefined({
+      status,
+      created_record_id: status === 'approved' ? createdRecordId : undefined,
+      created_record_type: status === 'approved' ? createdRecordType : undefined,
+      updated_at: new Date(),
+    }),
+  });
 
-  return queryOne<ImageExtractionItem>(
-    `UPDATE image_extraction_items SET
-      status = $2,
-      updated_at = CURRENT_TIMESTAMP
-    WHERE id = $1 RETURNING *`,
-    [itemId, status]
-  );
+  return items[0] ? mapExtractionItem(items[0]) : null;
 }
 
 export async function updateImageExtractionStatus(
@@ -200,34 +245,49 @@ export async function updateImageExtractionStatus(
   status: ExtractionStatus,
   reviewedBy: number
 ): Promise<ImageExtraction | null> {
-  return queryOne<ImageExtraction>(
-    `UPDATE image_extractions SET
-      status = $2,
-      reviewed_by = $3,
-      reviewed_at = CURRENT_TIMESTAMP
-    WHERE id = $1 RETURNING *`,
-    [extractionId, status, reviewedBy]
-  );
+  const extractions = await prisma.image_extractions.updateManyAndReturn({
+    where: {
+      id: extractionId,
+    },
+    data: {
+      status,
+      reviewed_by: reviewedBy,
+      reviewed_at: new Date(),
+    },
+  });
+
+  return extractions[0] ? mapExtraction(extractions[0]) : null;
 }
 
 export async function getImageExtractionItemById(itemId: number): Promise<ImageExtractionItem | null> {
-  return queryOne<ImageExtractionItem>(
-    'SELECT * FROM image_extraction_items WHERE id = $1',
-    [itemId]
-  );
+  const item = await prisma.image_extraction_items.findUnique({
+    where: {
+      id: itemId,
+    },
+  });
+
+  return item ? mapExtractionItem(item) : null;
 }
 
 export async function bulkUpdateImageExtractionItemsStatus(
   itemIds: number[],
   status: ExtractionItemStatus
 ): Promise<ImageExtractionItem[]> {
-  if (itemIds.length === 0) return [];
+  if (itemIds.length === 0) {
+    return [];
+  }
 
-  return query<ImageExtractionItem>(
-    `UPDATE image_extraction_items SET
-      status = $2,
-      updated_at = CURRENT_TIMESTAMP
-    WHERE id = ANY($1) RETURNING *`,
-    [itemIds, status]
-  );
+  const items = await prisma.image_extraction_items.updateManyAndReturn({
+    where: {
+      id: {
+        in: itemIds,
+      },
+    },
+    data: {
+      status,
+      updated_at: new Date(),
+    },
+  });
+
+  return items.map(mapExtractionItem);
 }

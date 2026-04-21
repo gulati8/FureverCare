@@ -1,6 +1,7 @@
 import { nanoid } from 'nanoid';
-import { query, queryOne, transaction } from '../db/pool.js';
-import { cacheDelete, cacheDeletePattern } from '../db/redis.js';
+import { prisma } from '../db/prisma.js';
+import { cacheDelete } from '../db/redis.js';
+import { decimalToNumber, stripUndefined, toNullableDate } from './prisma-helpers.js';
 
 export interface Pet {
   id: number;
@@ -24,6 +25,18 @@ export interface Pet {
   user_role?: string | null;
 }
 
+function mapPet(
+  pet: {
+    weight_kg: any;
+    user_role?: string | null;
+  } & Record<string, any>
+): Pet {
+  return {
+    ...pet,
+    weight_kg: decimalToNumber(pet.weight_kg),
+  } as Pet;
+}
+
 export interface CreatePetInput {
   user_id: number;
   name: string;
@@ -44,79 +57,115 @@ export interface CreatePetInput {
 export async function createPet(input: CreatePetInput): Promise<Pet> {
   const shareId = nanoid();
 
-  const result = await queryOne<Pet>(
-    `INSERT INTO pets (user_id, share_id, name, species, breed, date_of_birth, weight_kg, weight_unit, sex, is_fixed, microchip_id, photo_url, special_instructions, age, color_markings)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-     RETURNING *`,
-    [
-      input.user_id,
-      shareId,
-      input.name,
-      input.species,
-      input.breed || null,
-      input.date_of_birth || null,
-      input.weight_kg || null,
-      input.weight_unit || 'lbs',
-      input.sex || null,
-      input.is_fixed || false,
-      input.microchip_id || null,
-      input.photo_url || null,
-      input.special_instructions || null,
-      input.age ?? null,
-      input.color_markings || null,
-    ]
-  );
+  const result = await prisma.pets.create({
+    data: {
+      user_id: input.user_id,
+      share_id: shareId,
+      name: input.name,
+      species: input.species,
+      breed: input.breed || null,
+      date_of_birth: toNullableDate(input.date_of_birth) ?? null,
+      weight_kg: input.weight_kg ?? null,
+      weight_unit: input.weight_unit || 'lbs',
+      sex: input.sex || null,
+      is_fixed: input.is_fixed || false,
+      microchip_id: input.microchip_id || null,
+      photo_url: input.photo_url || null,
+      special_instructions: input.special_instructions || null,
+      age: input.age ?? null,
+      color_markings: input.color_markings || null,
+    },
+  });
 
-  return result!;
+  return mapPet(result);
 }
 
 export async function findPetById(id: number): Promise<Pet | null> {
-  return queryOne<Pet>('SELECT * FROM pets WHERE id = $1', [id]);
+  const pet = await prisma.pets.findUnique({
+    where: {
+      id,
+    },
+  });
+  return pet ? mapPet(pet) : null;
 }
 
 export async function findPetByShareId(shareId: string): Promise<Pet | null> {
-  return queryOne<Pet>('SELECT * FROM pets WHERE share_id = $1', [shareId]);
+  const pet = await prisma.pets.findUnique({
+    where: {
+      share_id: shareId,
+    },
+  });
+  return pet ? mapPet(pet) : null;
 }
 
 // Get pets where user is the original owner (legacy)
 export async function findPetsByUserId(userId: number): Promise<Pet[]> {
-  return query<Pet>('SELECT * FROM pets WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
+  const pets = await prisma.pets.findMany({
+    where: {
+      user_id: userId,
+    },
+    orderBy: {
+      created_at: 'desc',
+    },
+  });
+  return pets.map(mapPet);
 }
 
 // Get all pets user has access to (via pet_owners junction table)
 export async function findPetsForUser(userId: number): Promise<Pet[]> {
-  return query<Pet>(
-    `SELECT p.*, po.role as user_role FROM pets p
-     JOIN pet_owners po ON po.pet_id = p.id
-     WHERE po.user_id = $1 AND po.accepted_at IS NOT NULL
-     ORDER BY p.created_at DESC`,
-    [userId]
-  );
+  const petOwners = await prisma.pet_owners.findMany({
+    where: {
+      user_id: userId,
+      accepted_at: {
+        not: null,
+      },
+    },
+    include: {
+      pets: true,
+    },
+  });
+
+  return petOwners
+    .map((petOwner) =>
+      mapPet({
+        ...petOwner.pets,
+        user_role: petOwner.role,
+      })
+    )
+    .sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
 }
 
 export async function updatePet(id: number, userId: number, updates: Partial<CreatePetInput>): Promise<Pet | null> {
-  const fields: string[] = [];
-  const values: any[] = [];
-  let paramCount = 1;
+  const data = stripUndefined({
+    name: updates.name,
+    species: updates.species,
+    breed: updates.breed,
+    date_of_birth: toNullableDate(updates.date_of_birth),
+    weight_kg: updates.weight_kg,
+    weight_unit: updates.weight_unit,
+    sex: updates.sex,
+    is_fixed: updates.is_fixed,
+    microchip_id: updates.microchip_id,
+    photo_url: updates.photo_url,
+    special_instructions: updates.special_instructions,
+    age: updates.age,
+    color_markings: updates.color_markings,
+    updated_at: new Date(),
+  });
 
-  const allowedFields = ['name', 'species', 'breed', 'date_of_birth', 'weight_kg', 'weight_unit', 'sex', 'is_fixed', 'microchip_id', 'photo_url', 'special_instructions', 'age', 'color_markings'];
-
-  for (const field of allowedFields) {
-    if ((updates as any)[field] !== undefined) {
-      fields.push(`${field} = $${paramCount++}`);
-      values.push((updates as any)[field]);
-    }
+  if (Object.keys(data).length === 1) {
+    return findPetById(id);
   }
 
-  if (fields.length === 0) return findPetById(id);
+  const pets = await prisma.pets.updateManyAndReturn({
+    where: {
+      id,
+      user_id: userId,
+    },
+    data,
+  });
 
-  fields.push(`updated_at = CURRENT_TIMESTAMP`);
-  values.push(id, userId);
-
-  const result = await queryOne<Pet>(
-    `UPDATE pets SET ${fields.join(', ')} WHERE id = $${paramCount} AND user_id = $${paramCount + 1} RETURNING *`,
-    values
-  );
+  const result = pets[0] ? mapPet(pets[0]) : null;
 
   if (result) {
     await cacheDelete(`pet:${result.share_id}`);
@@ -129,7 +178,12 @@ export async function deletePet(id: number, userId: number): Promise<boolean> {
   const pet = await findPetById(id);
   if (!pet || pet.user_id !== userId) return false;
 
-  await query('DELETE FROM pets WHERE id = $1 AND user_id = $2', [id, userId]);
+  await prisma.pets.deleteMany({
+    where: {
+      id,
+      user_id: userId,
+    },
+  });
   await cacheDelete(`pet:${pet.share_id}`);
 
   return true;
@@ -142,10 +196,17 @@ export async function regenerateShareId(id: number, userId: number): Promise<Pet
   const oldShareId = pet.share_id;
   const newShareId = nanoid();
 
-  const result = await queryOne<Pet>(
-    `UPDATE pets SET share_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING *`,
-    [newShareId, id, userId]
-  );
+  const pets = await prisma.pets.updateManyAndReturn({
+    where: {
+      id,
+      user_id: userId,
+    },
+    data: {
+      share_id: newShareId,
+      updated_at: new Date(),
+    },
+  });
+  const result = pets[0] ? mapPet(pets[0]) : null;
 
   if (result) {
     await cacheDelete(`pet:${oldShareId}`);

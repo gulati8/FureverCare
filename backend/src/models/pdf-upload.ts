@@ -1,4 +1,5 @@
-import { query, queryOne } from '../db/pool.js';
+import { prisma } from '../db/prisma.js';
+import { stripUndefined } from './prisma-helpers.js';
 
 export type PdfUploadStatus = 'pending' | 'processing' | 'completed' | 'failed';
 export type DocumentType = 'vaccination_record' | 'visit_summary' | 'lab_results' | 'prescription' | 'other';
@@ -31,39 +32,64 @@ export interface CreatePdfUploadInput {
   documentType?: DocumentType;
 }
 
+function mapPdfUpload(upload: Record<string, any>): PdfUpload {
+  return {
+    id: upload.id,
+    pet_id: upload.pet_id,
+    uploaded_by: upload.uploaded_by,
+    filename: upload.filename,
+    original_filename: upload.original_filename,
+    file_path: upload.file_path,
+    file_size: upload.file_size,
+    mime_type: upload.mime_type,
+    status: upload.status as PdfUploadStatus,
+    document_type: upload.document_type as DocumentType | null,
+    processing_started_at: upload.processing_started_at,
+    processing_completed_at: upload.processing_completed_at,
+    error_message: upload.error_message,
+    created_at: upload.created_at,
+  };
+}
+
 export async function createPdfUpload(data: CreatePdfUploadInput): Promise<PdfUpload> {
-  const result = await query<PdfUpload>(
-    `INSERT INTO pdf_uploads (
-      pet_id, uploaded_by, filename, original_filename, file_path,
-      file_size, mime_type, status, document_type
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8)
-    RETURNING *`,
-    [
-      data.petId,
-      data.uploadedBy,
-      data.filename,
-      data.originalFilename,
-      data.filePath,
-      data.fileSize,
-      data.mimeType,
-      data.documentType || null,
-    ]
-  );
-  return result[0];
+  const upload = await prisma.pdf_uploads.create({
+    data: {
+      pet_id: data.petId,
+      uploaded_by: data.uploadedBy,
+      filename: data.filename,
+      original_filename: data.originalFilename,
+      file_path: data.filePath,
+      file_size: data.fileSize,
+      mime_type: data.mimeType,
+      status: 'pending',
+      document_type: data.documentType ?? null,
+    },
+  });
+
+  return mapPdfUpload(upload);
 }
 
 export async function getPdfUploadById(id: number): Promise<PdfUpload | null> {
-  return queryOne<PdfUpload>(
-    'SELECT * FROM pdf_uploads WHERE id = $1',
-    [id]
-  );
+  const upload = await prisma.pdf_uploads.findUnique({
+    where: {
+      id,
+    },
+  });
+
+  return upload ? mapPdfUpload(upload) : null;
 }
 
 export async function getPdfUploadsByPetId(petId: number): Promise<PdfUpload[]> {
-  return query<PdfUpload>(
-    'SELECT * FROM pdf_uploads WHERE pet_id = $1 ORDER BY created_at DESC',
-    [petId]
-  );
+  const uploads = await prisma.pdf_uploads.findMany({
+    where: {
+      pet_id: petId,
+    },
+    orderBy: {
+      created_at: 'desc',
+    },
+  });
+
+  return uploads.map(mapPdfUpload);
 }
 
 export async function updatePdfUploadStatus(
@@ -71,67 +97,66 @@ export async function updatePdfUploadStatus(
   status: PdfUploadStatus,
   errorMessage?: string
 ): Promise<PdfUpload | null> {
-  let sql: string;
-  let params: any[];
+  const uploads = await prisma.pdf_uploads.updateManyAndReturn({
+    where: {
+      id,
+    },
+    data: stripUndefined({
+      status,
+      processing_started_at: status === 'processing' ? new Date() : undefined,
+      processing_completed_at: status === 'completed' || status === 'failed' ? new Date() : undefined,
+      error_message: status === 'failed' ? errorMessage || null : undefined,
+    }),
+  });
 
-  if (status === 'processing') {
-    sql = `UPDATE pdf_uploads SET
-      status = $2,
-      processing_started_at = CURRENT_TIMESTAMP
-    WHERE id = $1 RETURNING *`;
-    params = [id, status];
-  } else if (status === 'completed') {
-    sql = `UPDATE pdf_uploads SET
-      status = $2,
-      processing_completed_at = CURRENT_TIMESTAMP
-    WHERE id = $1 RETURNING *`;
-    params = [id, status];
-  } else if (status === 'failed') {
-    sql = `UPDATE pdf_uploads SET
-      status = $2,
-      processing_completed_at = CURRENT_TIMESTAMP,
-      error_message = $3
-    WHERE id = $1 RETURNING *`;
-    params = [id, status, errorMessage || null];
-  } else {
-    sql = `UPDATE pdf_uploads SET status = $2 WHERE id = $1 RETURNING *`;
-    params = [id, status];
-  }
-
-  return queryOne<PdfUpload>(sql, params);
+  return uploads[0] ? mapPdfUpload(uploads[0]) : null;
 }
 
 export async function updatePdfUploadDocumentType(
   id: number,
   documentType: DocumentType
 ): Promise<PdfUpload | null> {
-  return queryOne<PdfUpload>(
-    'UPDATE pdf_uploads SET document_type = $2 WHERE id = $1 RETURNING *',
-    [id, documentType]
-  );
+  const uploads = await prisma.pdf_uploads.updateManyAndReturn({
+    where: {
+      id,
+    },
+    data: {
+      document_type: documentType,
+    },
+  });
+
+  return uploads[0] ? mapPdfUpload(uploads[0]) : null;
 }
 
 export async function deletePdfUpload(id: number, petId: number): Promise<boolean> {
-  const result = await query(
-    'DELETE FROM pdf_uploads WHERE id = $1 AND pet_id = $2 RETURNING id',
-    [id, petId]
-  );
-  return result.length > 0;
+  const result = await prisma.pdf_uploads.deleteMany({
+    where: {
+      id,
+      pet_id: petId,
+    },
+  });
+
+  return result.count > 0;
 }
 
 export async function getPdfUploadWithExtraction(id: number): Promise<(PdfUpload & {
   extraction?: any;
 }) | null> {
-  const upload = await getPdfUploadById(id);
-  if (!upload) return null;
+  const upload = await prisma.pdf_uploads.findUnique({
+    where: {
+      id,
+    },
+    include: {
+      pdf_extractions: true,
+    },
+  });
 
-  const extraction = await queryOne(
-    'SELECT * FROM pdf_extractions WHERE pdf_upload_id = $1',
-    [id]
-  );
+  if (!upload) {
+    return null;
+  }
 
   return {
-    ...upload,
-    extraction: extraction || undefined,
+    ...mapPdfUpload(upload),
+    extraction: upload.pdf_extractions[0] || undefined,
   };
 }

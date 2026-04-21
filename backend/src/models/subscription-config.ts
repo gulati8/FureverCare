@@ -1,4 +1,4 @@
-import { query, queryOne } from '../db/pool.js';
+import { prisma } from '../db/prisma.js';
 
 export interface SubscriptionPricing {
   monthly_price_cents: number;
@@ -25,23 +25,31 @@ interface ConfigRow {
 }
 
 export async function getConfig<T>(key: string): Promise<T | null> {
-  const result = await queryOne<ConfigRow>(
-    'SELECT * FROM subscription_config WHERE key = $1',
-    [key]
-  );
+  const result = await prisma.subscription_config.findUnique({
+    where: {
+      key,
+    },
+  });
   return result ? (result.value as T) : null;
 }
 
 export async function setConfig<T>(key: string, value: T, updatedBy: number): Promise<void> {
-  await query(
-    `INSERT INTO subscription_config (key, value, updated_by, updated_at)
-     VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
-     ON CONFLICT (key) DO UPDATE SET
-       value = EXCLUDED.value,
-       updated_by = EXCLUDED.updated_by,
-       updated_at = CURRENT_TIMESTAMP`,
-    [key, JSON.stringify(value), updatedBy]
-  );
+  await prisma.subscription_config.upsert({
+    where: {
+      key,
+    },
+    create: {
+      key,
+      value: value as object,
+      updated_by: updatedBy,
+      updated_at: new Date(),
+    },
+    update: {
+      value: value as object,
+      updated_by: updatedBy,
+      updated_at: new Date(),
+    },
+  });
 }
 
 export async function getPricing(): Promise<SubscriptionPricing> {

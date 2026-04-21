@@ -1,4 +1,4 @@
-import { query, queryOne } from '../db/pool.js';
+import { prisma } from '../db/prisma.js';
 import { cacheGet, cacheSet, cacheDelete } from '../db/redis.js';
 
 export interface EmailTemplate {
@@ -11,16 +11,19 @@ export interface EmailTemplate {
 }
 
 export async function getAllEmailTemplates(): Promise<EmailTemplate[]> {
-  return query<EmailTemplate>(
-    'SELECT * FROM email_templates ORDER BY email_type'
-  );
+  return prisma.email_templates.findMany({
+    orderBy: {
+      email_type: 'asc',
+    },
+  }) as Promise<EmailTemplate[]>;
 }
 
 export async function getEmailTemplateByType(emailType: string): Promise<EmailTemplate | null> {
-  return queryOne<EmailTemplate>(
-    'SELECT * FROM email_templates WHERE email_type = $1',
-    [emailType]
-  );
+  return prisma.email_templates.findUnique({
+    where: {
+      email_type: emailType,
+    },
+  }) as Promise<EmailTemplate | null>;
 }
 
 export async function upsertEmailTemplate(
@@ -29,26 +32,34 @@ export async function upsertEmailTemplate(
   description: string | null,
   updatedBy: number
 ): Promise<EmailTemplate> {
-  const row = await queryOne<EmailTemplate>(
-    `INSERT INTO email_templates (email_type, brevo_template_id, description, updated_at, updated_by)
-     VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4)
-     ON CONFLICT (email_type) DO UPDATE SET
-       brevo_template_id = EXCLUDED.brevo_template_id,
-       description = EXCLUDED.description,
-       updated_at = CURRENT_TIMESTAMP,
-       updated_by = EXCLUDED.updated_by
-     RETURNING *`,
-    [emailType, brevoTemplateId, description, updatedBy]
-  );
+  const row = await prisma.email_templates.upsert({
+    where: {
+      email_type: emailType,
+    },
+    create: {
+      email_type: emailType,
+      brevo_template_id: brevoTemplateId,
+      description,
+      updated_by: updatedBy,
+      updated_at: new Date(),
+    },
+    update: {
+      brevo_template_id: brevoTemplateId,
+      description,
+      updated_by: updatedBy,
+      updated_at: new Date(),
+    },
+  });
   await cacheDelete('email_template:' + emailType);
-  return row!;
+  return row as EmailTemplate;
 }
 
 export async function deleteEmailTemplate(emailType: string): Promise<void> {
-  await query(
-    'DELETE FROM email_templates WHERE email_type = $1',
-    [emailType]
-  );
+  await prisma.email_templates.deleteMany({
+    where: {
+      email_type: emailType,
+    },
+  });
   await cacheDelete('email_template:' + emailType);
 }
 
@@ -58,10 +69,11 @@ export async function getTemplateId(emailType: string): Promise<number> {
     return cached;
   }
 
-  const row = await queryOne<EmailTemplate>(
-    'SELECT * FROM email_templates WHERE email_type = $1',
-    [emailType]
-  );
+  const row = await prisma.email_templates.findUnique({
+    where: {
+      email_type: emailType,
+    },
+  });
 
   if (!row) {
     throw new Error(`Email template not configured for type: ${emailType}`);

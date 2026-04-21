@@ -18,7 +18,8 @@ export default function MedicationsTab({ petId, token, medications, setMedicatio
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [addError, setAddError] = useState<string | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
   const [addValues, setAddValues] = useState<Record<string, string | boolean>>({
     name: '',
     dosage: '',
@@ -77,10 +78,27 @@ export default function MedicationsTab({ petId, token, medications, setMedicatio
     };
   };
 
+  const getMedicationFormValues = (medication: PetMedication) => ({
+    name: medication.name,
+    dosage: medication.dosage || '',
+    frequency: medication.frequency || '',
+    start_date: medication.start_date ? medication.start_date.split('T')[0] : '',
+    start_date_precision: medication.start_date_precision || 'day',
+    reminder_enabled: medication.reminder_enabled,
+    reminder_next_due_date: medication.reminder_next_due_date ? medication.reminder_next_due_date.split('T')[0] : '',
+    reminder_lead_time_value: medication.reminder_lead_time_value?.toString() || '',
+    reminder_lead_time_unit: medication.reminder_lead_time_unit || 'days',
+    reminder_recurrence_value: medication.reminder_recurrence_value?.toString() || '',
+    reminder_recurrence_unit: medication.reminder_recurrence_unit || 'months',
+  });
+
+  const getSaveErrorMessage = (err: unknown, fallback: string) =>
+    err instanceof Error && err.message.trim() ? err.message : fallback;
+
   const handleAdd = async (values: Record<string, string | boolean>) => {
     if (!(values.name as string).trim()) return;
     try {
-      setError(null);
+      setAddError(null);
       const med = await petsApi.addMedication(
         petId,
         buildMedicationPayload(values),
@@ -102,14 +120,19 @@ export default function MedicationsTab({ petId, token, medications, setMedicatio
         reminder_recurrence_unit: 'months',
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save medication');
+      setAddError(
+        getSaveErrorMessage(
+          err,
+          'We couldn’t save this medication. Your changes are still here, so you can fix anything and try again.'
+        )
+      );
     }
   };
 
   const handleSaveEdit = async (values: Record<string, string | boolean>) => {
     if (!editingId || !(values.name as string).trim()) return;
     try {
-      setError(null);
+      setEditError(null);
       const updated = await petsApi.updateMedication(
         petId,
         editingId,
@@ -122,7 +145,12 @@ export default function MedicationsTab({ petId, token, medications, setMedicatio
       setMedications(medications.map(m => m.id === editingId ? updated : m));
       setEditingId(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update medication');
+      setEditError(
+        getSaveErrorMessage(
+          err,
+          'We couldn’t update this medication. Your changes are still here, so you can adjust them and try again.'
+        )
+      );
     }
   };
 
@@ -143,21 +171,15 @@ export default function MedicationsTab({ petId, token, medications, setMedicatio
       {editingId === m.id ? (
         <InlineEditForm
           fields={getMedicationFields}
-          values={{
-            name: m.name,
-            dosage: m.dosage || '',
-            frequency: m.frequency || '',
-            start_date: m.start_date ? m.start_date.split('T')[0] : '',
-            start_date_precision: m.start_date_precision || 'day',
-            reminder_enabled: m.reminder_enabled,
-            reminder_next_due_date: m.reminder_next_due_date ? m.reminder_next_due_date.split('T')[0] : '',
-            reminder_lead_time_value: m.reminder_lead_time_value?.toString() || '',
-            reminder_lead_time_unit: m.reminder_lead_time_unit || 'days',
-            reminder_recurrence_value: m.reminder_recurrence_value?.toString() || '',
-            reminder_recurrence_unit: m.reminder_recurrence_unit || 'months',
-          }}
+          values={getMedicationFormValues(m)}
           onSave={handleSaveEdit}
-          onCancel={() => setEditingId(null)}
+          onCancel={() => {
+            setEditError(null);
+            setEditingId(null);
+          }}
+          resetKey={m.id}
+          submitError={editError}
+          onChange={() => setEditError(null)}
         />
       ) : (
         <div className="flex justify-between items-start gap-4">
@@ -178,7 +200,15 @@ export default function MedicationsTab({ petId, token, medications, setMedicatio
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
             <ShowOnCardButton active={m.show_on_card} onClick={() => handleToggleShowOnCard(m)} />
-            <button onClick={() => setEditingId(m.id)} className="text-navy hover:text-primary-800 text-sm">Edit</button>
+            <button
+              onClick={() => {
+                setEditError(null);
+                setEditingId(m.id);
+              }}
+              className="text-navy hover:text-primary-800 text-sm"
+            >
+              Edit
+            </button>
             <button onClick={() => handleToggleActive(m)} className={`text-sm ${isInactive ? 'text-navy hover:text-primary-800' : 'text-surface-600 hover:text-navy'}`}>
               {isInactive ? 'Reactivate' : 'Discontinue'}
             </button>
@@ -201,22 +231,30 @@ export default function MedicationsTab({ petId, token, medications, setMedicatio
     <div>
       <div className="flex justify-between items-center mb-4">
         <h3 className="section-title">Medications</h3>
-        <button onClick={() => setShowForm(!showForm)} className="btn-primary text-sm">+ Add Medication</button>
+        <button
+          onClick={() => {
+            setAddError(null);
+            setShowForm(!showForm);
+          }}
+          className="btn-primary text-sm"
+        >
+          + Add Medication
+        </button>
       </div>
-
-      {error && (
-        <div className="mb-4 bg-danger-light border border-danger/20 text-danger px-4 py-3 rounded-lg text-sm">
-          {error}
-        </div>
-      )}
 
       {showForm && (
         <InlineEditForm
           fields={getMedicationFields}
           values={addValues}
           onSave={handleAdd}
-          onCancel={() => setShowForm(false)}
+          onCancel={() => {
+            setAddError(null);
+            setShowForm(false);
+          }}
           className="mb-4"
+          resetKey="medication-add"
+          submitError={addError}
+          onChange={() => setAddError(null)}
         />
       )}
 

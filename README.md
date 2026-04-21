@@ -5,7 +5,7 @@ Digital emergency health cards for pets. Pet owners control the health informati
 ## What This Repo Contains
 
 - `frontend/`: React 18 + TypeScript + Vite SPA
-- `backend/`: Express + TypeScript API, Postgres models, migrations, and workers
+- `backend/`: Express + TypeScript API, Prisma-backed Postgres access, migrations, and workers
 - `deploy/`: production compose file used by GitHub Actions + AWS SSM deploys
 - `docs/developer-operations.md`: canonical setup, migration, seed, preview-env, and deployment notes
 
@@ -33,11 +33,20 @@ The local stack starts:
 
 ### First-Time Database Bootstrap
 
-The repo does not yet have a tracked migration runner. For a fresh local database, run the current bootstrap sequence from [docs/developer-operations.md](docs/developer-operations.md).
+The backend now uses Prisma Migrate with a baseline for existing environments.
 
-That guide includes:
+Run:
 
-- the full dev migration chain
+```bash
+docker compose exec backend npm run db:migrate
+docker compose exec backend npm run db:seed:dev
+docker compose exec backend npm run db:seed:cms:dev
+docker compose exec backend npm run db:seed:cms-empty-state:dev
+```
+
+The operator guide also documents:
+
+- how the baseline works for existing databases
 - seed commands
 - CMS seed commands
 - known test accounts

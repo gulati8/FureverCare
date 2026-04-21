@@ -1,6 +1,6 @@
 import type { Job } from 'bullmq';
 import { config } from '../config/index.js';
-import { transaction } from '../db/pool.js';
+import { prisma } from '../db/prisma.js';
 import {
   advanceMedicationReminderRule,
   getDueReminderRules,
@@ -67,7 +67,7 @@ export async function processDueReminders(
       continue;
     }
 
-    const insertedNotifications = await transaction(async (client) => {
+    const insertedNotifications = await prisma.$transaction(async (client) => {
       const created = await queueReminderNotifications(client, {
         rule,
         recipients,

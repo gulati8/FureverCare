@@ -27,6 +27,9 @@ interface InlineEditFormProps {
   onSave: (values: Record<string, string | boolean>) => void;
   onCancel: () => void;
   className?: string;
+  resetKey?: string | number;
+  submitError?: string | null;
+  onChange?: (values: Record<string, string | boolean>) => void;
 }
 
 function AutocompleteSelect({ field, value, onChange }: { field: EditField; value: string; onChange: (v: string) => void }) {
@@ -133,19 +136,35 @@ function AutocompleteSelect({ field, value, onChange }: { field: EditField; valu
   );
 }
 
-export default function InlineEditForm({ fields, values: initialValues, onSave, onCancel, className = '' }: InlineEditFormProps) {
+export default function InlineEditForm({
+  fields,
+  values: initialValues,
+  onSave,
+  onCancel,
+  className = '',
+  resetKey,
+  submitError = null,
+  onChange,
+}: InlineEditFormProps) {
   const [values, setValues] = useState<Record<string, string | boolean>>(initialValues);
-  const [error, setError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const resolvedFields = typeof fields === 'function' ? fields(values) : fields;
 
   useEffect(() => {
+    if (resetKey === undefined) {
+      return;
+    }
     setValues(initialValues);
-    setError(null);
-  }, [initialValues]);
+    setValidationError(null);
+  }, [initialValues, resetKey]);
 
   const setValue = (key: string, value: string | boolean) => {
-    setError(null);
-    setValues(prev => ({ ...prev, [key]: value }));
+    setValidationError(null);
+    setValues(prev => {
+      const nextValues = { ...prev, [key]: value };
+      onChange?.(nextValues);
+      return nextValues;
+    });
   };
 
   const handleSave = () => {
@@ -160,12 +179,12 @@ export default function InlineEditForm({ fields, values: initialValues, onSave, 
         (typeof rawValue === 'string' && rawValue.trim() === '');
 
       if (isMissing) {
-        setError(field.label || field.placeholder.replace(/\s*\*$/, ''));
+        setValidationError(field.label || field.placeholder.replace(/\s*\*$/, ''));
         return;
       }
     }
 
-    setError(null);
+    setValidationError(null);
     onSave(values);
   };
 
@@ -215,7 +234,12 @@ export default function InlineEditForm({ fields, values: initialValues, onSave, 
             value={val as string}
             precision={currentPrecision}
             onChange={(date, precision) => {
-              setValues(prev => ({ ...prev, [field.key]: date, [precisionKey]: precision }));
+              setValidationError(null);
+              setValues(prev => {
+                const nextValues = { ...prev, [field.key]: date, [precisionKey]: precision };
+                onChange?.(nextValues);
+                return nextValues;
+              });
             }}
             label={field.label || field.placeholder}
             required={field.required}
@@ -297,9 +321,14 @@ export default function InlineEditForm({ fields, values: initialValues, onSave, 
   return (
     <div className={`bg-surface rounded-lg p-4 space-y-3 ${className}`}>
       {renderFields()}
-      {error && (
+      {validationError && (
         <div className="bg-danger-light border border-danger/20 text-danger px-4 py-3 rounded-lg text-sm">
-          {error} is required.
+          {validationError} is required.
+        </div>
+      )}
+      {submitError && (
+        <div className="bg-danger-light border border-danger/20 text-danger px-4 py-3 rounded-lg text-sm">
+          {submitError}
         </div>
       )}
       <div className="flex gap-2">
